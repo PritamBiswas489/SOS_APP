@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
@@ -10,11 +10,12 @@ import BottomTabNavigator from './BottomTabNavigator';
 
 const Drawer = createDrawerNavigator();
 
-const CustomDrawerContent = (props) => {
+const CustomDrawerContent = props => {
   return (
     <DrawerContentScrollView
       {...props}
-      contentContainerStyle={styles.drawerContainer}>
+      contentContainerStyle={styles.drawerContainer}
+    >
       {/* Profile Section */}
       <View style={styles.profileSection}>
         <View style={styles.profileAvatar}>
@@ -70,7 +71,7 @@ const CustomDrawerContent = (props) => {
 const DrawerNavigator = () => {
   return (
     <Drawer.Navigator
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
+      drawerContent={props => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerShown: false,
         drawerStyle: {
@@ -85,13 +86,14 @@ const DrawerNavigator = () => {
           fontWeight: '500',
           marginLeft: -15,
         },
-      }}>
+      }}
+    >
       <Drawer.Screen
         name="MainTabs"
         component={BottomTabNavigator}
         options={{
           drawerLabel: 'Home',
-          drawerIcon: ({color, size}) => (
+          drawerIcon: ({ color, size }) => (
             <Icon name="home" size={size} color={color} />
           ),
         }}
@@ -101,7 +103,7 @@ const DrawerNavigator = () => {
         component={BottomTabNavigator}
         options={{
           drawerLabel: 'Map',
-          drawerIcon: ({color, size}) => (
+          drawerIcon: ({ color, size }) => (
             <Icon name="map" size={size} color={color} />
           ),
         }}
@@ -111,7 +113,7 @@ const DrawerNavigator = () => {
         component={BottomTabNavigator}
         options={{
           drawerLabel: 'Health',
-          drawerIcon: ({color, size}) => (
+          drawerIcon: ({ color, size }) => (
             <Icon name="favorite" size={size} color={color} />
           ),
         }}
@@ -121,7 +123,7 @@ const DrawerNavigator = () => {
         component={BottomTabNavigator}
         options={{
           drawerLabel: 'Contacts',
-          drawerIcon: ({color, size}) => (
+          drawerIcon: ({ color, size }) => (
             <Icon name="people" size={size} color={color} />
           ),
         }}
@@ -131,7 +133,7 @@ const DrawerNavigator = () => {
         component={BottomTabNavigator}
         options={{
           drawerLabel: 'Settings',
-          drawerIcon: ({color, size}) => (
+          drawerIcon: ({ color, size }) => (
             <Icon name="settings" size={size} color={color} />
           ),
         }}

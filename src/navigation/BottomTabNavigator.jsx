@@ -1,29 +1,29 @@
 import React from 'react';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-import HomeScreen from '../screens/HomeScreen';
-import MapScreen from '../screens/MapScreen';
-import HealthScreen from '../screens/HealthScreen';
-import ContactsScreen from '../screens/ContactsScreen';
-import SettingsScreen from '../screens/SettingsScreen';
+import HomeScreen from '../screens/homeScreen';
+import MapScreen from '../screens/mapScreen';
+import HealthScreen from '../screens/healthScreen';
+import ContactsScreen from '../screens/contactsScreen';
+import SettingsScreen from '../screens/settingsScreen';
 
 const Tab = createBottomTabNavigator();
 
 const tabConfig = {
-  Home: {icon: 'home', label: 'Home'},
-  Map: {icon: 'map', label: 'Map'},
-  Health: {icon: 'favorite', label: 'Health'},
-  Contacts: {icon: 'people', label: 'Contacts'},
-  Settings: {icon: 'settings', label: 'Settings'},
+  Home: { icon: 'home', label: 'Home' },
+  Map: { icon: 'map', label: 'Map' },
+  Health: { icon: 'favorite', label: 'Health' },
+  Contacts: { icon: 'people', label: 'Contacts' },
+  Settings: { icon: 'settings', label: 'Settings' },
 };
 
 const BottomTabNavigator = () => {
   return (
     <Tab.Navigator
-      screenOptions={({route}) => ({
+      screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({focused, color, size}) => {
+        tabBarIcon: ({ focused, color, size }) => {
           const config = tabConfig[route.name];
           return <Icon name={config.icon} size={size} color={color} />;
         },
@@ -37,7 +37,7 @@ const BottomTabNavigator = () => {
           paddingTop: 8,
           elevation: 20,
           shadowColor: '#000000',
-          shadowOffset: {width: 0, height: -4},
+          shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,
         },
@@ -46,7 +46,8 @@ const BottomTabNavigator = () => {
           fontWeight: '600',
         },
         tabBarLabel: tabConfig[route.name].label,
-      })}>
+      })}
+    >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Health" component={HealthScreen} />
