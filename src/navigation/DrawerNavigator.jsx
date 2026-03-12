@@ -1,12 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
   DrawerItemList,
 } from '@react-navigation/drawer';
+
 import Icon from 'react-native-vector-icons/MaterialIcons';
+
 import BottomTabNavigator from './BottomTabNavigator';
+import AudioStreamScreen from '../screens/audioStream';
+import loginScreen from '../screens/loginScreen';
+import TrustedContactsScreen from '../screens/trustedContactsScreen';
+import AddContactsScreen from '../screens/addContactsScreen';
 
 const Drawer = createDrawerNavigator();
 
@@ -21,8 +27,10 @@ const CustomDrawerContent = props => {
         <View style={styles.profileAvatar}>
           <Icon name="person" size={40} color="#FFFFFF" />
         </View>
+
         <Text style={styles.profileName}>Alex Johnson</Text>
         <Text style={styles.profileEmail}>alex.johnson@email.com</Text>
+
         <View style={styles.statusBadge}>
           <View style={styles.statusDot} />
           <Text style={styles.statusText}>Online</Text>
@@ -46,10 +54,12 @@ const CustomDrawerContent = props => {
           <Icon name="share" size={22} color="#A4B0BE" />
           <Text style={styles.extraItemText}>Share App</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.extraItem}>
           <Icon name="star" size={22} color="#A4B0BE" />
           <Text style={styles.extraItemText}>Rate Us</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.extraItem}>
           <Icon name="privacy-tip" size={22} color="#A4B0BE" />
           <Text style={styles.extraItemText}>Privacy Policy</Text>
@@ -62,6 +72,7 @@ const CustomDrawerContent = props => {
           <Icon name="logout" size={22} color="#FF4757" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
+
         <Text style={styles.version}>Version 1.0.0</Text>
       </View>
     </DrawerContentScrollView>
@@ -98,6 +109,7 @@ const DrawerNavigator = () => {
           ),
         }}
       />
+
       <Drawer.Screen
         name="DrawerMap"
         component={BottomTabNavigator}
@@ -108,6 +120,7 @@ const DrawerNavigator = () => {
           ),
         }}
       />
+
       <Drawer.Screen
         name="DrawerHealth"
         component={BottomTabNavigator}
@@ -118,6 +131,7 @@ const DrawerNavigator = () => {
           ),
         }}
       />
+
       <Drawer.Screen
         name="DrawerContacts"
         component={BottomTabNavigator}
@@ -128,6 +142,7 @@ const DrawerNavigator = () => {
           ),
         }}
       />
+
       <Drawer.Screen
         name="DrawerSettings"
         component={BottomTabNavigator}
@@ -138,19 +153,64 @@ const DrawerNavigator = () => {
           ),
         }}
       />
+
+      <Drawer.Screen
+        name="DrawerAudio"
+        component={AudioStreamScreen}
+        options={{
+          drawerLabel: 'Audio Stream',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="audiotrack" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="DrawerLogin"
+        component={loginScreen}
+        options={{
+          drawerLabel: 'Login',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="login" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="TrustedContactsScreen"
+        component={TrustedContactsScreen}
+        options={{
+          drawerLabel: 'Trusted Contacts',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="AddContactsScreen"
+        component={AddContactsScreen}
+        options={{
+          drawerLabel: 'Add Contacts',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="person-add" size={size} color={color} />
+          ),
+        }}
+      />
     </Drawer.Navigator>
   );
 };
+
+export default DrawerNavigator;
 
 const styles = StyleSheet.create({
   drawerContainer: {
     flex: 1,
   },
+
   profileSection: {
     padding: 20,
     paddingTop: 30,
     alignItems: 'center',
   },
+
   profileAvatar: {
     width: 80,
     height: 80,
@@ -160,16 +220,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+
   profileName: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+
   profileEmail: {
     fontSize: 13,
     color: '#A4B0BE',
     marginTop: 4,
   },
+
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -179,6 +242,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
+
   statusDot: {
     width: 8,
     height: 8,
@@ -186,39 +250,47 @@ const styles = StyleSheet.create({
     backgroundColor: '#2ED573',
     marginRight: 6,
   },
+
   statusText: {
     color: '#2ED573',
     fontSize: 12,
     fontWeight: '600',
   },
+
   divider: {
     height: 1,
     backgroundColor: '#16213E',
     marginHorizontal: 20,
     marginVertical: 10,
   },
+
   drawerItems: {
     paddingTop: 5,
   },
+
   extraSection: {
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
+
   extraItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
   },
+
   extraItemText: {
     color: '#A4B0BE',
     fontSize: 14,
     marginLeft: 15,
   },
+
   bottomSection: {
     paddingHorizontal: 20,
     paddingBottom: 20,
     marginTop: 'auto',
   },
+
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -227,12 +299,14 @@ const styles = StyleSheet.create({
     padding: 12,
     justifyContent: 'center',
   },
+
   logoutText: {
     color: '#FF4757',
     fontSize: 15,
     fontWeight: '600',
     marginLeft: 8,
   },
+
   version: {
     color: '#A4B0BE',
     fontSize: 12,
@@ -240,5 +314,3 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 });
-
-export default DrawerNavigator;

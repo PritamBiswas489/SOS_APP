@@ -74,31 +74,6 @@ const HealthScreen = () => {
           />
         </Svg>
       </View>
-      {/* <View style={styles.ecgContainer}>
-        <Svg height="80" width="100%">
-          <Polyline
-            points="
-            0,40
-            20,40
-            30,20
-            40,60
-            50,40
-            70,40
-            90,20
-            110,60
-            130,40
-            160,40
-            180,20
-            200,60
-            220,40
-            250,40"
-            fill="none"
-            stroke={appColors.primary}
-            strokeWidth="3"
-          />
-        </Svg>
-      </View> */}
-
       {/* Stats Cards */}
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
