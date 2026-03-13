@@ -10,13 +10,13 @@ const styles = StyleSheet.create({
   },
 
   greetingContainer: {
-    paddingHorizontal: 20,
-    marginTop: 50,
-    marginBottom: 50,
+    paddingHorizontal: SW(18),
+    marginTop: SW(55),
+    marginBottom: SW(50),
   },
 
   goodMorning: {
-    color: '#7F8FA6',
+    color: appColors.bodyColor,
     fontSize: SF(14),
     letterSpacing: 1,
   },
@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
     fontSize: SF(30),
     color: appColors.white,
     fontFamily: appFonts.NunitoBold,
-    marginTop: 5,
+    marginTop: SW(3),
   },
 
   /* SOS */
