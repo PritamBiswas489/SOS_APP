@@ -25,19 +25,19 @@ export default StyleSheet.create({
 
   title: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: SF(18),
+    fontFamily: appFonts.NunitoBold,
   },
 
   subtitle: {
-    color: '#6B7C99',
-    fontSize: 11,
+    color: appColors.bodyColor,
+    fontSize: SF(11),
   },
 
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0E1A33',
+    backgroundColor: appColors.secondary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 14,
@@ -47,13 +47,13 @@ export default StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#2ED573',
+    backgroundColor: appColors.green,
     marginRight: 6,
   },
 
   liveText: {
-    color: '#2ED573',
-    fontSize: 11,
+    color: appColors.green,
+    fontSize: SF(11),
   },
 
   /* CONTACT AVATARS */
@@ -71,23 +71,23 @@ export default StyleSheet.create({
 
   avatarItem: {
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: SW(12),
   },
 
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+    width: SW(40),
+    height: SW(40),
+    borderRadius: SW(20),
+    borderWidth: SW(1.5),
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   avatarAdd: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
+    width: SW(40),
+    height: SW(40),
+    borderRadius: SW(20),
+    borderWidth: SW(1.5),
     borderColor: '#4DA3FF',
     borderStyle: 'dashed',
     justifyContent: 'center',
@@ -95,13 +95,14 @@ export default StyleSheet.create({
   },
 
   avatarText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: appColors.white,
+    fontFamily: appFonts.NunitoExtraBold,
   },
 
   avatarLabel: {
-    color: '#6B7C99',
-    fontSize: 11,
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoExtraBold,
+    fontSize: SF(11),
     marginTop: 4,
   },
 
@@ -109,15 +110,16 @@ export default StyleSheet.create({
 
   dayLabel: {
     textAlign: 'center',
-    color: '#6B7C99',
-    fontSize: 11,
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoExtraBold,
+    fontSize: SF(10),
     marginTop: 20,
   },
 
   /* SOS ALERT */
 
   sosCard: {
-    backgroundColor: '#5C141C',
+    backgroundColor: appColors.primaryAA,
     borderRadius: 14,
     marginHorizontal: 20,
     marginTop: 12,
@@ -125,22 +127,23 @@ export default StyleSheet.create({
   },
 
   sosBadge: {
-    backgroundColor: '#8E1D27',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: appColors.primary,
+    paddingHorizontal: SW(7),
+    paddingVertical: SW(3),
     borderRadius: 6,
     alignSelf: 'flex-start',
     marginBottom: 5,
   },
 
   sosBadgeText: {
-    color: '#fff',
-    fontSize: 10,
+    color: appColors.white,
+    fontSize: SF(10),
+    fontFamily: appFonts.NunitoBold,
   },
 
   sosMessage: {
-    color: '#fff',
-    fontSize: 14,
+    color: appColors.white,
+    fontSize: SF(13),
   },
 
   /* GPS CARD */
@@ -148,17 +151,17 @@ export default StyleSheet.create({
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0C2A3A',
-    marginHorizontal: 20,
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 12,
+    backgroundColor: appColors.whiteBdrTransparent,
+    marginHorizontal: SW(18),
+    marginTop: SW(8),
+    padding: SW(8),
+    borderRadius: SW(10),
   },
 
   locationText: {
-    color: '#6B7C99',
-    fontSize: 12,
-    marginLeft: 6,
+    color: appColors.bodyColor,
+    fontSize: SF(11),
+    marginLeft: SF(5),
   },
 
   /* MESSAGE LEFT */
@@ -166,45 +169,45 @@ export default StyleSheet.create({
   messageRowLeft: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginTop: 16,
-    marginLeft: 16,
+    marginTop: SW(14),
+    marginLeft: SW(14),
   },
 
   bubbleLeft: {
-    backgroundColor: '#1C2538',
-    padding: 12,
+    backgroundColor: appColors.whiteBdrTransparent,
+    padding: SW(10),
     borderRadius: 14,
     maxWidth: '68%',
   },
 
   messageText: {
-    color: '#fff',
-    fontSize: 13,
+    color: appColors.white,
+    fontSize: SF(12),
   },
 
   avatarSmallRed: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: SW(25),
+    height: SW(25),
+    borderRadius: SW(25),
     backgroundColor: '#FF3B5C',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
+    marginRight: SW(5),
   },
 
   avatarSmallBlue: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#4DA3FF',
+    width: SW(25),
+    height: SW(25),
+    borderRadius: SW(25),
+    backgroundColor: appColors.blue,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
+    marginRight: SW(5),
   },
 
   avatarSmallText: {
-    color: '#fff',
-    fontSize: 11,
+    color: appColors.white,
+    fontSize: SF(10),
   },
 
   /* MESSAGE RIGHT */
@@ -213,22 +216,22 @@ export default StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
-    marginTop: 16,
-    marginRight: 16,
+    marginTop: SW(15),
+    marginRight: SW(15),
   },
 
   bubbleRight: {
     backgroundColor: '#5C141C',
-    padding: 12,
+    padding: SW(10),
     borderRadius: 14,
     maxWidth: '68%',
   },
 
   avatarSmallPink: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FF3B5C',
+    width: SW(25),
+    height: SW(25),
+    borderRadius: SW(25),
+    backgroundColor: appColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 6,
@@ -237,17 +240,17 @@ export default StyleSheet.create({
   /* TIMES */
 
   timeLeft: {
-    color: '#6B7C99',
-    fontSize: 10,
-    marginLeft: 52,
+    color: appColors.bodyColor,
+    fontSize: SF(10),
+    marginLeft: SW(48),
     marginTop: 4,
   },
 
   timeRight: {
-    color: '#6B7C99',
-    fontSize: 10,
+    color: appColors.bodyColor,
+    fontSize: SF(10),
     textAlign: 'right',
-    marginRight: 52,
+    marginRight: SW(48),
     marginTop: 4,
   },
 
@@ -257,9 +260,9 @@ export default StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     // backgroundColor: '#0E1A33',
-    marginHorizontal: 14,
-    marginBottom: 12,
-    paddingHorizontal: 14,
+    marginHorizontal: SW(12),
+    marginBottom: SW(10),
+    paddingHorizontal: SW(12),
     borderTopColor: appColors.secondary,
     borderTopWidth: 1,
     borderBottomColor: appColors.secondary,
@@ -279,7 +282,7 @@ export default StyleSheet.create({
   },
 
   sendBtn: {
-    backgroundColor: '#FF3B5C',
+    backgroundColor: appColors.primary,
     width: SW(38),
     height: SW(38),
     borderRadius: SW(38),

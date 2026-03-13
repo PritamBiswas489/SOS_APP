@@ -1,57 +1,60 @@
 import { StyleSheet } from 'react-native';
+import appColors from '../../theme/appColors';
+import appFonts from '../../theme/appFonts';
+import { SH, SW, SF } from '../../theme/dimensions';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020B1B',
+    backgroundColor: appColors.DarkPrimary,
   },
 
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    marginBottom: 25,
+    paddingHorizontal: SW(18),
+    paddingTop: SH(50),
+    marginBottom: SW(25),
   },
 
   headerTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: SF(22),
+    fontFamily: appFonts.NunitoBold,
+    color: appColors.white,
   },
 
   headerSub: {
-    fontSize: 12,
-    color: '#6B7C99',
+    fontSize: SF(12),
+    color: appColors.bodyColor,
     marginTop: 3,
   },
 
   section: {
-    color: '#6B7C99',
+    color: appColors.bodyColor,
     marginHorizontal: 20,
     marginTop: 20,
     marginBottom: 10,
-    fontSize: 12,
+    fontSize: SF(12),
     letterSpacing: 1,
   },
 
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: SW(18),
+    paddingVertical: SW(14),
     borderBottomWidth: 1,
-    borderBottomColor: '#0E1A33',
+    borderBottomColor: appColors.whiteTransparent,
   },
 
   iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: SW(34),
+    height: SW(34),
+    borderRadius: SW(10),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: SW(10),
   },
 
   rowText: {
@@ -59,21 +62,21 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    color: appColors.white,
+    fontSize: SF(12),
+    fontFamily: appFonts.NunitoBold,
   },
 
   subtitle: {
-    color: '#6B7C99',
-    fontSize: 12,
+    color: appColors.bodyColor,
+    fontSize: SF(12),
     marginTop: 3,
   },
 
   status: {
-    color: '#00E0A4',
-    fontSize: 13,
-    fontWeight: '600',
+    color: appColors.green,
+    fontSize: SF(13),
+    fontFamily: appFonts.NunitoBold,
   },
 });
 

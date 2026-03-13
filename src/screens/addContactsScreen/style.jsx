@@ -6,35 +6,36 @@ import { SH, SW, SF } from '../../theme/dimensions';
 export default StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020B1B',
-    paddingHorizontal: 20,
+    backgroundColor: appColors.DarkPrimary,
+    paddingHorizontal: SW(18),
   },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: SW(48),
   },
 
   headerText: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: SW(10),
   },
 
   title: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: appColors.white,
+    fontSize: SF(17),
+    fontFamily: appFonts.NunitoBold,
   },
 
   subtitle: {
-    color: '#6B7C99',
-    fontSize: 11,
+    color: appColors.bodyColor,
+    fontSize: SF(10),
+    fontFamily: appFonts.NunitoSemiBold,
   },
 
   photoContainer: {
     alignItems: 'center',
-    marginTop: 25,
+    marginTop: SW(22),
   },
 
   photoCircle: {
@@ -46,7 +47,7 @@ export default StyleSheet.create({
     borderColor: appColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1A1A2E',
+    backgroundColor: appColors.primaryAA,
   },
 
   photoText: {
@@ -156,7 +157,8 @@ export default StyleSheet.create({
 
   saveText: {
     color: appColors.white,
-    fontWeight: '600',
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(13),
   },
 
   cancel: {

@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
     color: appColors.bodyColor,
     fontSize: SF(12),
     marginTop: SW(3),
-    fontFamily: appFonts.NunitoRegular,
+    fontFamily: appFonts.NunitoSemiBold,
   },
 
   heartContainer: {
@@ -34,9 +34,8 @@ const styles = StyleSheet.create({
 
   heartRate: {
     fontSize: SF(48),
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoExtraBold,
     color: appColors.primary,
-    marginTop: 10,
   },
 
   bpm: {
@@ -69,7 +68,6 @@ const styles = StyleSheet.create({
     fontSize: SF(18),
     fontFamily: appFonts.NunitoBold,
     color: appColors.white,
-    // fontWeight: 'bold',
     marginTop: SW(6),
   },
 
@@ -103,7 +101,7 @@ const styles = StyleSheet.create({
 
   progressBar: {
     height: SW(5),
-    backgroundColor: appColors.whiteAA,
+    backgroundColor: appColors.whiteBdrTransparent,
     borderRadius: SW(5),
     overflow: 'hidden',
   },

@@ -30,14 +30,14 @@ const MapScreen = ({ navigation }) => {
 
       {/* MAP */}
 
-      <MapView style={styles.map} region={region} showsUserLocation={false}>
-        {/* USER DOT */}
+      {/* <MapView style={styles.map} region={region} showsUserLocation={false}>
+
 
         <Marker coordinate={{ latitude: 22.7, longitude: 88.45 }}>
           <View style={styles.userDot} />
         </Marker>
 
-        {/* CONTACT MARKER */}
+
 
         <Marker coordinate={{ latitude: 22.701, longitude: 88.451 }}>
           <View style={styles.markerContainer}>
@@ -45,14 +45,14 @@ const MapScreen = ({ navigation }) => {
           </View>
         </Marker>
 
-        {/* SECOND CONTACT */}
+
 
         <Marker coordinate={{ latitude: 22.6985, longitude: 88.448 }}>
           <View style={styles.markerContainer}>
             <Icon name="person-pin-circle" size={34} color="#7B61FF" />
           </View>
         </Marker>
-      </MapView>
+      </MapView> */}
 
       {/* SEARCH BAR */}
 

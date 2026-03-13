@@ -6,7 +6,7 @@ import { SH, SW, SF } from '../../theme/dimensions';
 export default StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020B1B',
+    backgroundColor: appColors.DarkPrimary,
   },
 
   header: {
@@ -19,14 +19,15 @@ export default StyleSheet.create({
 
   title: {
     fontSize: SF(22),
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoBold,
     color: appColors.white,
   },
 
   subtitle: {
     fontSize: SF(12),
+    fontFamily: appFonts.NunitoSemiBold,
     color: appColors.bodyColor,
-    marginTop: 3,
+    marginTop: SW(3),
   },
 
   waveContainer: {
@@ -49,7 +50,7 @@ export default StyleSheet.create({
     color: appColors.primary,
     textAlign: 'center',
     marginTop: SW(16),
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoBold,
   },
 
   recordingRow: {
@@ -128,7 +129,7 @@ export default StyleSheet.create({
 
   statValue: {
     fontSize: SF(16),
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoBold,
     color: appColors.primary,
   },
 

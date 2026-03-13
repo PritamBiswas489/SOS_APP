@@ -18,7 +18,7 @@ export default StyleSheet.create({
   logoBox: {
     width: SW(60),
     height: SH(60),
-    borderRadius: 18,
+    borderRadius: SW(18),
     backgroundColor: appColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -27,7 +27,7 @@ export default StyleSheet.create({
 
   appName: {
     fontSize: SF(24),
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoBlack,
     color: appColors.white,
   },
 
@@ -41,7 +41,7 @@ export default StyleSheet.create({
   welcome: {
     color: appColors.white,
     fontSize: SF(18),
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoBold,
     marginTop: SH(40),
   },
 
@@ -64,7 +64,7 @@ export default StyleSheet.create({
     borderColor: appColors.primary,
     backgroundColor: appColors.primaryAA,
     borderRadius: 14,
-    paddingHorizontal: 12,
+    paddingHorizontal: SW(10),
     marginTop: 8,
   },
 
@@ -105,7 +105,7 @@ export default StyleSheet.create({
     color: appColors.bodyColor,
     fontSize: SF(12),
     textAlign: 'center',
-    fontWeight: '600',
+    fontFamily: appFonts.NunitoBold,
     backgroundColor: appColors.DarkPrimary,
     paddingHorizontal: SW(10),
     zIndex: 1,
@@ -158,7 +158,7 @@ export default StyleSheet.create({
 
   loginText: {
     color: appColors.white,
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoBold,
     fontSize: SF(14),
   },
 

@@ -1,5 +1,5 @@
 const appColors = {
-  DarkPrimary: '#0B1220',
+  DarkPrimary: '#020B1B',
   primary: '#FF3B5C',
   primaryAA: 'rgba(255, 59, 92, 0.1)',
   secondary: '#0E1A33',

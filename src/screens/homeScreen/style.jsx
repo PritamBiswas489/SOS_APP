@@ -22,11 +22,9 @@ const styles = StyleSheet.create({
   },
 
   userName: {
-    // color:'#FFFFFF',
     fontSize: SF(30),
     color: appColors.white,
     fontFamily: appFonts.NunitoBold,
-    fontWeight: 'bold',
     marginTop: 5,
   },
 
@@ -56,14 +54,14 @@ const styles = StyleSheet.create({
 
   sosText: {
     fontSize: SF(34),
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoBold,
     color: appColors.white,
   },
 
   sosSubText: {
     fontSize: SF(12),
     color: appColors.whiteAA,
-    fontFamily: appFonts.NunitoRegular,
+    fontFamily: appFonts.NunitoSemiBold,
     letterSpacing: 2,
     marginTop: 5,
   },
@@ -78,68 +76,62 @@ const styles = StyleSheet.create({
 
   glowRing2: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: SW(180),
+    height: SW(180),
+    borderRadius: SW(90),
     backgroundColor: appColors.primary,
     opacity: 0.4,
   },
-
-  /* Safe Card */
 
   safeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: appColors.lightGreen,
     marginHorizontal: SW(20),
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 25,
+    padding: SW(12),
+    borderRadius: SW(12),
+    marginBottom: SW(20),
   },
-
   greenDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: SW(10),
+    height: SW(10),
+    borderRadius: SW(5),
     backgroundColor: appColors.green,
-    marginRight: 10,
+    marginRight: SW(8),
   },
-
   safeText: {
     color: appColors.green,
-    fontSize: SF(14),
+    fontSize: SF(12),
+    fontFamily: appFonts.NunitoSemiBold,
   },
-
-  /* GRID */
-
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: SW(18),
   },
 
   card: {
     width: '48%',
     backgroundColor: appColors.secondary,
-    paddingVertical: SW(24),
-    paddingHorizontal: SW(20),
+    paddingVertical: SW(20),
+    paddingHorizontal: SW(18),
     borderRadius: SW(20),
-    marginBottom: 15,
+    marginBottom: SW(12),
   },
 
   cardNumber: {
     color: appColors.white,
     fontSize: SF(20),
-    fontWeight: 'bold',
-    marginTop: 10,
+    fontFamily: appFonts.NunitoBold,
+    marginTop: SW(4),
   },
 
   cardLabel: {
     color: appColors.bodyColor,
-    fontFamily: appFonts.NunitoRegular,
-    fontSize: SF(13),
-    marginTop: 4,
+    fontFamily: appFonts.NunitoSemiBold,
+    fontSize: SF(12),
+    marginTop: SW(4),
   },
 });
 

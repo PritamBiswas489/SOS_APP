@@ -21,11 +21,12 @@ const styles = StyleSheet.create({
   title: {
     color: appColors.white,
     fontSize: SF(22),
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoBold,
   },
 
   subtitle: {
     color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoSemiBold,
     fontSize: SF(12),
     marginTop: SW(4),
   },
@@ -36,7 +37,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SW(18),
     paddingVertical: SW(10),
     borderBottomWidth: 1,
-    borderBottomColor: appColors.secondary,
+    borderBottomColor: appColors.whiteTransparent,
   },
 
   avatar: {
@@ -49,7 +50,7 @@ const styles = StyleSheet.create({
 
   avatarText: {
     color: appColors.white,
-    fontWeight: 'bold',
+    fontFamily: appFonts.NunitoExtraBold,
     fontSize: SF(16),
   },
 
@@ -61,13 +62,14 @@ const styles = StyleSheet.create({
   contactName: {
     color: appColors.white,
     fontSize: SF(15),
-    fontWeight: '600',
+    fontFamily: appFonts.NunitoBold,
   },
 
   contactDetails: {
     color: appColors.bodyColor,
     fontSize: SF(12),
     marginTop: SW(3),
+    fontFamily: appFonts.NunitoSemiBold,
   },
 
   statusDot: {
@@ -89,7 +91,8 @@ const styles = StyleSheet.create({
 
   addText: {
     color: appColors.blue,
-    fontWeight: '600',
+    fontSize: SF(13),
+    fontFamily: appFonts.NunitoSemiBold,
   },
 
   infoCard: {
@@ -132,7 +135,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     color: appColors.white,
     fontSize: SF(18),
-    fontWeight: '600',
+    fontFamily: appFonts.NunitoBold,
   },
 
   input: {
@@ -153,7 +156,8 @@ const styles = StyleSheet.create({
 
   saveText: {
     color: appColors.white,
-    fontWeight: '600',
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(14),
   },
 });
 
