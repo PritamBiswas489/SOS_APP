@@ -10,10 +10,10 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import BottomTabNavigator from './BottomTabNavigator';
 import SettingsScreen from '../screens/settingsScreen';
-
+ 
 import AddContactsScreen from '../screens/addContactsScreen';
 import ContactsScreen from '../screens/contactsScreen';
-import analysisScreen from '../screens/analysis';
+ 
 
 const Drawer = createDrawerNavigator();
 
@@ -128,17 +128,6 @@ const DrawerNavigator = () => {
         component={SettingsScreen}
         options={{
           drawerLabel: 'Settings',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="settings" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Drawer.Screen
-        name="Analysis"
-        component={analysisScreen}
-        options={{
-          drawerLabel: 'Analysis',
           drawerIcon: ({ color, size }) => (
             <Icon name="settings" size={size} color={color} />
           ),
