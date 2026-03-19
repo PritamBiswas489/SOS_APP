@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 import styles from './style';
 
 const LoginScreen = () => {
+  const navigation = useNavigation();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputs = useRef([]);
@@ -55,10 +57,10 @@ const LoginScreen = () => {
       <Text style={styles.label}>MOBILE NUMBER</Text>
 
       <View style={styles.inputBox}>
-        <Text style={styles.country}>IN</Text>
+        <Text style={styles.country}>NG</Text>
 
         <TextInput
-          placeholder="+91 98765 4321"
+          placeholder="+234812484262"
           placeholderTextColor="#6B7C99"
           style={styles.input}
         />
@@ -115,7 +117,7 @@ const LoginScreen = () => {
       </View>
 
       {/* BUTTON */}
-      <TouchableOpacity style={styles.loginBtn}>
+      <TouchableOpacity style={styles.loginBtn} onPress={() => navigation.replace('Main')}>
         <Icon name="verified-user" size={18} color="#fff" />
         <Text style={styles.loginText}> Verify & Sign In</Text>
       </TouchableOpacity>

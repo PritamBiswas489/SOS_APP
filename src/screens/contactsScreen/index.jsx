@@ -9,53 +9,60 @@ import {
 } from 'react-native';
 import styles from './style';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 
 const ContactsScreen = () => {
   const [editModal, setEditModal] = useState(false);
+  const navigation = useNavigation();
   const contacts = [
     {
       id: 1,
-      name: 'Mom',
-      relation: 'Family',
-      phone: '+91 98765 43210',
+      name: 'Mr Chinaka',
+     
+      phone: '+234812484262',
       avatar: 'M',
       color: '#FF3B5C',
       active: true,
     },
     {
       id: 2,
-      name: 'Rahul Kumar',
-      relation: 'Friend',
-      phone: '+91 87654 32109',
-      avatar: 'R',
+      name: 'Mr Chima',
+      phone: '+234812484262',
+      avatar: 'C',
       color: '#2F6BFF',
       active: true,
     },
     {
       id: 3,
-      name: 'Priya Singh',
-      relation: 'Colleague',
-      phone: '+91 76543 21098',
-      avatar: 'P',
+      name: 'Mum', 
+      phone: '+234812484262',
+      avatar: 'M',
       color: '#6A4CFF',
       active: false,
     },
     {
       id: 4,
-      name: 'Dad',
-      relation: 'Family',
-      phone: '+91 65432 10987',
-      avatar: 'D',
+      name: 'Kolean W Sanders',
+      phone: '+234812484262',
+      avatar: 'K',
       color: '#FFA726',
       active: true,
     },
   ];
 
+  const gotToAddContactScreen = () => {
+    navigation.navigate('AddContact');
+  };
+
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        <View style={{flex: 1, marginLeft: 12}}>
           <Text style={styles.title}>Contacts</Text>
           <Text style={styles.subtitle}>4 TRUSTED CONTACTS</Text>
         </View>
@@ -75,7 +82,7 @@ const ContactsScreen = () => {
           <View style={styles.contactInfo}>
             <Text style={styles.contactName}>{item.name}</Text>
             <Text style={styles.contactDetails}>
-              {item.relation} • {item.phone}
+                {item.phone}
             </Text>
           </View>
 
@@ -89,7 +96,7 @@ const ContactsScreen = () => {
       ))}
 
       {/* Add Contact */}
-      <TouchableOpacity style={styles.addBtn}>
+      <TouchableOpacity onPress={gotToAddContactScreen} style={styles.addBtn}>
         <Text style={styles.addText}>+ Add Trusted Contact</Text>
       </TouchableOpacity>
 

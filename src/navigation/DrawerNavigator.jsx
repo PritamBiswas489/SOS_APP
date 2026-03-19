@@ -9,10 +9,11 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import BottomTabNavigator from './BottomTabNavigator';
-import AudioStreamScreen from '../screens/audioStream';
-import loginScreen from '../screens/loginScreen';
-import TrustedContactsScreen from '../screens/trustedContactsScreen';
+import SettingsScreen from '../screens/settingsScreen';
+ 
 import AddContactsScreen from '../screens/addContactsScreen';
+import ContactsScreen from '../screens/contactsScreen';
+ 
 
 const Drawer = createDrawerNavigator();
 
@@ -82,6 +83,7 @@ const CustomDrawerContent = props => {
 const DrawerNavigator = () => {
   return (
     <Drawer.Navigator
+      initialRouteName="MainTabs"
       drawerContent={props => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerShown: false,
@@ -95,7 +97,7 @@ const DrawerNavigator = () => {
         drawerLabelStyle: {
           fontSize: 15,
           fontWeight: '500',
-          marginLeft: -15,
+          marginLeft: 0,
         },
       }}
     >
@@ -111,86 +113,23 @@ const DrawerNavigator = () => {
       />
 
       <Drawer.Screen
-        name="DrawerMap"
-        component={BottomTabNavigator}
-        options={{
-          drawerLabel: 'Map',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="map" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Drawer.Screen
-        name="DrawerHealth"
-        component={BottomTabNavigator}
-        options={{
-          drawerLabel: 'Health',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="favorite" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Drawer.Screen
-        name="DrawerContacts"
-        component={BottomTabNavigator}
+        name="Contacts"
+        component={ContactsScreen}
         options={{
           drawerLabel: 'Contacts',
           drawerIcon: ({ color, size }) => (
-            <Icon name="people" size={size} color={color} />
+            <Icon name="chat" size={size} color={color} />
           ),
         }}
       />
 
       <Drawer.Screen
-        name="DrawerSettings"
-        component={BottomTabNavigator}
+        name="Settings"
+        component={SettingsScreen}
         options={{
           drawerLabel: 'Settings',
           drawerIcon: ({ color, size }) => (
             <Icon name="settings" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Drawer.Screen
-        name="DrawerAudio"
-        component={AudioStreamScreen}
-        options={{
-          drawerLabel: 'Audio Stream',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="audiotrack" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="DrawerLogin"
-        component={loginScreen}
-        options={{
-          drawerLabel: 'Login',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="login" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="TrustedContactsScreen"
-        component={TrustedContactsScreen}
-        options={{
-          drawerLabel: 'Trusted Contacts',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="people" size={size} color={color} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="AddContactsScreen"
-        component={AddContactsScreen}
-        options={{
-          drawerLabel: 'Add Contacts',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="person-add" size={size} color={color} />
           ),
         }}
       />

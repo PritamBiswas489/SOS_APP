@@ -1,12 +1,14 @@
 import React from 'react';
+import { TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import HomeScreen from '../screens/homeScreen';
 import MapScreen from '../screens/mapScreen';
 import HealthScreen from '../screens/healthScreen';
-import ContactsScreen from '../screens/contactsScreen';
-import SettingsScreen from '../screens/settingsScreen';
+import AudioStreamScreen from '../screens/audioStream';
+import ChatScreen from '../screens/chatScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -14,15 +16,35 @@ const tabConfig = {
   Home: { icon: 'home', label: 'Home' },
   Map: { icon: 'map', label: 'Map' },
   Health: { icon: 'favorite', label: 'Health' },
-  Contacts: { icon: 'people', label: 'Contacts' },
-  Settings: { icon: 'settings', label: 'Settings' },
+  AudioStream: { icon: 'mic', label: 'Audio' },
+  Chat: { icon: 'chat', label: 'Chat' },
 };
 
 const BottomTabNavigator = () => {
+  const navigation = useNavigation();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerShown: false,
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#1A1A2E',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTitleStyle: {
+          color: '#FFFFFF',
+          fontWeight: '600',
+        },
+        headerTintColor: '#FFFFFF',
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+            style={{ marginLeft: 16 }}
+          >
+            <Icon name="menu" size={26} color="#FFFFFF" />
+          </TouchableOpacity>
+        ),
         tabBarIcon: ({ focused, color, size }) => {
           const config = tabConfig[route.name];
           return <Icon name={config.icon} size={size} color={color} />;
@@ -51,8 +73,8 @@ const BottomTabNavigator = () => {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Health" component={HealthScreen} />
-      <Tab.Screen name="Contacts" component={ContactsScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="AudioStream" component={AudioStreamScreen} />
+      <Tab.Screen name="Chat" component={ChatScreen} />
     </Tab.Navigator>
   );
 };

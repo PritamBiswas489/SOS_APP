@@ -43,10 +43,12 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
+
+      
       {/* Greeting */}
       <View style={styles.greetingContainer}>
         <Text style={styles.goodMorning}>GOOD MORNING,</Text>
-        <Text style={styles.userName}>Sarah Johnson 👋</Text>
+        <Text style={styles.userName}>Vision John 👋</Text>
       </View>
 
       {/* SOS Button */}

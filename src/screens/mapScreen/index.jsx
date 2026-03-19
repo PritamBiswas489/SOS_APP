@@ -1,90 +1,233 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import styles from './style';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const MapScreen = ({ navigation }) => {
-  const [region, setRegion] = useState({
-    latitude: 22.7,
-    longitude: 88.45,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
+const darkMapStyle = [
+  { elementType: 'geometry', stylers: [{ color: '#0a1628' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#4a6a8a' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0a1628' }] },
+  {
+    featureType: 'administrative',
+    elementType: 'geometry.stroke',
+    stylers: [{ color: '#0f2440' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry',
+    stylers: [{ color: '#0f2440' }],
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry.stroke',
+    stylers: [{ color: '#0d1f38' }],
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'geometry',
+    stylers: [{ color: '#122a4a' }],
+  },
+  {
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: [{ color: '#060e1a' }],
+  },
+  {
+    featureType: 'poi',
+    elementType: 'geometry',
+    stylers: [{ color: '#0a1628' }],
+  },
+  {
+    featureType: 'transit',
+    elementType: 'geometry',
+    stylers: [{ color: '#0a1628' }],
+  },
+  {
+    featureType: 'landscape',
+    elementType: 'geometry',
+    stylers: [{ color: '#0a1628' }],
+  },
+];
+
+// Example: New York City
+const USER_LOCATION = { latitude: 40.7128, longitude: -74.006 };
+
+const CONTACT_MARKERS = [
+  {
+    id: 1,
+    coordinate: { latitude: 40.7138, longitude: -74.001 }, // Manhattan
+    color: '#FF3B5C',
+    initial: 'R',
+  },
+  {
+    id: 2,
+    coordinate: { latitude: 40.709, longitude: -74.012 }, // Lower Manhattan
+    color: '#7B61FF',
+    initial: 'P',
+  },
+];
+
+const MapScreen = () => {
+  const mapRef = useRef(null);
+  const [region] = useState({
+    latitude: USER_LOCATION.latitude,
+    longitude: USER_LOCATION.longitude,
+    latitudeDelta: 0.012,
+    longitudeDelta: 0.012,
   });
+  // Simulate API key check
+  const [mapEnabled] = useState(true); // Set to true if API key is available
+
+  const centerOnUser = () => {
+    mapRef.current?.animateToRegion(
+      {
+        ...USER_LOCATION,
+        latitudeDelta: 0.012,
+        longitudeDelta: 0.012,
+      },
+      600,
+    );
+  };
 
   return (
     <View style={styles.container}>
-      {/* HEADER (UNCHANGED) */}
+      {mapEnabled ? (
+        <>
+          {/* MAP */}
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={region}
+            customMapStyle={darkMapStyle}
+            showsUserLocation={false}
+            showsMyLocationButton={false}
+            showsCompass={false}
+            toolbarEnabled={false}
+          >
+            {/* Accuracy radius */}
+            <Circle
+              center={USER_LOCATION}
+              radius={150}
+              fillColor="rgba(0, 180, 150, 0.12)"
+              strokeColor="rgba(0, 200, 170, 0.25)"
+              strokeWidth={1.5}
+            />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
-          <Icon name="menu" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
+            {/* User blue dot */}
+            <Marker coordinate={USER_LOCATION} anchor={{ x: 0.5, y: 0.5 }}>
+              <View style={styles.userDotOuter}>
+                <View style={styles.userDot} />
+              </View>
+            </Marker>
 
-        <Text style={styles.headerTitle}>Map</Text>
+            {/* Contact markers */}
+            {CONTACT_MARKERS.map(marker => (
+              <Marker
+                key={marker.id}
+                coordinate={marker.coordinate}
+                anchor={{ x: 0.5, y: 1 }}
+              >
+                <View style={styles.markerWrapper}>
+                  <View
+                    style={[
+                      styles.markerPin,
+                      { backgroundColor: marker.color },
+                    ]}
+                  >
+                    <Icon name="person" size={16} color="#fff" />
+                  </View>
+                  <View
+                    style={[
+                      styles.markerArrow,
+                      { borderTopColor: marker.color },
+                    ]}
+                  />
+                </View>
+              </Marker>
+            ))}
+          </MapView>
 
-        <TouchableOpacity>
-          <Icon name="my-location" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* MAP */}
-
-      {/* <MapView style={styles.map} region={region} showsUserLocation={false}>
-
-
-        <Marker coordinate={{ latitude: 22.7, longitude: 88.45 }}>
-          <View style={styles.userDot} />
-        </Marker>
-
-
-
-        <Marker coordinate={{ latitude: 22.701, longitude: 88.451 }}>
-          <View style={styles.markerContainer}>
-            <Icon name="person-pin-circle" size={34} color="#FF3B5C" />
+          {/* SEARCH BAR */}
+          <View style={styles.searchBar}>
+            <Icon name="location-pin" size={20} color="#FF3B5C" />
+            <Text style={styles.searchText}>Current Location</Text>
+            <TouchableOpacity style={styles.searchBtn} onPress={centerOnUser}>
+              <Icon name="my-location" size={18} color="#4DA3FF" />
+            </TouchableOpacity>
           </View>
-        </Marker>
 
+          {/* LOCATION CARD */}
+          <View style={styles.locationCard}>
+            <View style={styles.locationLeft}>
+              <View style={styles.redDotContainer}>
+                <View style={styles.redDot} />
+                <View style={styles.redDotLine} />
+              </View>
 
+              <View>
+                <Text style={styles.locationTitle}>California, US</Text>
+                <Text style={styles.locationSub}>
+                  Updated 2 sec ago ·{'\n'}Accuracy ±4m
+                </Text>
+              </View>
+            </View>
 
-        <Marker coordinate={{ latitude: 22.6985, longitude: 88.448 }}>
-          <View style={styles.markerContainer}>
-            <Icon name="person-pin-circle" size={34} color="#7B61FF" />
+            <View style={styles.liveBadge}>
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
           </View>
-        </Marker>
-      </MapView> */}
+        </>
+      ) : (
+        <>
+          <View style={styles.container}>
+            {/* HEADER (UNCHANGED) */}
 
-      {/* SEARCH BAR */}
+            <View style={styles.header}>
+              
 
-      <View style={styles.searchBar}>
-        <Icon name="location-pin" size={18} color="#FF3B5C" />
+              <Text style={styles.headerTitle}>Map</Text>
 
-        <Text style={styles.searchText}>Current Location</Text>
+              <TouchableOpacity>
+                <Icon name="my-location" size={28} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.searchBtn}>
-          <Icon name="search" size={18} color="#fff" />
-        </View>
-      </View>
+            {/* SEARCH BAR */}
 
-      {/* LOCATION CARD */}
+            <View style={styles.searchBar}>
+              <Icon name="location-pin" size={18} color="#FF3B5C" />
 
-      <View style={styles.locationCard}>
-        <View style={styles.locationLeft}>
-          <View style={styles.redDot} />
+              <Text style={styles.searchText}>Current Location</Text>
 
-          <View>
-            <Text style={styles.locationTitle}>Madhyamgram, WB</Text>
+              <View style={styles.searchBtn}>
+                <Icon name="search" size={18} color="#fff" />
+              </View>
+            </View>
 
-            <Text style={styles.locationSub}>
-              Updated 2 sec ago · Accuracy ±4m
-            </Text>
+            {/* LOCATION CARD */}
+
+            <View style={styles.locationCard}>
+              <View style={styles.locationLeft}>
+                <View style={styles.redDot} />
+
+                <View>
+                  <Text style={styles.locationTitle}>California, US</Text>
+
+                  <Text style={styles.locationSub}>
+                    Updated 2 sec ago · Accuracy ±4m
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.liveBadge}>
+                <Text style={styles.liveText}>LIVE</Text>
+              </View>
+            </View>
           </View>
-        </View>
-
-        <View style={styles.liveBadge}>
-          <Text style={styles.liveText}>LIVE</Text>
-        </View>
-      </View>
+        </>
+      )}
     </View>
   );
 };

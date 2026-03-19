@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Switch, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Switch, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 import styles from './style';
 
 const SettingsScreen = () => {
+  const navigation = useNavigation();
   const [autoSOS, setAutoSOS] = useState(true);
   const [gpsTracking, setGpsTracking] = useState(true);
   const [dangerAlert, setDangerAlert] = useState(true);
@@ -48,7 +50,11 @@ const SettingsScreen = () => {
     <ScrollView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <View>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        <View style={{flex: 1, marginLeft: 12}}>
           <Text style={styles.headerTitle}>Settings</Text>
           <Text style={styles.headerSub}>DEVICE CONFIGURATION</Text>
         </View>

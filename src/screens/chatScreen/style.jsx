@@ -9,6 +9,10 @@ export default StyleSheet.create({
     backgroundColor: '#020B1B',
   },
 
+  chatScroll: {
+    flex: 1,
+  },
+
   /* HEADER */
 
   header: {
@@ -37,7 +41,9 @@ export default StyleSheet.create({
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: appColors.secondary,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: appColors.green,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 14,
@@ -106,6 +112,13 @@ export default StyleSheet.create({
     marginTop: 4,
   },
 
+  selectedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 4,
+  },
+
   /* DAY */
 
   dayLabel: {
@@ -118,12 +131,17 @@ export default StyleSheet.create({
 
   /* SOS ALERT */
 
+  sosContainer: {
+    alignItems: 'flex-end',
+    marginHorizontal: SW(20),
+    marginTop: SW(12),
+  },
+
   sosCard: {
     backgroundColor: appColors.primaryAA,
     borderRadius: 14,
-    marginHorizontal: 20,
-    marginTop: 12,
     padding: 14,
+    maxWidth: '85%',
   },
 
   sosBadge: {
@@ -146,14 +164,33 @@ export default StyleSheet.create({
     fontSize: SF(13),
   },
 
+  sosTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginRight: SW(20),
+    marginTop: SW(6),
+  },
+
+  sosTimeText: {
+    color: appColors.bodyColor,
+    fontSize: SF(10),
+    fontFamily: appFonts.NunitoRegular,
+    marginRight: SW(8),
+  },
+
   /* GPS CARD */
+
+  locationContainer: {
+    alignItems: 'flex-end',
+    marginHorizontal: SW(20),
+    marginTop: SW(6),
+  },
 
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: appColors.whiteBdrTransparent,
-    marginHorizontal: SW(18),
-    marginTop: SW(8),
     padding: SW(8),
     borderRadius: SW(10),
   },
@@ -165,6 +202,25 @@ export default StyleSheet.create({
   },
 
   /* MESSAGE LEFT */
+
+  bubbleLeftWrapper: {
+    marginTop: SW(14),
+    marginLeft: SW(14),
+    maxWidth: '75%',
+  },
+
+  messageFooterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SW(6),
+  },
+
+  timeLeftInline: {
+    color: appColors.bodyColor,
+    fontSize: SF(10),
+    fontFamily: appFonts.NunitoRegular,
+    marginLeft: SW(6),
+  },
 
   messageRowLeft: {
     flexDirection: 'row',
@@ -255,6 +311,15 @@ export default StyleSheet.create({
   },
 
   /* INPUT BAR */
+
+  micBtn: {
+    width: SW(36),
+    height: SW(36),
+    borderRadius: SW(18),
+    backgroundColor: appColors.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   inputContainer: {
     flexDirection: 'row',
