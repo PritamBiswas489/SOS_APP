@@ -180,7 +180,7 @@ const AnalysisScreen = () => {
           </View>
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.emergencyTitle}>EMERGENCY ID CODE</Text>
+            <Text style={styles.emergencyTitle}>LICENSE NUMBER</Text>
             <Text style={styles.emergencyCode}>SG • 4821 • JHN</Text>
           </View>
 

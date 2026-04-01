@@ -50,7 +50,7 @@ const AddContactsScreen = () => {
         <Icon name="person" size={18} color="#6B7C99" />
         <TextInput
           style={styles.input}
-          placeholder="Ananya Sharma"
+          placeholder="Vision John"
           placeholderTextColor="#A4B0BE"
         />
       </View>
@@ -63,7 +63,7 @@ const AddContactsScreen = () => {
         <Icon name="phone-android" size={18} color="#4DA3FF" />
         <TextInput
           style={styles.input}
-          placeholder="+91 99887 76655"
+          placeholder="+234812484262"
           placeholderTextColor="#A4B0BE"
         />
       </View>
@@ -102,7 +102,7 @@ const AddContactsScreen = () => {
         <Icon name="email" size={18} color="#6B7C99" />
         <TextInput
           style={styles.input}
-          placeholder="ananya@email.com"
+          placeholder="vision.john@email.com"
           placeholderTextColor="#A4B0BE"
         />
       </View>

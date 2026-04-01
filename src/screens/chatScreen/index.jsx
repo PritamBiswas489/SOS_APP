@@ -16,25 +16,25 @@ const ChatScreen = () => {
   const navigation = useNavigation();
   const contacts = [
     {
-      name: 'Mom',
+      name: 'Mr Chinaka',
       initial: 'M',
       borderColor: '#2ED573',
       bgColor: '#0B2F2A',
     },
     {
-      name: 'Rahul',
+      name: 'Mr Chima',
       initial: 'R',
       borderColor: '#FF3B5C',
       bgColor: '#2A0F14',
     },
     {
-      name: 'Priya',
+      name: 'Mum',
       initial: 'P',
       borderColor: '#7B61FF',
       bgColor: '#1B1430',
     },
     {
-      name: 'Dad',
+      name: 'Kolean W Sanders',
       initial: 'D',
       borderColor: '#FFA502',
       bgColor: '#2A200F',
