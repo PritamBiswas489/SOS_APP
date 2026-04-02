@@ -9,6 +9,7 @@ import DrawerNavigator from './src/navigation/DrawerNavigator';
 import SplashScreen from './src/screens/splashScreen/index.jsx';
 import LoginScreen from './src/screens/loginScreen/index.jsx';
 import AddContactsScreen from './src/screens/addContactsScreen/index.jsx';
+import ProcessScreen from './src/screens/processScreen/index.jsx';
 
 const toastConfig = {
   success: (props) => (
@@ -52,6 +53,7 @@ const App = () => {
             initialRouteName="Splash"
             screenOptions={{headerShown: false}}>
             <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen name="Process" component={ProcessScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="AddContact" component={AddContactsScreen} />
             <Stack.Screen name="Main" component={DrawerNavigator} />

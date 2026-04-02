@@ -7,7 +7,7 @@ const SplashScreen = () => {
   const navigation = useNavigation();
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace('Login');
+      navigation.replace('Process', { action: 'retrieveDataAfterLogin' });
     }, 200);
     return () => clearTimeout(timer);
   }, [navigation]);

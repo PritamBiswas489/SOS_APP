@@ -26,7 +26,7 @@ const CountryListModal = ({ visible, onSelectCountry, onClose }) => {
   );
 
   return (
-    <Modal visible={visible} animationType="slide">
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerText}>Select Country</Text>

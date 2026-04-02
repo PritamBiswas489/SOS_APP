@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,20 +9,122 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import styles from './style';
+import { useNavigation } from '@react-navigation/native';
+import CountryListModal from '../../components/countryListModal';
+import { countries } from '../../config/countries';
+import PhoneContactModal from '../../components/phoneContactModal';
+import { Alert } from 'react-native';
+import useToast from '../../hook/useToast';
+import { TrustecContactService } from '../../services/trustecContact.service';
+
+const getFlagEmoji = countryCode => {
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+};
+const getDeviceCountryCode = () => {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale; // e.g., "en-NG"
+    const parts = locale.split('-');
+    return parts[parts.length - 1].toUpperCase();
+  } catch {
+    return null;
+  }
+};
 
 const AddContactsScreen = () => {
+  const navigation = useNavigation();
+  const {showError, showSuccess} = useToast();
   const [relationship, setRelationship] = useState('Friend');
   const [sosAlert, setSosAlert] = useState(true);
   const [shareLocation, setShareLocation] = useState(true);
-
   const relations = ['Family', 'Friend', 'Colleague', 'Other'];
+  const [selectedCountry, setSelectedCountry] = useState({
+    name: 'Nigeria',
+    code:  'NG',
+    dial_code: '+234',
+  });
+  const [userPhone, setUserPhone] = useState('');
+  const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
+  const [isPhoneBookModalVisible, setIsPhoneBookModalVisible] = useState(false);
+  const [fullName, setFullName] = useState('');
+   const [deviceCountryCode, setDeviceCountryCode] = useState(
+      getDeviceCountryCode() || 'NG',
+    ); // Default to 'NG' if detection fails
+
+    useEffect(() => {
+      if (deviceCountryCode) {
+        const match = countries.find(c => c.code === deviceCountryCode);
+        if (match) setSelectedCountry(match);
+        console.log(
+          'Detected country code:',
+          deviceCountryCode,
+          'Selected country:',
+          match,
+        );
+         
+      }
+    }, [deviceCountryCode]);
+
+  const handleSelectCountry = country => {
+    setSelectedCountry(country);
+    setIsCountryModalVisible(false);
+  };
+
+  const handleSelectPhoneContact = ({ name, phone }) => {
+    setFullName(name);
+    // Strip leading + and country code by attempting to match a known dial code,
+    // otherwise just set the raw number so the user can adjust.
+    const matched = [selectedCountry, ...countries].find(
+      c => phone.startsWith(c.dial_code),
+    );
+    if (matched) {
+      setSelectedCountry(matched);
+      setUserPhone(phone.slice(matched.dial_code.length).replace(/\D/g, ''));
+    } else {
+      setUserPhone(phone.replace(/\D/g, ''));
+    }
+    setIsPhoneBookModalVisible(false);
+  };
+  const handleSaveContact = async () => {
+    if (!fullName.trim() || !userPhone.trim()) {
+      showError('Please fill in all required fields');
+      return;
+    }
+    const fullPhone = `${selectedCountry.dial_code}${userPhone}`;
+    const contactData = {
+      name: fullName,
+      mobile_number: fullPhone,
+      relationship: relationship.toLowerCase(),
+    };
+
+    console.log('Constructed contact data:', contactData);
+    const saveContact = await new Promise((resolve, reject) => {
+      TrustecContactService.saveTrustedContact(contactData, response => {
+        if (response.success) {
+          resolve(response.data);
+          showSuccess('SUCCESS','Trusted contact saved successfully');
+          navigation.goBack();
+        } else {
+          reject(
+            new Error(response?.error || 'Failed to save trusted contact'),
+          );
+          showError('ERROR', response?.error || 'Failed to save trusted contact');
+        }
+      });
+    });
+  }
 
   return (
     <ScrollView style={styles.container}>
       {/* HEADER */}
 
       <View style={styles.header}>
-        <Icon name="arrow-back" size={22} color="#fff" />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
 
         <View style={styles.headerText}>
           <Text style={styles.title}>Add Contact</Text>
@@ -30,16 +132,6 @@ const AddContactsScreen = () => {
         </View>
 
         <Icon name="person" size={24} color="#6B7C99" />
-      </View>
-
-      {/* PHOTO */}
-
-      <View style={styles.photoContainer}>
-        <TouchableOpacity style={styles.photoCircle}>
-          <Icon name="person" size={28} color="#A4B0BE" />
-        </TouchableOpacity>
-
-        <Text style={styles.photoText}>TAP TO ADD PHOTO</Text>
       </View>
 
       {/* FULL NAME */}
@@ -52,6 +144,8 @@ const AddContactsScreen = () => {
           style={styles.input}
           placeholder="Vision John"
           placeholderTextColor="#A4B0BE"
+          value={fullName}
+          onChangeText={setFullName}
         />
       </View>
 
@@ -59,14 +153,42 @@ const AddContactsScreen = () => {
 
       <Text style={styles.label}>MOBILE NUMBER</Text>
 
+      <TouchableOpacity
+        style={styles.phonebookBtn}
+        onPress={() => setIsPhoneBookModalVisible(true)}
+      >
+        <Icon name="contacts" size={16} color="#2F6BFF" />
+        <Text style={styles.phonebookBtnText}>Pick from Phonebook</Text>
+      </TouchableOpacity>
+
       <View style={styles.inputBox}>
-        <Icon name="phone-android" size={18} color="#4DA3FF" />
+        <TouchableOpacity onPress={() => setIsCountryModalVisible(true)}>
+          <Text style={styles.country}>
+            {getFlagEmoji(selectedCountry.code)} {selectedCountry.dial_code}
+          </Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
-          placeholder="+234812484262"
+          placeholder="1234567890"
           placeholderTextColor="#A4B0BE"
+          keyboardType="phone-pad"
+          maxLength={15}
+          value={userPhone}
+          onChangeText={setUserPhone}
         />
       </View>
+
+      <CountryListModal
+        visible={isCountryModalVisible}
+        onSelectCountry={handleSelectCountry}
+        onClose={() => setIsCountryModalVisible(false)}
+      />
+
+      <PhoneContactModal
+        visible={isPhoneBookModalVisible}
+        onSelectContact={handleSelectPhoneContact}
+        onClose={() => setIsPhoneBookModalVisible(false)}
+      />
 
       {/* RELATIONSHIP */}
 
@@ -94,21 +216,7 @@ const AddContactsScreen = () => {
         ))}
       </View>
 
-      {/* EMAIL */}
-
-      <Text style={styles.label}>EMAIL (OPTIONAL)</Text>
-
-      <View style={styles.inputBox}>
-        <Icon name="email" size={18} color="#6B7C99" />
-        <TextInput
-          style={styles.input}
-          placeholder="vision.john@email.com"
-          placeholderTextColor="#A4B0BE"
-        />
-      </View>
-
       {/* SOS ALERT */}
-
       <View style={styles.toggleCard}>
         <View style={styles.toggleLeft}>
           <Icon name="notifications" size={18} color="#FF4757" />
@@ -149,11 +257,12 @@ const AddContactsScreen = () => {
 
       {/* SAVE BUTTON */}
 
-      <TouchableOpacity style={styles.saveBtn}>
+      <TouchableOpacity onPress={handleSaveContact} style={styles.saveBtn}>
         <Text style={styles.saveText}>✓ Save Trusted Contact</Text>
       </TouchableOpacity>
-
-      <Text style={styles.cancel}>Cancel</Text>
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Text style={styles.cancel}>Cancel</Text>
+      </TouchableOpacity>
 
       <View style={{ height: 60 }} />
     </ScrollView>

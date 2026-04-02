@@ -31,6 +31,40 @@ const styles = StyleSheet.create({
     marginTop: SW(4),
   },
 
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: SW(18),
+    marginBottom: SW(12),
+    backgroundColor: appColors.secondary,
+    borderRadius: SW(12),
+    padding: SW(4),
+  },
+
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: SW(10),
+    paddingVertical: SW(10),
+    paddingHorizontal: SW(6),
+  },
+
+  activeTabButton: {
+    backgroundColor: appColors.blue,
+  },
+
+  tabText: {
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoSemiBold,
+    fontSize: SF(10),
+    textAlign: 'center',
+  },
+
+  activeTabText: {
+    color: appColors.white,
+    fontFamily: appFonts.NunitoBold,
+  },
+
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -76,6 +110,22 @@ const styles = StyleSheet.create({
     width: SW(10),
     height: SW(10),
     borderRadius: SW(5),
+    marginRight: SW(10),
+  },
+
+  actionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  actionIconButton: {
+    width: SW(30),
+    height: SW(30),
+    borderRadius: SW(15),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: appColors.secondary,
+    marginLeft: SW(6),
   },
 
   addBtn: {

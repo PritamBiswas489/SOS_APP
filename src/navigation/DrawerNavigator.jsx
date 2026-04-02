@@ -14,8 +14,26 @@ import SettingsScreen from '../screens/settingsScreen';
 import AddContactsScreen from '../screens/addContactsScreen';
 import ContactsScreen from '../screens/contactsScreen';
 import analysisScreen from '../screens/analysis';
+import { Alert } from 'react-native';
+ 
+import { UserService } from '../services/user.service';
+ 
 
 const Drawer = createDrawerNavigator();
+
+const logoutProcess = async navigation => {
+  try {
+    await UserService.logout();
+    Alert.alert('Logged Out', 'You have been logged out successfully.');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
+  } catch (error) {
+    console.error('Logout failed:', error);
+    Alert.alert('Logout Failed', 'Unable to logout. Please try again.');
+  }
+};
 
 const CustomDrawerContent = props => {
   return (
@@ -69,7 +87,10 @@ const CustomDrawerContent = props => {
 
       {/* Logout */}
       <View style={styles.bottomSection}>
-        <TouchableOpacity style={styles.logoutBtn}>
+        <TouchableOpacity
+          onPress={() => logoutProcess(props.navigation)}
+          style={styles.logoutBtn}
+        >
           <Icon name="logout" size={22} color="#FF4757" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>

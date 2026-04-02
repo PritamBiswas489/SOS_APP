@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,31 +8,71 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Spinner from 'react-native-loading-spinner-overlay';
-import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
 import styles from './style';
 import CountryListModal from '../../components/countryListModal';
 import { Alert } from 'react-native';
-export const getFlagEmoji = (countryCode) => {
-  const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt(0));
+import { LoginService } from '../../services/login.service';
+import useToast from '../../hook/useToast';
+import { countries } from '../../config/countries';
+import { setAuthTokens } from '../../config/auth'; 
+
+export const getFlagEmoji = countryCode => {
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
+};
+const getDeviceCountryCode = () => {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale; // e.g., "en-NG"
+    const parts = locale.split('-');
+    return parts[parts.length - 1].toUpperCase();
+  } catch {
+    return null;
+  }
 };
 const LoginScreen = () => {
   const navigation = useNavigation();
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '']);
   const [isGetOtp, setIsGetOtp] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState({ name: 'Nigeria', code: 'NG', dial_code: '+234' });
+  const [selectedCountry, setSelectedCountry] = useState({
+    name: 'Nigeria',
+    code: 'NG',
+    dial_code: '+234',
+  });
   const [userPhone, setUserPhone] = useState('');
+  const [deviceCountryCode, setDeviceCountryCode] = useState(
+    getDeviceCountryCode() || 'NG',
+  ); // Default to 'NG' if detection fails
   const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const handleSelectCountry = (country) => {
+  const { showError, showSuccess } = useToast();
+
+  useEffect(() => {
+    if (deviceCountryCode) {
+      const match = countries.find(c => c.code === deviceCountryCode);
+      if (match) setSelectedCountry(match);
+      console.log(
+        'Detected country code:',
+        deviceCountryCode,
+        'Selected country:',
+        match,
+      );
+      if (deviceCountryCode === 'IN') {
+        setUserPhone('9830990065');
+      }
+    }
+  }, [deviceCountryCode]);
+  const handleSelectCountry = country => {
     console.log('Selected Country:', country);
     setSelectedCountry(country);
     setIsCountryModalVisible(false);
-  }
+  };
   const handleCloseCountryModal = () => {
     setIsCountryModalVisible(false);
-  }
+  };
   const [activeIndex, setActiveIndex] = useState(0);
   const inputs = useRef([]);
 
@@ -53,23 +93,113 @@ const LoginScreen = () => {
       setActiveIndex(index - 1);
     }
   };
-  const getLoginOtp = () => {
+  const openCountryModal = () => {
+    setIsCountryModalVisible(true);
+  };
+  const getLoginOtp = async () => {
     setIsLoading(true);
-  //phone number validation
-    const phoneRegex = /^[0-9]{10,15}$/;
-    if (!phoneRegex.test(userPhone)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Phone Number',
-        text2: 'Please enter a valid phone number.',
+    try {
+      const phoneRegex = /^[0-9]{10,15}$/;
+      if (!phoneRegex.test(userPhone)) {
+        showError('Invalid Phone Number', 'Please enter a valid phone number.');
+        setIsLoading(false);
+        return;
+      }
+      const fullPhoneNumber = `${selectedCountry.dial_code}${userPhone}`;
+      const payload = { phoneNumber: fullPhoneNumber };
+      const requestOtp = await new Promise((resolve, reject) => {
+        LoginService.requestOtp(payload, response => {
+          console.log('OTP Request Response:', response);
+          if (response.success === true) {
+            resolve(response);
+          } else {
+            reject(new Error(response?.error || 'OTP request failed'));
+          }
+        });
       });
       setIsLoading(false);
-      return;
+      showSuccess(
+        'SUCCESS',
+        requestOtp?.data?.message || 'OTP sent successfully',
+      );
+      console.log('otpCode', requestOtp?.data?.data?.otpCode);
+      setIsGetOtp(true);
+      const splitItpCode = requestOtp?.data?.data?.otpCode.split('');
+      setOtp(splitItpCode);
+    } catch (error) {
+      console.error('OTP Request Error:', error);
+      setIsLoading(false);
+      showError(
+        'OTP Request Failed',
+        'Unable to request OTP. Please try again.',
+      );
+    }
+    // Proceed with OTP request
+  };
+  const verfiyOtp = async () => {
+    setIsLoading(true);
+    try {
+      const enteredOtp = otp.join('');
+      if (enteredOtp.length < 4) {
+        showError('Invalid OTP', 'Please enter the complete 4-digit OTP.');
+        return;
+      }
+      // Proceed with OTP verification (e.g., API call)
+      const verifyPayload = {
+        phoneNumber: `${selectedCountry.dial_code}${userPhone}`,
+        otp: enteredOtp,
+      };
+      const verifyOtp = await new Promise((resolve, reject) => {
+        LoginService.verifyOtp(verifyPayload, response => {
+          console.log('OTP Verify Response:', response);
+          if (response.success === true) {
+            resolve(response);
+          } else {
+            reject(
+              new Error(response?.error || 'OTP verification failed'),
+            );
+          }
+        });
+      });
+     const processUserLogin = await new Promise((resolve, reject) => {
+        LoginService.processLogin({ phoneNumber: `${selectedCountry.dial_code}${userPhone}` }, response => {
+          console.log('Process Login Response:', response);
+          if (response.success === true) {
+              resolve(response);
+          } else {
+            reject(
+              new Error(response?.error || 'Login processing failed'),
+            );
+          }
+        });
+     });
+      const accessToken = processUserLogin?.data?.data?.accessToken; 
+      const refreshToken = processUserLogin?.data?.data?.refreshToken;
+      await setAuthTokens(accessToken, refreshToken);
+      console.log('Access Token:', accessToken);
+      console.log('Refresh Token:', refreshToken);
+      const userData = processUserLogin?.data?.data?.user;
+      console.log('User Data:', userData);
+      setIsLoading(false);
+      showSuccess(
+        'SUCCESS',
+        processUserLogin?.data?.message || 'OTP verified successfully and login processed',
+      );
+      navigation.replace('Process',{action: 'retrieveDataAfterLogin'});
+    } catch (error) {
+      setIsLoading(false);
+      console.error('OTP Verify Error:', error);
+      showError(
+        'OTP Verification Failed',
+        error?.message || 'Unable to verify OTP. Please try again.',
+      );
     }
   };
 
   return (
     <ScrollView style={styles.container}>
+      {/* BACK BUTTON */}
+
       {/* LOGO */}
       <View style={styles.logoContainer}>
         <View style={styles.logoBox}>
@@ -77,9 +207,9 @@ const LoginScreen = () => {
         </View>
 
         <Text style={styles.appName}>
-          Safe<Text style={{ color: '#ff3b5c' }}>Guard</Text>
+          KobyTech<Text style={{ color: '#ff3b5c' }}>SilentGuard</Text>
         </Text>
-        <Text style={styles.tagline}>PERSONAL SAFETY NETWORK</Text>
+        <Text style={styles.tagline}>PERSONAL SILENT ASSISTANT</Text>
       </View>
       {/* WELCOME */}
       <Text style={styles.welcome}>Welcome</Text>
@@ -89,8 +219,10 @@ const LoginScreen = () => {
       <Text style={styles.label}>MOBILE NUMBER</Text>
 
       <View style={styles.inputBox}>
-        <TouchableOpacity onPress={() => setIsCountryModalVisible(true)}>
-            <Text style={styles.country}>{getFlagEmoji(selectedCountry.code)} {selectedCountry.dial_code}</Text>
+        <TouchableOpacity onPress={openCountryModal} disabled={isGetOtp}>
+          <Text style={[styles.country, isGetOtp && { opacity: 0.4 }]}>
+            {getFlagEmoji(selectedCountry.code)} {selectedCountry.dial_code}
+          </Text>
         </TouchableOpacity>
         <TextInput
           placeholder="1234567890"
@@ -98,7 +230,8 @@ const LoginScreen = () => {
           style={styles.input}
           keyboardType="phone-pad"
           maxLength={15}
-          onChangeText={(text) => {
+          value={userPhone}
+          onChangeText={text => {
             setUserPhone(text);
           }}
           editable={isGetOtp ? false : true}
@@ -106,10 +239,7 @@ const LoginScreen = () => {
       </View>
 
       {!isGetOtp && (
-        <TouchableOpacity
-          style={styles.loginBtn}
-          onPress={getLoginOtp}
-        >
+        <TouchableOpacity style={styles.loginBtn} onPress={getLoginOtp}>
           <Icon name="sms" size={18} color="#fff" />
           <Text style={styles.loginText}> Get OTP</Text>
         </TouchableOpacity>
@@ -122,7 +252,6 @@ const LoginScreen = () => {
             <View style={styles.otpBoxLine}></View>
           </View>
           <Text style={styles.label}>ONE-TIME PASSWORD</Text>
-
           <View style={styles.otpRow}>
             {otp.map((digit, index) => (
               <TextInput
@@ -158,27 +287,41 @@ const LoginScreen = () => {
           </View>
 
           {/* BUTTON */}
-          <TouchableOpacity
-            style={styles.loginBtn}
-            onPress={() => navigation.replace('Main')}
-          >
+          <TouchableOpacity style={styles.loginBtn} onPress={verfiyOtp}>
             <Icon name="verified-user" size={18} color="#fff" />
             <Text style={styles.loginText}> Verify & Sign In</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.loginBtn}
+            onPress={() => {
+              if (isGetOtp) {
+                setIsGetOtp(false);
+                setOtp(['', '', '', '']);
+              }
+            }}
+          >
+            <Icon name="arrow-back" size={24} color="#fff" />
+            <Text style={{ color: '#fff', marginLeft: 8 }}>Edit Number</Text>
+          </TouchableOpacity>
+
           {/* RESEND */}
-          <Text style={styles.resend}>Didn't receive OTP? Resend in 00:42</Text>
+          {/* <Text style={styles.resend}>Didn't receive OTP? Resend in 00:42</Text> */}
         </>
       )}
 
-      <CountryListModal visible={isCountryModalVisible} onSelectCountry={handleSelectCountry} onClose={handleCloseCountryModal} />
+      <CountryListModal
+        visible={isCountryModalVisible}
+        onSelectCountry={handleSelectCountry}
+        onClose={handleCloseCountryModal}
+      />
 
       <View style={{ height: 60 }} />
       <Spinner
-          visible={isLoading}
-          textContent={'Processing...'}
-          textStyle={{ color: '#FFF' }}
-        />
+        visible={isLoading}
+        textContent={'Processing...'}
+        textStyle={{ color: '#FFF' }}
+      />
     </ScrollView>
   );
 };

@@ -5,12 +5,12 @@ import { useNavigation } from '@react-navigation/native';
 import { Alert } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { getAppUrl } from './utility';
-import { getValue } from '@src/utils/localstorage';
+import * as storeage from "../utils/localstorage/index.jsx";
 
 const app_url =  getAppUrl();
-console.log(app_url + '/api/v1');
+console.log(app_url + '/api-mobile/auth');
 const api = axios.create({
-	baseURL: app_url + '/api/v1',
+	baseURL: app_url + '/api-mobile/auth',
 	timeout: 15000,
 });
 
@@ -25,22 +25,14 @@ const resetStateData = ()=>{
 
 api.interceptors.request.use(async (config) => {
 	const {accessToken, refreshToken} = await getAuthTokens();
-    const languageCode = await getValue('languageCode');
+    const languageCode = await storeage.getValue('languageCode');
 	 
-	if(config.method!=='get'){
-		config.headers = {
-            ...config.headers,
-			'Content-Type': 'multipart/form-data',
-			'Authorization': 'Bearer ' + accessToken,
-            'X-localization': languageCode || 'en',  
-		};
-	}else{
-		config.headers = {
-            ...config.headers,
-			'Authorization': 'Bearer ' + accessToken,
-            'X-localization': languageCode || 'en', 
-		};
-	}
+	config.headers = {
+    ...config.headers,
+    Authorization: 'Bearer ' + accessToken,
+    refreshToken: refreshToken,
+    'X-localization': languageCode || 'en',
+  };
     // console.log(config.headers)
 	const fullRequestUrl = `${config.baseURL}${config.url}`;
 	console.log('Request URL:', fullRequestUrl);
@@ -57,6 +49,8 @@ api.interceptors.response.use(async (res) => {
     }
     if (res?.data?.status === 401) {
         resetStateData();
+        return Promise.reject(new Error('UNAUTHORIZED'));
+         
     }
     return res;
 }, error => {
@@ -73,6 +67,8 @@ api.interceptors.response.use(async (res) => {
         // Something happened in setting up the request that triggered an Error
         console.error('Error Message:', error.message);
     }
-    return Promise.reject(error);
+     console.log("================================")
+    console.error(error?.response?.data?.error?.message);
+    return Promise.reject(error?.response?.data?.error?.message ?  new Error(error.response.data.error.message) : error);
 });
 export default api;

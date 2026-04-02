@@ -6,19 +6,24 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  RefreshControl,
 } from 'react-native';
 import styles from './style';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
+import { Alert } from 'react-native';
 
 const ContactsScreen = () => {
   const [editModal, setEditModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('contact');
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
+
   const contacts = [
     {
       id: 1,
       name: 'Mr Chinaka',
-     
+
       phone: '+234812484262',
       avatar: 'M',
       color: '#FF3B5C',
@@ -34,7 +39,7 @@ const ContactsScreen = () => {
     },
     {
       id: 3,
-      name: 'Mum', 
+      name: 'Mum',
       phone: '+234812484262',
       avatar: 'M',
       color: '#6A4CFF',
@@ -50,21 +55,115 @@ const ContactsScreen = () => {
     },
   ];
 
+  const incomingRequests = [
+    {
+      id: 101,
+      name: 'Sarah Ali',
+      phone: '+234900000001',
+      avatar: 'S',
+      color: '#2ED573',
+      active: true,
+    },
+    {
+      id: 102,
+      name: 'John Carter',
+      phone: '+234900000002',
+      avatar: 'J',
+      color: '#FF3B5C',
+      active: false,
+    },
+  ];
+
+  const outgoingRequests = [
+    {
+      id: 201,
+      name: 'Nancy Jones',
+      phone: '+234900000003',
+      avatar: 'N',
+      color: '#2F6BFF',
+      active: false,
+    },
+    {
+      id: 202,
+      name: 'Michael Obi',
+      phone: '+234900000004',
+      avatar: 'M',
+      color: '#FFA726',
+      active: true,
+    },
+  ];
+
+  const getCurrentList = () => {
+    if (activeTab === 'incoming') {
+      return incomingRequests;
+    }
+    if (activeTab === 'outgoing') {
+      return outgoingRequests;
+    }
+    return contacts;
+  };
+
+  const currentList = getCurrentList();
+
+  const getActionIcons = () => {
+    if (activeTab === 'incoming') {
+      return [
+        { key: 'cancel', icon: 'close', color: '#FF4757' },
+        { key: 'accept', icon: 'check', color: '#2ED573' },
+        { key: 'delete', icon: 'delete', color: '#FFA726' },
+      ];
+    }
+
+    if (activeTab === 'outgoing') {
+      return [
+        { key: 'cancel', icon: 'close', color: '#FF4757' },
+        { key: 'delete', icon: 'delete', color: '#FFA726' },
+      ];
+    }
+
+    return [{ key: 'delete', icon: 'delete', color: '#FF4757' }];
+  };
+
+  const onActionPress = (action, item) => {
+    const actionText = action.charAt(0).toUpperCase() + action.slice(1);
+    Alert.alert(actionText, `${actionText} action for ${item.name}`);
+  };
+
   const gotToAddContactScreen = () => {
     navigation.navigate('AddContact');
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Hook API fetch here when backend is connected.
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#fff"
+          colors={['#2F6BFF']}
+        />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
 
-        <View style={{flex: 1, marginLeft: 12}}>
+        <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.title}>Contacts</Text>
-          <Text style={styles.subtitle}>4 TRUSTED CONTACTS</Text>
+          <Text style={styles.subtitle}>{currentList.length} ITEMS</Text>
         </View>
 
         <TouchableOpacity onPress={() => setEditModal(true)}>
@@ -72,8 +171,61 @@ const ContactsScreen = () => {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[
+            styles.tabButton,
+            activeTab === 'contact' && styles.activeTabButton,
+          ]}
+          onPress={() => setActiveTab('contact')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'contact' && styles.activeTabText,
+            ]}
+          >
+            Contact
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tabButton,
+            activeTab === 'incoming' && styles.activeTabButton,
+          ]}
+          onPress={() => setActiveTab('incoming')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'incoming' && styles.activeTabText,
+            ]}
+          >
+            Incoming Request
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tabButton,
+            activeTab === 'outgoing' && styles.activeTabButton,
+          ]}
+          onPress={() => setActiveTab('outgoing')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'outgoing' && styles.activeTabText,
+            ]}
+          >
+            Outgoing Request
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Contacts */}
-      {contacts.map(item => (
+      {currentList.map(item => (
         <View key={item.id} style={styles.contactRow}>
           <View style={[styles.avatar, { backgroundColor: item.color }]}>
             <Text style={styles.avatarText}>{item.avatar}</Text>
@@ -81,9 +233,7 @@ const ContactsScreen = () => {
 
           <View style={styles.contactInfo}>
             <Text style={styles.contactName}>{item.name}</Text>
-            <Text style={styles.contactDetails}>
-                {item.phone}
-            </Text>
+            <Text style={styles.contactDetails}>{item.phone}</Text>
           </View>
 
           <View
@@ -92,6 +242,18 @@ const ContactsScreen = () => {
               { backgroundColor: item.active ? '#1DFF9A' : '#6C7A92' },
             ]}
           />
+
+          <View style={styles.actionContainer}>
+            {getActionIcons().map(action => (
+              <TouchableOpacity
+                key={`${item.id}-${action.key}`}
+                style={styles.actionIconButton}
+                onPress={() => onActionPress(action.key, item)}
+              >
+                <Icon name={action.icon} size={18} color={action.color} />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       ))}
 

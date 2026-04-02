@@ -10,6 +10,12 @@ export default StyleSheet.create({
     paddingHorizontal: SW(20),
   },
 
+  backBtn: {
+    marginTop: SH(16),
+    alignSelf: 'flex-start',
+    padding: SW(4),
+  },
+
   logoContainer: {
     alignItems: 'center',
     marginTop: SH(70),
@@ -119,7 +125,7 @@ export default StyleSheet.create({
 
   otpBox: {
     width: SW(50),
-    height: SH(36),
+    height: SH(50),
     borderRadius: 10,
     backgroundColor: appColors.secondary,
     color: appColors.white,

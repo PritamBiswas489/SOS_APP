@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getAppUrl } from './utility';
 const app_url =  getAppUrl();
 const api = axios.create({
-	baseURL: app_url + '/api/v1',
+	baseURL: app_url + '/api-mobile/front',
 	timeout: 15000,
 });
 
@@ -38,7 +38,9 @@ api.interceptors.response.use(async (res) => {
         // Something happened in setting up the request that triggered an Error
         console.error('Error Message:', error.message);
     }
-    return Promise.reject(error);
+    console.log("================================")
+    console.error(error?.response?.data?.error?.message);
+    return Promise.reject(error?.response?.data?.error?.message ?  new Error(error.response.data.error.message) : error);
 });
 
 export default api;

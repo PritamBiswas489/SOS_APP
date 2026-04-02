@@ -9,11 +9,13 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
+import { useNavigation } from '@react-navigation/native';
 
 import styles from './style';
 import appColors from '../../theme/appColors';
 
 const AnalysisScreen = () => {
+  const navigation = useNavigation();
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* HEADER */}
@@ -25,8 +27,9 @@ const AnalysisScreen = () => {
 
         {/* TOP ICONS */}
         <View style={styles.headerTop}>
-          <Icon name="arrow-back-ios" size={20} color="#fff" />
-          <Icon name="edit" size={18} color="#F59E0B" />
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back-ios" size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         {/* PROFILE */}

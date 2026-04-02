@@ -65,13 +65,39 @@ export default StyleSheet.create({
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: appColors.whiteTransparent,
-    borderColor: appColors.whiteBdrTransparent,
-    borderWidth: 1,
+    borderWidth: 0.7,
+    borderColor: appColors.primary,
+    backgroundColor: appColors.primaryAA,
     borderRadius: SW(14),
     paddingHorizontal: SW(10),
-    height: SW(40),
+    height: SW(48),
     marginTop: 8,
+  },
+
+  country: {
+    color: appColors.white,
+    marginRight: SW(8),
+    fontSize: SF(14),
+  },
+
+  phonebookBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginTop: SW(10),
+    marginBottom: SW(4),
+    paddingVertical: SW(6),
+    paddingHorizontal: SW(12),
+    borderRadius: SW(20),
+    backgroundColor: '#2F6BFF18',
+    borderWidth: 1,
+    borderColor: '#2F6BFF55',
+  },
+
+  phonebookBtnText: {
+    color: '#2F6BFF',
+    fontSize: SF(12),
+    marginLeft: SW(6),
   },
 
   inputBoxActive: {

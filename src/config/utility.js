@@ -1,12 +1,7 @@
 import moment from 'moment-timezone';
 import {env} from '../../environment';
-import {useValues} from '../../App';
-import {allListingActions} from '@src/store/redux/all-listing-redux';
-import {pendingListingActions} from '@src/store/redux/pending-listing-redux';
-import {completedListingActions} from '@src/store/redux/completed-listing-redux';
-import {ongoingListingActions} from '@src/store/redux/ongoing-listing-redux';
-import {canceledListingActions} from '@src/store/redux/canceled-listing-redux';
-import {acceptedListingActions} from '@src/store/redux/accepted.listing-redux';
+ 
+ 
 
 export const fileToBase64 = file => {
   return new Promise(resolve => {
@@ -277,49 +272,7 @@ export function formatNumberProcessing(num) {
   }
   return num.toString();
 }
-export function searchStatusArray() {
-  const {t} = useValues();
-
-  return [
-    {
-      value: 'all',
-      label: t('newDeveloper.all'),
-      selector: 'allListingSearch',
-      actions: allListingActions,
-    },
-    {
-      value: 'pending',
-      label: t('newDeveloper.pending'),
-      selector: 'pendingListingSearch',
-      actions: pendingListingActions,
-    },
-    {
-      value: 'accepted',
-      label: t('newDeveloper.accepted'),
-      selector: 'acceptedListingSearch',
-      actions: acceptedListingActions,
-    },
-    {
-      value: 'ongoing',
-      label: t('newDeveloper.ongoing'),
-      selector: 'ongoingListingSearch',
-      actions: ongoingListingActions,
-    },
-    {
-      value: 'completed',
-      label: t('newDeveloper.completed'),
-      selector: 'completedListingSearch',
-      actions: completedListingActions,
-    },
-    {
-      value: 'canceled',
-      label: t('newDeveloper.canceled'),
-      selector: 'cancelListingSearch',
-      actions: canceledListingActions,
-    },
-  ];
-}
-
+ 
 export function timeformatting(timestamp) {
   // Create a new Date object from the timestamp
   const date = new Date(timestamp);

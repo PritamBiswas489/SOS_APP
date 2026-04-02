@@ -8,11 +8,17 @@ import {
   Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useSelector } from 'react-redux';
+ 
 
 import styles from './style';
 
 const HomeScreen = ({ navigation }) => {
   const pulseAnim = useRef(new Animated.Value(0)).current;
+  const userData = useSelector(state => state.userProviderData);
+  console.log('=====================================================');
+  console.log('User Data in Home Screen:', userData);
+  console.log('=====================================================');
 
   useEffect(() => {
     Animated.loop(
@@ -43,12 +49,10 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
-
-      
       {/* Greeting */}
       <View style={styles.greetingContainer}>
         <Text style={styles.goodMorning}>GOOD MORNING,</Text>
-        <Text style={styles.userName}>Vision John 👋</Text>
+        <Text style={styles.userName}>{userData.name} 👋</Text>
       </View>
 
       {/* SOS Button */}
