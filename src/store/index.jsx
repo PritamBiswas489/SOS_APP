@@ -1,15 +1,35 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers, createAction } from '@reduxjs/toolkit';
 import userSlice from './redux/user.redux';
+import trustedContactSlice from './redux/trustedContactList.redux';
+import trustedContactIncommingRequestSlice from './redux/trustedContactIncommingRequest.redux';
+import trustedContactOutgongRequestSlice from './redux/trustedContactOutgongRequest.redux';
+import chatSelectedTrustedContactSlice from './redux/chatSelectedTrustedContact.redux';
+import chatContactSlice from './redux/chatContactList.redux';
+
+export const resetAllState = createAction('store/resetAll');
+
+const appReducer = combineReducers({
+  userProviderData: userSlice.reducer,
+  trustedContactList: trustedContactSlice.reducer,
+  trustedContactIncommingRequest: trustedContactIncommingRequestSlice.reducer,
+  trustedContactOutgongRequest: trustedContactOutgongRequestSlice.reducer,
+  chatSelectedTrustedContact: chatSelectedTrustedContactSlice.reducer,
+  chatContactList: chatContactSlice.reducer,
+});
+
+const rootReducer = (state, action) => {
+  if (action.type === resetAllState.type) {
+    return appReducer(undefined, action);
+  }
+  return appReducer(state, action);
+};
 
 const store = configureStore({
-  reducer: {
-    userProviderData: userSlice.reducer,
-  },
+  reducer: rootReducer,
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Increase the timeout threshold for warnings
-        warnAfter: 128, // Increase threshold to 128ms
+        warnAfter: 128,
       },
     }),
 });

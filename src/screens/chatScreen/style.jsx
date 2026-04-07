@@ -13,13 +13,58 @@ export default StyleSheet.create({
     flex: 1,
   },
 
+  chatContent: {
+    paddingBottom: SW(8),
+  },
+
+  chatContentEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: SW(24),
+  },
+
+  emptyStateWrapper: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: appColors.secondary,
+    borderRadius: SW(16),
+    paddingVertical: SH(24),
+    paddingHorizontal: SW(18),
+  },
+
+  emptyStateIconCircle: {
+    width: SW(60),
+    height: SW(60),
+    borderRadius: SW(30),
+    backgroundColor: 'rgba(143, 163, 200, 0.14)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SH(12),
+  },
+
+  emptyStateTitle: {
+    color: appColors.white,
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(16),
+    marginBottom: SH(8),
+  },
+
+  emptyStateSubtitle: {
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoRegular,
+    fontSize: SF(12),
+    textAlign: 'center',
+    lineHeight: SF(18),
+  },
+
   /* HEADER */
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 10,
   },
 
   headerCenter: {
@@ -64,8 +109,7 @@ export default StyleSheet.create({
 
   /* CONTACT AVATARS */
 
-  avatarRow: {
-    flexDirection: 'row',
+  avatarRowContainer: {
     paddingHorizontal: SW(18),
     marginTop: SW(18),
     borderTopColor: appColors.secondary,
@@ -73,6 +117,15 @@ export default StyleSheet.create({
     borderBottomColor: appColors.secondary,
     borderBottomWidth: 1,
     paddingVertical: SW(10),
+  },
+
+  avatarRow: {
+    flexGrow: 0,
+  },
+
+  avatarRowContent: {
+    paddingRight: SW(12),
+    alignItems: 'center',
   },
 
   avatarItem: {
@@ -281,6 +334,7 @@ export default StyleSheet.create({
     padding: SW(10),
     borderRadius: 14,
     maxWidth: '68%',
+    overflow: 'hidden',
   },
 
   avatarSmallPink: {
@@ -308,6 +362,14 @@ export default StyleSheet.create({
     textAlign: 'right',
     marginRight: SW(48),
     marginTop: 4,
+  },
+
+  messageStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginRight: SW(48),
+    marginTop: 2,
   },
 
   /* INPUT BAR */
@@ -350,8 +412,231 @@ export default StyleSheet.create({
     backgroundColor: appColors.primary,
     width: SW(38),
     height: SW(38),
-    borderRadius: SW(38),
+    borderRadius: SW(19),
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  sendBtnDisabled: {
+    opacity: 0.7,
+  },
+
+  /* MEDIA BUBBLES */
+
+  mediaBubbleImage: {
+    width: SW(200),
+    height: SW(160),
+    borderRadius: SW(8),
+    marginBottom: SW(4),
+    backgroundColor: appColors.secondary,
+  },
+
+  mediaBubbleVideo: {
+    width: SW(200),
+    height: SW(120),
+    borderRadius: SW(8),
+    marginBottom: SW(4),
+    backgroundColor: '#1A2B44',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  mediaBubblePlayBtn: {
+    width: SW(48),
+    height: SW(48),
+    borderRadius: SW(24),
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SW(4),
+  },
+
+  mediaBubbleAudio: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A2B44',
+    borderRadius: SW(8),
+    paddingVertical: SW(10),
+    paddingHorizontal: SW(12),
+    marginBottom: SW(4),
+    minWidth: SW(140),
+  },
+
+  mediaBubbleDocument: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A2B44',
+    borderRadius: SW(8),
+    paddingVertical: SW(10),
+    paddingHorizontal: SW(12),
+    marginBottom: SW(4),
+    minWidth: SW(140),
+  },
+
+  mediaBubbleLabel: {
+    color: appColors.white,
+    fontFamily: appFonts.NunitoRegular,
+    fontSize: SF(12),
+    marginLeft: SW(8),
+  },
+
+  previewWrapper: {
+    marginHorizontal: SW(12),
+    marginBottom: SW(8),
+    borderWidth: 1,
+    borderColor: appColors.secondary,
+    backgroundColor: appColors.primaryAA,
+    borderRadius: SW(12),
+    padding: SW(10),
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  previewImageContainer: {
+    position: 'relative',
+  },
+
+  previewImage: {
+    width: SW(52),
+    height: SW(52),
+    borderRadius: SW(10),
+    backgroundColor: appColors.secondary,
+  },
+
+  previewImageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: SW(10),
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  previewMetaContainer: {
+    flex: 1,
+    marginHorizontal: SW(10),
+  },
+
+  previewTitle: {
+    color: appColors.white,
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(12),
+  },
+
+  previewSubtitle: {
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoRegular,
+    fontSize: SF(10),
+    marginTop: SH(2),
+  },
+
+  previewRemoveBtn: {
+    width: SW(28),
+    height: SW(28),
+    borderRadius: SW(14),
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: appColors.secondary,
+  },
+
+  scrollToBottomBtn: {
+    position: 'absolute',
+    right: SW(16),
+    bottom: SW(88),
+    width: SW(38),
+    height: SW(38),
+    borderRadius: SW(19),
+    backgroundColor: appColors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 6,
+    zIndex: 20,
+  },
+
+  actionSheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+
+  actionSheetContainer: {
+    backgroundColor: '#111A2F',
+    borderTopLeftRadius: SW(18),
+    borderTopRightRadius: SW(18),
+    paddingHorizontal: SW(14),
+    paddingTop: SW(12),
+    paddingBottom: SW(22),
+    borderTopColor: appColors.secondary,
+    borderTopWidth: 1,
+  },
+
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SW(12),
+    paddingHorizontal: SW(10),
+    borderRadius: SW(10),
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    marginTop: SW(8),
+  },
+
+  actionText: {
+    color: appColors.white,
+    marginLeft: SW(10),
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(13),
+  },
+
+  cancelActionItem: {
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
+  },
+
+  cancelActionText: {
+    color: '#FF6B6B',
+    marginLeft: SW(10),
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(13),
+  },
+
+  /* TYPING INDICATOR */
+
+  typingIndicatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SW(16),
+    paddingVertical: SH(6),
+  },
+
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SW(6),
+  },
+
+  typingDot: {
+    width: SW(6),
+    height: SW(6),
+    borderRadius: SW(3),
+    backgroundColor: appColors.bodyColor,
+    marginHorizontal: SW(2),
+    opacity: 0.6,
+  },
+
+  typingDotOne: {},
+  typingDotTwo: {},
+  typingDotThree: {},
+
+  typingIndicatorText: {
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoRegular,
+    fontSize: SF(11),
+    fontStyle: 'italic',
   },
 });

@@ -51,6 +51,7 @@ const BottomTabNavigator = () => {
         },
         tabBarActiveTintColor: '#FF4757',
         tabBarInactiveTintColor: '#A4B0BE',
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: '#16213E',
           borderTopWidth: 0,

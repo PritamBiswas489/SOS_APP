@@ -15,7 +15,9 @@ import { countries } from '../../config/countries';
 import PhoneContactModal from '../../components/phoneContactModal';
 import { Alert } from 'react-native';
 import useToast from '../../hook/useToast';
-import { TrustecContactService } from '../../services/trustecContact.service';
+import { TrustedContactService } from '../../services/trustedContact.service';
+import { useDispatch } from 'react-redux';
+import { trustedContactOutgongRequestActions } from '../../store/redux/trustedContactOutgongRequest.redux';
 
 const getFlagEmoji = countryCode => {
   const codePoints = countryCode
@@ -46,6 +48,7 @@ const AddContactsScreen = () => {
     code:  'NG',
     dial_code: '+234',
   });
+  const dispatch = useDispatch();
   const [userPhone, setUserPhone] = useState('');
   const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
   const [isPhoneBookModalVisible, setIsPhoneBookModalVisible] = useState(false);
@@ -98,14 +101,17 @@ const AddContactsScreen = () => {
       name: fullName,
       mobile_number: fullPhone,
       relationship: relationship.toLowerCase(),
+      sos_alert: sosAlert,
+      share_location: shareLocation,
     };
 
     console.log('Constructed contact data:', contactData);
     const saveContact = await new Promise((resolve, reject) => {
-      TrustecContactService.saveTrustedContact(contactData, response => {
+      TrustedContactService.saveTrustedContact(contactData, response => {
         if (response.success) {
           resolve(response.data);
           showSuccess('SUCCESS','Trusted contact saved successfully');
+          dispatch(trustedContactOutgongRequestActions.setRefresh(true));
           navigation.goBack();
         } else {
           reject(

@@ -17,13 +17,16 @@ import analysisScreen from '../screens/analysis';
 import { Alert } from 'react-native';
  
 import { UserService } from '../services/user.service';
+import { useDispatch } from 'react-redux';
+import { resetAllState } from '../store';
  
 
 const Drawer = createDrawerNavigator();
 
-const logoutProcess = async navigation => {
+const logoutProcess = async (navigation, dispatch) => {
   try {
     await UserService.logout();
+    dispatch(resetAllState());
     Alert.alert('Logged Out', 'You have been logged out successfully.');
     navigation.reset({
       index: 0,
@@ -36,6 +39,7 @@ const logoutProcess = async navigation => {
 };
 
 const CustomDrawerContent = props => {
+  const dispatch = useDispatch();
   return (
     <DrawerContentScrollView
       {...props}
@@ -88,7 +92,7 @@ const CustomDrawerContent = props => {
       {/* Logout */}
       <View style={styles.bottomSection}>
         <TouchableOpacity
-          onPress={() => logoutProcess(props.navigation)}
+          onPress={() => logoutProcess(props.navigation, dispatch)}
           style={styles.logoutBtn}
         >
           <Icon name="logout" size={22} color="#FF4757" />

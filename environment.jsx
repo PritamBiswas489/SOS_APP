@@ -2,7 +2,7 @@ export const env = {
   type: 'dev', //prod staging dev
   appUrls: {
     dev: {
-      apiUrl: 'https://back-sos.pritamaqua.aqualeafitsol.com',
+      apiUrl: 'https://99bpkvn6-4000.inc1.devtunnels.ms',
     },
     staging: {
       apiUrl: 'https://back-sos.pritamaqua.aqualeafitsol.com',

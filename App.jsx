@@ -10,6 +10,8 @@ import SplashScreen from './src/screens/splashScreen/index.jsx';
 import LoginScreen from './src/screens/loginScreen/index.jsx';
 import AddContactsScreen from './src/screens/addContactsScreen/index.jsx';
 import ProcessScreen from './src/screens/processScreen/index.jsx';
+import { SocketProvider } from './src/context/SocketContext';
+import { ChatProvider } from './src/context/ChatContext';
 
 const toastConfig = {
   success: (props) => (
@@ -45,11 +47,13 @@ const Stack = createNativeStackNavigator();
 const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
   return (
-    <GestureHandlerRootView style={{flex: 1}}>
-      <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#1A1A2E" />
-        <NavigationContainer>
-          <Stack.Navigator
+    <SocketProvider>
+      <ChatProvider>
+        <GestureHandlerRootView style={{flex: 1}}>
+          <SafeAreaProvider>
+            <StatusBar barStyle="light-content" backgroundColor="#1A1A2E" />
+            <NavigationContainer>
+              <Stack.Navigator
             initialRouteName="Splash"
             screenOptions={{headerShown: false}}>
             <Stack.Screen name="Splash" component={SplashScreen} />
@@ -62,6 +66,8 @@ const App = () => {
         <Toast config={toastConfig} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  </ChatProvider>
+</SocketProvider>
   );
 };
 

@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import appColors from '../../theme/appColors';
 import appFonts from '../../theme/appFonts';
 import { SH, SW, SF } from '../../theme/dimensions';
+import { TrustedContactService } from '../../services/trustedContact.service';
 
 const styles = StyleSheet.create({
   container: {
@@ -29,6 +30,47 @@ const styles = StyleSheet.create({
     fontFamily: appFonts.NunitoSemiBold,
     fontSize: SF(12),
     marginTop: SW(4),
+  },
+
+  contactList: {
+    flex: 1,
+  },
+
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SW(32),
+    paddingTop: SW(60),
+    paddingBottom: SW(40),
+  },
+
+  emptyIconWrap: {
+    width: SW(90),
+    height: SW(90),
+    borderRadius: SW(45),
+    backgroundColor: appColors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SW(20),
+    borderWidth: 1,
+    borderColor: appColors.whiteTransparent,
+  },
+
+  emptyTitle: {
+    color: appColors.white,
+    fontSize: SF(17),
+    fontFamily: appFonts.NunitoBold,
+    textAlign: 'center',
+    marginBottom: SW(10),
+  },
+
+  emptySubtitle: {
+    color: appColors.bodyColor,
+    fontSize: SF(13),
+    fontFamily: appFonts.NunitoSemiBold,
+    textAlign: 'center',
+    lineHeight: SF(20),
   },
 
   tabContainer: {
@@ -105,6 +147,12 @@ const styles = StyleSheet.create({
     marginTop: SW(3),
     fontFamily: appFonts.NunitoSemiBold,
   },
+    contactRelation:{
+    color: appColors.blue,
+    fontSize: SF(11),
+    marginTop: SW(2),
+    fontFamily: appFonts.NunitoSemiBold,
+  },
 
   statusDot: {
     width: SW(10),
@@ -133,7 +181,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: appColors.blue,
     marginHorizontal: SW(20),
-    marginTop: SW(25),
+    marginTop: SW(16),
     paddingVertical: SW(15),
     borderRadius: SW(12),
     alignItems: 'center',
@@ -149,7 +197,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: appColors.secondary,
     marginHorizontal: SW(20),
-    marginTop: SW(20),
+    marginTop: SW(14),
+    marginBottom: SW(20),
     padding: SW(15),
     borderRadius: SW(12),
   },
@@ -187,6 +236,7 @@ const styles = StyleSheet.create({
     fontSize: SF(18),
     fontFamily: appFonts.NunitoBold,
   },
+ 
 
   input: {
     backgroundColor: appColors.secondary,

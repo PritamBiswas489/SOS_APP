@@ -10,34 +10,35 @@ import * as storeage from "../utils/localstorage/index.jsx";
 const app_url =  getAppUrl();
 console.log(app_url + '/api-mobile/auth');
 const api = axios.create({
-	baseURL: app_url + '/api-mobile/auth',
-	timeout: 15000,
+    baseURL: app_url + '/api-mobile/auth',
+    timeout: 15000,
 });
 
 const navigateToLogin = () => {
-	const navigation = useNavigation();
-	navigation.navigate('Login'); // Replace 'Login' with the actual name of your login screen
+    const navigation = useNavigation();
+    navigation.navigate('Login'); // Replace 'Login' with the actual name of your login screen
   };
 const resetStateData = ()=>{
-	// const dispatch = useDispatch();
-	// dispatch(userAccountDataActions.resetState());
+    // const dispatch = useDispatch();
+    // dispatch(userAccountDataActions.resetState());
 }
 
 api.interceptors.request.use(async (config) => {
-	const {accessToken, refreshToken} = await getAuthTokens();
+    const {accessToken, refreshToken} = await getAuthTokens();
     const languageCode = await storeage.getValue('languageCode');
-	 
-	config.headers = {
+     
+    config.headers = {
     ...config.headers,
+    "Content-Type": "multipart/form-data",
     Authorization: 'Bearer ' + accessToken,
     refreshToken: refreshToken,
     'X-localization': languageCode || 'en',
   };
     // console.log(config.headers)
-	const fullRequestUrl = `${config.baseURL}${config.url}`;
-	console.log('Request URL:', fullRequestUrl);
-	
-	return config;
+    const fullRequestUrl = `${config.baseURL}${config.url}`;
+    console.log('Request URL:', fullRequestUrl);
+    
+    return config;
 });
 
 api.interceptors.response.use(async (res) => {
