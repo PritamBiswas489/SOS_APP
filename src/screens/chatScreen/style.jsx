@@ -371,6 +371,38 @@ export default StyleSheet.create({
     fontSize: SF(12),
   },
 
+  replyPreviewBox: {
+    borderLeftWidth: 2.5,
+    borderRadius: SW(8),
+    paddingVertical: SH(6),
+    paddingHorizontal: SW(8),
+    marginBottom: SW(6),
+  },
+
+  replyPreviewBoxLeft: {
+    borderLeftColor: '#60A6FF',
+    backgroundColor: 'rgba(96, 166, 255, 0.15)',
+  },
+
+  replyPreviewBoxRight: {
+    borderLeftColor: '#FF8FA0',
+    backgroundColor: 'rgba(255, 143, 160, 0.12)',
+  },
+
+  replyPreviewTitle: {
+    color: '#D7E3FF',
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(10),
+    marginBottom: SH(2),
+  },
+
+  replyPreviewText: {
+    color: appColors.white,
+    fontFamily: appFonts.NunitoRegular,
+    fontSize: SF(11),
+    lineHeight: SF(15),
+  },
+
   avatarSmallRed: {
     width: SW(25),
     height: SW(25),

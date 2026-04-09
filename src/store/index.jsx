@@ -4,6 +4,7 @@ import trustedContactSlice from './redux/trustedContactList.redux';
 import trustedContactIncommingRequestSlice from './redux/trustedContactIncommingRequest.redux';
 import trustedContactOutgongRequestSlice from './redux/trustedContactOutgongRequest.redux';
 import chatSelectedTrustedContactSlice from './redux/chatSelectedTrustedContact.redux';
+import selectedReplyMessageSlice from './redux/selectedReplyMessage.redux';
 import chatContactSlice from './redux/chatContactList.redux';
 
 export const resetAllState = createAction('store/resetAll');
@@ -14,6 +15,7 @@ const appReducer = combineReducers({
   trustedContactIncommingRequest: trustedContactIncommingRequestSlice.reducer,
   trustedContactOutgongRequest: trustedContactOutgongRequestSlice.reducer,
   chatSelectedTrustedContact: chatSelectedTrustedContactSlice.reducer,
+  selectedReplyMessage: selectedReplyMessageSlice.reducer,
   chatContactList: chatContactSlice.reducer,
 });
 

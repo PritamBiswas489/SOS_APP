@@ -249,7 +249,7 @@ export const ChatProvider = ({ children }) => {
   }, [isConnected, currentUserId, contactList, emit]);
 
   const sendMessage = useCallback(
-    async (roomId, recipientId, text, media = null, location = null) => {
+    async (roomId, recipientId, text, media = null, location = null, replyTo = null ) => {
       const payload = { roomId, recipientId, text };
       if (media) {
         payload.mediaUrl = media.url;
@@ -257,6 +257,9 @@ export const ChatProvider = ({ children }) => {
       }
       if (location?.latitude && location?.longitude) {
         payload.locationJson = location;
+      }
+      if(replyTo){
+        payload.replyTo = replyTo;
       }
       //console.log('===============================================');
       //console.log('ChatProvider: Sending message with payload:', payload);

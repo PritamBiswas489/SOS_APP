@@ -93,14 +93,14 @@ const ContactAvatarList = ({
     }, [navigation]);
 
     const avatarColors = [
-  '#2F6BFF',
-  '#FF3B5C',
-  '#2ED573',
-  '#FFA726',
-  '#6A4CFF',
-  '#00BCD4',
-  '#8BC34A',
-  '#E91E63',
+      '#2F6BFF',
+      '#FF3B5C',
+      '#2ED573',
+      '#FFA726',
+      '#6A4CFF',
+      '#00BCD4',
+      '#8BC34A',
+      '#E91E63',
 ];
 
 const getAvatarColor = item => {
@@ -130,10 +130,8 @@ const getAvatarColor = item => {
               style={[
                 styles.avatarCircle,
                 {
-                  borderColor: avatarColor,
+                  borderColor: appColors.white,
                   backgroundColor: avatarColor,
-                  
-                   
                 },
                 isSelected && {
                   borderWidth: 2.5,
@@ -154,11 +152,11 @@ const getAvatarColor = item => {
             {item.isOnline && <View style={styles.onlineDot} />}
           </View>
 
-          <Text style={[styles.avatarLabel, { color: OFFLINE_COLOR }, isSelected && { color: appColors.primary }]}>
+          <Text style={[styles.avatarLabel,  isSelected && { color: appColors.primary }]}>
             {item.name}
           </Text>
           {item.phone_number && (
-            <Text style={[styles.avatarPhoneNumber,  { color: OFFLINE_COLOR }, isSelected && { color: appColors.primary }]}>
+            <Text style={[styles.avatarPhoneNumber,    isSelected && { color: appColors.primary }]}>
               {item.phone_number}
             </Text>
           )}

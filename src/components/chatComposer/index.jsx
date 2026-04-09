@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef, use } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { pick, types, isCancel } from '@react-native-documents/picker';
 import Geolocation from '@react-native-community/geolocation';
@@ -21,18 +21,24 @@ import { useChatActions, useChatTyping } from '../../context/ChatContext';
 import api from '../../config/authApiFormData.config';
 import { getAppUrl } from '../../config/utility';
 import styles from './style';
+import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_AUDIO_SIZE_BYTES = 20 * 1024 * 1024;
 const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024;
+const TYPING_DEBOUNCE_MS = 1000;
 
 const getMediaSizeLimit = mediaCategory =>
   mediaCategory === 'video' ? MAX_VIDEO_SIZE_BYTES : MAX_IMAGE_SIZE_BYTES;
 
 const formatMegabytes = bytes => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
-const ChatComposer = () => {
+const ChatComposer = ({
+  onSendComplete,
+  placeholder = 'Type a message...',
+  showTypingIndicator = true,
+}) => {
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [message, setMessage] = useState('');
   const [selectedMedia, setSelectedMedia] = useState(null);
@@ -41,19 +47,24 @@ const ChatComposer = () => {
   const [uploadingLocalUri, setUploadingLocalUri] = useState(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const typingDebounceRef = useRef(null);
 
   const chatSelectedTrustedContact = useSelector(state => state.chatSelectedTrustedContact);
   const userData = useSelector(state => state.userProviderData);
+  const selectedReplyMessage = useSelector(state => state.selectedReplyMessage);
   const chatActions = useChatActions();
   const typingIndicators = useChatTyping();
   const currentUserId = userData?.id;
   const currentRoomId = chatSelectedTrustedContact?.roomId;
+  const dispatch = useDispatch();
 
   const rawTypingInfo = typingIndicators?.[currentRoomId] || null;
   const typingInfo = rawTypingInfo?.userId && rawTypingInfo.userId !== currentUserId ? rawTypingInfo : null;
   if (typingInfo) {
     typingInfo.userName = chatSelectedTrustedContact?.name || typingInfo.userName;
   }
+
+   
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -70,15 +81,33 @@ const ChatComposer = () => {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (typingDebounceRef.current) {
+        clearTimeout(typingDebounceRef.current);
+        typingDebounceRef.current = null;
+      }
+    };
+  }, [currentRoomId]);
+
   const openActionMenu = useCallback(() => setShowActionMenu(true), []);
   const closeActionMenu = useCallback(() => setShowActionMenu(false), []);
 
   const handleMessageChange = useCallback(
     text => {
       setMessage(text);
-      if (currentRoomId) {
-        chatActions.sendTyping(currentRoomId);
+      if (!currentRoomId || !text.trim()) {
+        return;
       }
+
+      if (typingDebounceRef.current) {
+        clearTimeout(typingDebounceRef.current);
+      }
+
+      typingDebounceRef.current = setTimeout(() => {
+        console.log(`Emitting typing event for room ${currentRoomId}`);
+        chatActions.sendTyping(currentRoomId);
+      }, TYPING_DEBOUNCE_MS);
     },
     [currentRoomId, chatActions],
   );
@@ -91,6 +120,7 @@ const ChatComposer = () => {
   }, []);
 
   const handleSendMessage = useCallback(async () => {
+    
     if (isSendingMessage) return;
     const trimmedMessage = message.trim();
     if (!trimmedMessage && !selectedMedia) return;
@@ -101,14 +131,29 @@ const ChatComposer = () => {
         chatSelectedTrustedContact?.receipent_id,
         trimmedMessage,
         selectedMedia ? { url: selectedMedia, mediaType: selectedMediaType || 'image' } : null,
+        null,
+        selectedReplyMessage?.id || null,
       );
       setMessage('');
       setSelectedMedia(null);
       setSelectedMediaType(null);
+      setUploadingLocalUri(null);
+      if (onSendComplete) {
+        onSendComplete();
+      }
     } finally {
       setIsSendingMessage(false);
     }
-  }, [isSendingMessage, message, selectedMedia, selectedMediaType, chatActions, chatSelectedTrustedContact]);
+  }, [
+    isSendingMessage,
+    message,
+    selectedMedia,
+    selectedMediaType,
+    chatActions,
+    chatSelectedTrustedContact,
+    onSendComplete,
+    selectedReplyMessage,
+  ]);
 
   const handlePickFromGallery = useCallback((type) => {
     closeActionMenu();
@@ -351,7 +396,7 @@ const ChatComposer = () => {
 
   return (
     <>
-      {typingInfo && (
+      {showTypingIndicator && typingInfo && (
         <View style={styles.typingIndicatorRow}>
           <View style={styles.typingDots}>
             <View style={[styles.typingDot, styles.typingDotOne]} />
@@ -438,7 +483,7 @@ const ChatComposer = () => {
 
           <TextInput
             style={styles.input}
-            placeholder="Type a message..."
+            placeholder={placeholder}
             placeholderTextColor="#6B7C99"
             value={message}
             onChangeText={handleMessageChange}

@@ -109,7 +109,7 @@ export default StyleSheet.create({
   },
 
   avatarPhoneNumber: {
-    color: appColors.bodyColor,
+    color: appColors.white,
     fontFamily: appFonts.NunitoRegular,
     fontSize: SF(9),
     marginTop: 2,

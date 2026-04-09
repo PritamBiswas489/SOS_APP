@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   Image,
   Linking,
+  PanResponder,
   PermissionsAndroid,
   Platform,
   RefreshControl,
@@ -18,10 +20,14 @@ import ImagePreviewModal from '../imagePreviewModal';
 import VideoPlayerModal from '../videoPlayerModal';
 import AudioPlayerModal from '../audioPlayerModal';
 import ForwardMessageModal from '../forwardMessageModal';
-import { useSelector } from 'react-redux';
+import ReplyMessageModal from '../replyMessageModal';
+import { useSelector, useDispatch } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { useChatActions, useChatMessages } from '../../context/ChatContext';
 import useToast from '../../hook/useToast';
+import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
+
+const loadedRoomIds = new Set();
  
 const getMessageTimestamp = message => {
   return (
@@ -73,6 +79,68 @@ const formatMessageTime = timestamp => {
   }).format(date);
 };
 
+const truncateByWordLimit = (value, wordLimit = 12) => {
+  if (!value || typeof value !== 'string') return '';
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  if (words.length <= wordLimit) return words.join(' ');
+  return `${words.slice(0, wordLimit).join(' ')}...`;
+};
+
+const getReplyPreviewContent = replyMessage => {
+  if (!replyMessage) return null;
+
+  if (typeof replyMessage === 'string') {
+    return {
+      title: 'Reply to message',
+      text: truncateByWordLimit(replyMessage),
+    };
+  }
+
+  const replyText = replyMessage?.text || replyMessage?.message;
+  if (replyText) {
+    return {
+      title: 'Reply to message',
+      text: truncateByWordLimit(replyText),
+    };
+  }
+
+  const replyMediaType = replyMessage?.mediaType || replyMessage?.media_type;
+  if (replyMediaType === 'image') {
+    return { title: 'Reply to image', text: 'Image attachment' };
+  }
+  if (replyMediaType === 'video') {
+    return { title: 'Reply to video', text: 'Video attachment' };
+  }
+  if (replyMediaType === 'audio') {
+    return { title: 'Reply to audio', text: 'Audio attachment' };
+  }
+  if (replyMediaType === 'document') {
+    return { title: 'Reply to document', text: 'Document attachment' };
+  }
+
+  if (replyMessage?.locationJson || replyMessage?.location_json) {
+    return { title: 'Reply to location', text: 'Shared location' };
+  }
+
+  return { title: 'Reply to message', text: 'Message' };
+};
+
+const getReplyTargetId = message => {
+  const replyObject = message?.reply_to_message;
+
+  const targetId =
+    replyObject?.id ??
+    message?.reply_to_message_id ??
+    message?.replyToId ??
+    message?.reply_to_id ??
+    (typeof message?.replyTo === 'string' || typeof message?.replyTo === 'number'
+      ? message.replyTo
+      : message?.replyTo?.id);
+
+  if (targetId === null || targetId === undefined) return null;
+  return String(targetId);
+};
+
 const buildConversationItems = (messages, selectedContact, statuses = {}, styles) => {
   if (!Array.isArray(messages) || messages.length === 0) {
     return [];
@@ -90,6 +158,10 @@ const buildConversationItems = (messages, selectedContact, statuses = {}, styles
   sortedMessages.forEach(message => {
     const timestamp = getMessageTimestamp(message);
     const dateKey = getDateKey(timestamp);
+    const computedMessageId =
+      message?.id ?? `${getMessageTimestamp(message) || 'no-time'}-${message?.text || message?.message || 'msg'}`;
+    const replyToMessage = message?.reply_to_message || null;
+    const replyTargetId = getReplyTargetId(message);
 
     if (dateKey !== lastDateKey) {
       items.push({
@@ -101,14 +173,17 @@ const buildConversationItems = (messages, selectedContact, statuses = {}, styles
     }
 
     items.push({
-      id: message?.id ? `message-${message.id}` : `message-${dateKey}-${items.length}`,
+      id: String(computedMessageId),
       type: message?.isSelf ? 'right' : 'left',
       locationJson: message?.locationJson || null,
       text: message?.text || message?.message || '',
       mediaUrl: message?.mediaUrl || message?.media_url || null,
       mediaType: message?.mediaType || message?.media_type || null,
+      replyTo: message?.replyTo || null,
+      replyTargetId,
       time: formatMessageTime(timestamp),
       status: statuses[message?.id] || message?.status || null,
+      reply_to_message: replyToMessage,
       avatarStyle: message?.isSelf ? undefined : styles.avatarSmallBlue,
       avatarText: message?.isSelf
         ? 'Y'
@@ -182,6 +257,60 @@ const renderMessageActionButtonSecondary = (styles, iconName, onPress) => {
   );
 };
 
+const ReplySwipeWrapper = React.memo(({
+  children,
+  item,
+  onSwipeReply,
+  enabled = true,
+}) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const resetPosition = useCallback(() => {
+    Animated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 6,
+      speed: 16,
+    }).start();
+  }, [translateX]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          if (!enabled) return false;
+          const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+          return isHorizontal && gestureState.dx > 6;
+        },
+        onPanResponderMove: (_, gestureState) => {
+          if (!enabled) return;
+          const dx = Math.max(0, Math.min(gestureState.dx, 90));
+          translateX.setValue(dx);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (enabled && gestureState.dx > 62) {
+            onSwipeReply?.(item);
+          }
+          resetPosition();
+        },
+        onPanResponderTerminate: () => {
+          resetPosition();
+        },
+      }),
+    [enabled, item, onSwipeReply, resetPosition, translateX],
+  );
+
+  return (
+    <Animated.View
+      style={{ transform: [{ translateX }] }}
+      {...(enabled ? panResponder.panHandlers : {})}
+    >
+      {children}
+    </Animated.View>
+  );
+});
+
 const ConversationList = ({
   styles,
 }) => {
@@ -191,8 +320,12 @@ const ConversationList = ({
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const lastSeenMessageKeyRef = useRef(null);
   const lastReadBatchKeyRef = useRef('');
+  const dispatch = useDispatch();
+  const replyingItem = useSelector(state => state.selectedReplyMessage);
+//   console.log("replyingItem", replyingItem);
 
   const [forwardingItem, setForwardingItem] = useState(null);
+   
 
   const { loadMessages, markAsRead, sendMessage:sendMessageToRecipent } = useChatActions();
   const { showSuccess, showError } = useToast();
@@ -362,7 +495,7 @@ const ConversationList = ({
   }, []);
 
   const handleReplyPress = useCallback(item => {
-    Alert.alert('Reply', `Reply action for ${item?.text ? 'this message' : 'this attachment'} is ready for wiring.`);
+    dispatch(selectedReplyMessageActions.setSelectedReplyMessage(item));
   }, []);
 
   const handleForwardPress = useCallback(item => {
@@ -373,10 +506,26 @@ const ConversationList = ({
     setForwardingItem(null);
   }, []);
 
+  const handleReplyClose = useCallback(() => {
+    dispatch(selectedReplyMessageActions.resetState());
+  }, []);
+
   const chatItems = useMemo(
     () => buildConversationItems(currentRoomConversations, selectedContact, messageStatuses, styles),
     [currentRoomConversations, selectedContact, messageStatuses, styles],
   );
+
+  const messageIndexById = useMemo(() => {
+    const idToIndex = new Map();
+    chatItems.forEach((chatItem, index) => {
+      if (chatItem?.type !== 'day' && chatItem?.id) {
+        idToIndex.set(String(chatItem.id), index);
+      }
+    });
+    return idToIndex;
+  }, [chatItems]);
+
+   
 
   const isInitialConversationLoading =
     isHistoryLoading && currentRoomConversations.length === 0;
@@ -427,7 +576,10 @@ const ConversationList = ({
 
   useEffect(() => {
     if (!currentRoomId) return;
-    loadMessages(currentRoomId, 1, 20).catch(() => {});
+    const roomKey = String(currentRoomId);
+    if (loadedRoomIds.has(roomKey)) return;
+    loadedRoomIds.add(roomKey);
+    loadMessages(currentRoomId, 1, 50).catch(() => {});
   }, [currentRoomId, loadMessages]);
 
   useFocusEffect(
@@ -469,7 +621,7 @@ const ConversationList = ({
     setRefreshing(true);
     try {
       const nextPage = (currentRoomPagination.page || 1) + 1;
-      await loadMessages(currentRoomId, nextPage, currentRoomPagination.limit || 20);
+      await loadMessages(currentRoomId, nextPage, currentRoomPagination.limit || 50);
     } finally {
       setRefreshing(false);
     }
@@ -536,6 +688,56 @@ const ConversationList = ({
     return null;
   };
 
+  const scrollToRepliedMessage = useCallback((replyTargetId) => {
+    if (!replyTargetId) return;
+
+    const targetIndex = messageIndexById.get(String(replyTargetId));
+    if (targetIndex === undefined) {
+      //showError('Message not found', 'Replied message is not loaded in this list yet.');
+      return;
+    }
+
+    flatListRef.current?.scrollToIndex({
+      index: targetIndex,
+      animated: true,
+      viewPosition: 0.5,
+    });
+  }, [messageIndexById, showError]);
+
+  const renderReplyPreview = (item, isSelfMessage) => {
+    const replyData = item?.reply_to_message || item?.replyTo;
+    const targetId = item?.replyTargetId;
+    const preview = getReplyPreviewContent(replyData);
+
+    if (!preview) return null;
+
+    const replyPreviewContent = (
+      <View
+        style={[
+          styles.replyPreviewBox,
+          isSelfMessage ? styles.replyPreviewBoxRight : styles.replyPreviewBoxLeft,
+        ]}
+      >
+        <Text style={styles.replyPreviewTitle}>{preview.title}</Text>
+        <Text style={styles.replyPreviewText} numberOfLines={2}>
+          {preview.text}
+        </Text>
+      </View>
+    );
+
+    if (!targetId) {
+      return replyPreviewContent;
+    }
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.82}
+        onPress={() => scrollToRepliedMessage(targetId)}
+      >
+        {replyPreviewContent}
+      </TouchableOpacity>
+    );
+  };
   const renderLocationContent = (item, isSelfMessage) => {
     const location = parseMessageLocation(item?.locationJson);
     if (!location) return null;
@@ -601,58 +803,71 @@ const ConversationList = ({
           </View>
         </View>
       );
-    }
+    } 
 
     if (item.type === 'left') {
       return (
-        <View style={styles.bubbleLeftWrapper}>
-          <View style={styles.messageRowLeft}>
-            <View style={styles.bubbleLeft}>
-              {renderLocationContent(item, false)}
-              {renderMediaContent(item)}
-              {!!item.text && <Text style={styles.messageText}>{item.text}</Text>}
+        <ReplySwipeWrapper item={item} onSwipeReply={handleReplyPress} enabled={item.type === 'left'}>
+          <View style={styles.bubbleLeftWrapper}>
+            <View style={styles.messageRowLeft}>
+              <View style={styles.bubbleLeft}>
+                {renderReplyPreview(item, false)}
+                {renderLocationContent(item, false)}
+                {renderMediaContent(item)}
+                {!!item.text && <Text style={styles.messageText}>{item.text}</Text>}
+              </View>
+
+              {renderMessageActions(item, false)}
             </View>
 
-            {renderMessageActions(item, false)}
-          </View>
-
-          <View style={styles.messageFooterLeft}>
-            <View style={item.avatarStyle}>
-              <Text style={styles.avatarSmallText}>{item.avatarText}</Text>
+            <View style={styles.messageFooterLeft}>
+              <View style={item.avatarStyle}>
+                <Text style={styles.avatarSmallText}>{item.avatarText}</Text>
+              </View>
+              <Text style={styles.timeLeftInline}>{item.time}</Text>
             </View>
-            <Text style={styles.timeLeftInline}>{item.time}</Text>
           </View>
-        </View>
+        </ReplySwipeWrapper>
       );
     }
 
     if (item.type === 'right') {
       return (
-        <View>
-          <View style={styles.messageRowRight}>
-            {renderMessageActions(item, true)}
+        <ReplySwipeWrapper item={item} onSwipeReply={handleReplyPress} enabled={item.type === 'right'}>
+          <View>
+            <View style={styles.messageRowRight}>
+              {renderMessageActions(item, true)}
 
-            <View style={styles.bubbleRight}>
-              {renderLocationContent(item, true)}
-              {renderMediaContent(item)}
-              {!!item.text && <Text style={styles.messageText}>{item.text}</Text>}
+              <View style={styles.bubbleRight}>
+                {renderReplyPreview(item, true)}
+                {renderLocationContent(item, true)}
+                {renderMediaContent(item)}
+                {!!item.text && <Text style={styles.messageText}>{item.text}</Text>}
+              </View>
+
+              <View style={styles.avatarSmallPink}>
+                <Text style={styles.avatarSmallText}>{item.avatarText}</Text>
+              </View>
             </View>
 
-            <View style={styles.avatarSmallPink}>
-              <Text style={styles.avatarSmallText}>{item.avatarText}</Text>
+            <View style={styles.messageStatusRow}>
+              <Text style={styles.timeRight}>{item.time}</Text>
+              {renderStatusIcon(item.status)}
             </View>
           </View>
-
-          <View style={styles.messageStatusRow}>
-            <Text style={styles.timeRight}>{item.time}</Text>
-            {renderStatusIcon(item.status)}
-          </View>
-        </View>
+        </ReplySwipeWrapper>
       );
     }
 
     return null;
   };
+
+  const handleReload = useCallback(() => {
+    if (!currentRoomId) return;
+    const roomKey = String(currentRoomId);
+    loadedRoomIds.delete(roomKey);
+    loadMessages(currentRoomId, 1, 50).catch(() => {});
+  }, [currentRoomId, loadMessages]);
 
   const renderNoConversation = () => {
     if (isInitialConversationLoading) {
@@ -676,6 +891,14 @@ const ConversationList = ({
         <Text style={styles.emptyStateSubtitle}>
           Start a conversation with {selectedContact?.name || 'this contact'}. Your messages will appear here.
         </Text>
+        <TouchableOpacity
+          onPress={handleReload}
+          activeOpacity={0.8}
+          style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, backgroundColor: 'rgba(46,213,115,0.15)', borderWidth: 1, borderColor: '#2ED573' }}
+        >
+          <Icon name="refresh" size={16} color="#2ED573" />
+          <Text style={{ color: '#2ED573', fontSize: 13 }}>Reload</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -698,7 +921,7 @@ const ConversationList = ({
       <FlatList
         ref={flatListRef}
         data={chatItems}
-        keyExtractor={item => item.id}
+        keyExtractor={item => String(item.id)}
         renderItem={renderChatItem}
         showsVerticalScrollIndicator={false}
         style={styles.chatScroll}
@@ -711,6 +934,12 @@ const ConversationList = ({
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         onScroll={handleScroll}
+        onScrollToIndexFailed={info => {
+          flatListRef.current?.scrollToOffset({
+            offset: Math.max(0, info.averageItemLength * info.index),
+            animated: true,
+          });
+        }}
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
@@ -751,6 +980,12 @@ const ConversationList = ({
         item={forwardingItem}
         onClose={handleForwardClose}
         onSend={forwardMessage}
+      />
+
+      <ReplyMessageModal
+        visible={replyingItem?.id ? true : false}
+        item={replyingItem}
+        onClose={handleReplyClose}
       />
     </>
   );
