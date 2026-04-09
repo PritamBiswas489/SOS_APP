@@ -8,13 +8,12 @@ import { useDispatch } from 'react-redux';
 import { userActions } from '../../store/redux/user.redux';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
-import { TrustedContactService } from '../../services/trustedContact.service';
-import { trustedContactActions } from '../../store/redux/trustedContactList.redux';
-import { chatContactActions } from '../../store/redux/chatContactList.redux';
+import { useChatContacts } from '../../hook/useChatContacts';
 
 const ProcessScreen = payload => {
   const { action } = payload.route.params;
   const dispatch = useDispatch();
+  const { fetchChatContacts } = useChatContacts();
   console.log('=====================================================');
   console.log('Process Screen Action:', action);
   console.log('=====================================================');
@@ -123,33 +122,16 @@ const ProcessScreen = payload => {
         console.log('=====================================================');
         console.log("Trusted Contacts for Join Socket Room need to be fetched here");
         console.log('=====================================================');
-        try {
-          TrustedContactService.getChatContactList(result => {
-            if (result.success) {
-              console.log('=====================================================');
-              console.log('Chat contact list fetched successfully:', result.data);
-              console.log('=====================================================');
-              dispatch(
-                chatContactActions.setChatContactList(
-                  result.data.data,
-                ),
-              );
-            }
-            dispatch(chatContactActions.setRefresh(false));
-          });
-        } catch (error) {}
+        await fetchChatContacts();
         console.log('=====================================================');
         console.log('Data retrieval successful, navigating to Main screen');
         console.log('=====================================================');
-
-
-
 
         navigation.replace('Main');
       }
     };
     fetchData();
-  }, [action, dispatch, navigation]);
+  }, [action, dispatch, fetchChatContacts, navigation]);
   return (
     <View style={styles.container}>
       <Spinner

@@ -58,6 +58,54 @@ export default StyleSheet.create({
     lineHeight: SF(18),
   },
 
+  historyLoaderScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SW(24),
+  },
+
+  historyLoaderCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: appColors.secondary,
+    borderRadius: SW(16),
+    paddingVertical: SH(24),
+    paddingHorizontal: SW(20),
+    minWidth: SW(220),
+  },
+
+  historyLoaderTitle: {
+    color: appColors.white,
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(15),
+    marginTop: SH(12),
+  },
+
+  historyLoaderSubtitle: {
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoRegular,
+    fontSize: SF(11),
+    marginTop: SH(4),
+    textAlign: 'center',
+  },
+
+  historyLoaderInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SH(14),
+    marginBottom: SH(2),
+  },
+
+  historyLoaderInlineText: {
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoSemiBold,
+    fontSize: SF(11),
+    marginLeft: SW(8),
+  },
+
   /* HEADER */
 
   header: {
@@ -259,7 +307,7 @@ export default StyleSheet.create({
   bubbleLeftWrapper: {
     marginTop: SW(14),
     marginLeft: SW(14),
-    maxWidth: '75%',
+   
   },
 
   messageFooterLeft: {
@@ -278,15 +326,44 @@ export default StyleSheet.create({
   messageRowLeft: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginTop: SW(14),
-    marginLeft: SW(14),
   },
 
   bubbleLeft: {
     backgroundColor: appColors.whiteBdrTransparent,
     padding: SW(10),
     borderRadius: 14,
-    maxWidth: '68%',
+    maxWidth: '75%',
+  },
+
+  messageActionsRow: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+
+  messageActionsRowLeft: {
+    marginLeft: SW(8),
+    marginBottom: SW(2),
+  },
+
+  messageActionsRowRight: {
+    marginRight: SW(8),
+    marginBottom: SW(2),
+  },
+
+  messageActionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: SW(28),
+    height: SW(28),
+    borderRadius: SW(14),
+    backgroundColor: 'rgba(143, 163, 200, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(143, 163, 200, 0.22)',
+  },
+
+  messageActionButtonSecondary: {
+    marginTop: SW(6),
   },
 
   messageText: {
@@ -333,7 +410,7 @@ export default StyleSheet.create({
     backgroundColor: '#5C141C',
     padding: SW(10),
     borderRadius: 14,
-    maxWidth: '68%',
+    maxWidth: '75%',
     overflow: 'hidden',
   },
 
@@ -370,55 +447,6 @@ export default StyleSheet.create({
     justifyContent: 'flex-end',
     marginRight: SW(48),
     marginTop: 2,
-  },
-
-  /* INPUT BAR */
-
-  micBtn: {
-    width: SW(36),
-    height: SW(36),
-    borderRadius: SW(18),
-    backgroundColor: appColors.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    // backgroundColor: '#0E1A33',
-    marginHorizontal: SW(12),
-    marginBottom: SW(10),
-    paddingHorizontal: SW(12),
-    borderTopColor: appColors.secondary,
-    borderTopWidth: 1,
-    borderBottomColor: appColors.secondary,
-    borderBottomWidth: 1,
-    paddingVertical: SW(10),
-  },
-
-  input: {
-    flex: 1,
-    color: '#fff',
-    marginLeft: 10,
-    backgroundColor: appColors.primaryAA,
-    marginHorizontal: SW(12),
-    height: SW(42),
-    paddingHorizontal: SW(15),
-    borderRadius: SW(20),
-  },
-
-  sendBtn: {
-    backgroundColor: appColors.primary,
-    width: SW(38),
-    height: SW(38),
-    borderRadius: SW(19),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  sendBtnDisabled: {
-    opacity: 0.7,
   },
 
   /* MEDIA BUBBLES */
@@ -480,66 +508,80 @@ export default StyleSheet.create({
     marginLeft: SW(8),
   },
 
-  previewWrapper: {
-    marginHorizontal: SW(12),
-    marginBottom: SW(8),
-    borderWidth: 1,
-    borderColor: appColors.secondary,
-    backgroundColor: appColors.primaryAA,
-    borderRadius: SW(12),
+  locationMessageCard: {
+    borderRadius: SW(10),
     padding: SW(10),
+    marginBottom: SW(6),
+    borderWidth: 1,
+  },
+
+  locationMessageCardLeft: {
+    backgroundColor: 'rgba(61, 131, 255, 0.12)',
+    borderColor: 'rgba(96, 166, 255, 0.35)',
+  },
+
+  locationMessageCardRight: {
+    backgroundColor: 'rgba(255, 91, 109, 0.16)',
+    borderColor: 'rgba(255, 126, 141, 0.38)',
+  },
+
+  locationMessageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
 
-  previewImageContainer: {
-    position: 'relative',
-  },
-
-  previewImage: {
-    width: SW(52),
-    height: SW(52),
-    borderRadius: SW(10),
-    backgroundColor: appColors.secondary,
-  },
-
-  previewImageOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: SW(10),
-    backgroundColor: 'rgba(0,0,0,0.45)',
+  locationPinBadge: {
+    width: SW(26),
+    height: SW(26),
+    borderRadius: SW(13),
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: appColors.primary,
+    marginRight: SW(8),
   },
 
-  previewMetaContainer: {
+  locationMessageHeaderTextBlock: {
     flex: 1,
-    marginHorizontal: SW(10),
   },
 
-  previewTitle: {
+  locationMessageTitle: {
     color: appColors.white,
     fontFamily: appFonts.NunitoBold,
     fontSize: SF(12),
   },
 
-  previewSubtitle: {
+  locationMessageSubtitle: {
     color: appColors.bodyColor,
     fontFamily: appFonts.NunitoRegular,
     fontSize: SF(10),
-    marginTop: SH(2),
+    marginTop: SH(1),
   },
 
-  previewRemoveBtn: {
-    width: SW(28),
-    height: SW(28),
-    borderRadius: SW(14),
-    justifyContent: 'center',
+  locationCoordsRow: {
+    marginTop: SH(8),
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: appColors.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: SW(8),
+    paddingVertical: SH(5),
+    paddingHorizontal: SW(8),
+  },
+
+  locationCoordsLabel: {
+    color: appColors.bodyColor,
+    fontFamily: appFonts.NunitoExtraBold,
+    fontSize: SF(9),
+  },
+
+  locationCoordsLabelSpacing: {
+    marginLeft: SW(10),
+  },
+
+  locationCoordsValue: {
+    color: appColors.white,
+    fontFamily: appFonts.NunitoSemiBold,
+    fontSize: SF(10),
+    marginLeft: SW(4),
   },
 
   scrollToBottomBtn: {
@@ -560,83 +602,4 @@ export default StyleSheet.create({
     zIndex: 20,
   },
 
-  actionSheetOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-  },
-
-  actionSheetContainer: {
-    backgroundColor: '#111A2F',
-    borderTopLeftRadius: SW(18),
-    borderTopRightRadius: SW(18),
-    paddingHorizontal: SW(14),
-    paddingTop: SW(12),
-    paddingBottom: SW(22),
-    borderTopColor: appColors.secondary,
-    borderTopWidth: 1,
-  },
-
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SW(12),
-    paddingHorizontal: SW(10),
-    borderRadius: SW(10),
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    marginTop: SW(8),
-  },
-
-  actionText: {
-    color: appColors.white,
-    marginLeft: SW(10),
-    fontFamily: appFonts.NunitoBold,
-    fontSize: SF(13),
-  },
-
-  cancelActionItem: {
-    backgroundColor: 'rgba(255, 107, 107, 0.12)',
-  },
-
-  cancelActionText: {
-    color: '#FF6B6B',
-    marginLeft: SW(10),
-    fontFamily: appFonts.NunitoBold,
-    fontSize: SF(13),
-  },
-
-  /* TYPING INDICATOR */
-
-  typingIndicatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SW(16),
-    paddingVertical: SH(6),
-  },
-
-  typingDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: SW(6),
-  },
-
-  typingDot: {
-    width: SW(6),
-    height: SW(6),
-    borderRadius: SW(3),
-    backgroundColor: appColors.bodyColor,
-    marginHorizontal: SW(2),
-    opacity: 0.6,
-  },
-
-  typingDotOne: {},
-  typingDotTwo: {},
-  typingDotThree: {},
-
-  typingIndicatorText: {
-    color: appColors.bodyColor,
-    fontFamily: appFonts.NunitoRegular,
-    fontSize: SF(11),
-    fontStyle: 'italic',
-  },
 });

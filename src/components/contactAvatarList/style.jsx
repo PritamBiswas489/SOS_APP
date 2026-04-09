@@ -7,6 +7,8 @@ export default StyleSheet.create({
   /* CONTACT AVATARS */
 
   avatarRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: SW(18),
     marginTop: SW(16),
     borderTopColor: appColors.secondary,
@@ -15,6 +17,23 @@ export default StyleSheet.create({
     borderBottomWidth: 0.8,
     paddingVertical: SW(12),
     backgroundColor: 'rgba(255, 255, 255, 0.01)',
+  },
+
+  refreshIconBtn: {
+    width: SW(34),
+    height: SW(34),
+    borderRadius: SW(17),
+    borderWidth: 1,
+    borderColor: 'rgba(46, 213, 115, 0.35)',
+    backgroundColor: 'rgba(46, 213, 115, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SW(10),
+    shadowColor: '#2ED573',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   avatarRow: {
@@ -30,6 +49,9 @@ export default StyleSheet.create({
     alignItems: 'center',
     marginRight: SW(4),
   },
+  avatarCircleWrap: {
+    position: 'relative',
+  },
   avatarCircle: {
     width: SW(48),
     height: SW(48),
@@ -42,6 +64,18 @@ export default StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
+    color: appColors.white,
+  },
+  onlineDot: {
+    position: 'absolute',
+    right: SW(1),
+    bottom: SW(1),
+    width: SW(11),
+    height: SW(11),
+    borderRadius: SW(5.5),
+    backgroundColor: '#2ED573',
+    borderWidth: 1.6,
+    borderColor: '#0A1628',
   },
   avatarAdd: {
     width: SW(48),

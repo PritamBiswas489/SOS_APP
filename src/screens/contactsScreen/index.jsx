@@ -17,6 +17,7 @@ import { TrustedContactService } from '../../services/trustedContact.service';
 import { trustedContactActions } from '../../store/redux/trustedContactList.redux';
 import { trustedContactIncommingRequestActions } from '../../store/redux/trustedContactIncommingRequest.redux';
 import { trustedContactOutgongRequestActions } from '../../store/redux/trustedContactOutgongRequest.redux';
+import { chatSelectedTrustedContactActions } from '../../store/redux/chatSelectedTrustedContact.redux';
 import useToast from '../../hook/useToast';
 import Spinner from 'react-native-loading-spinner-overlay';
 const ContactsScreen = () => {
@@ -35,6 +36,7 @@ const ContactsScreen = () => {
   const outgoingRequests = useSelector(
     state => state.trustedContactOutgongRequest,
   );
+  const userData = useSelector(state => state.userProviderData);
 
   const contactRefresh = contacts.refresh;
   const incomingRequestRefresh = incomingRequests.refresh;
@@ -145,11 +147,43 @@ const ContactsScreen = () => {
         { key: 'cancel', icon: 'close', color: '#FF4757' },
       ];
     }
-    return [{ key: 'delete', icon: 'delete', color: '#FF4757' }];
+    return [{ key: 'chat', icon: 'chat', color: '#2F6BFF' },{ key: 'delete', icon: 'delete', color: '#FF4757' }];
   };
 
   const onActionPress = (action, item, tab) => {
     const actionText = action.charAt(0).toUpperCase() + action.slice(1);
+    if (action === 'chat' && tab === 'contact') {
+      const usrId = userData?.id;
+      const roomid = [item.user_id, item.trusted_user_id].sort().join(':');
+      let displayName, receipentId;
+      if (item.user_id === usrId) {
+        displayName = item.nickname || item.trusted_contact?.name || 'Unknown';
+        receipentId = item.trusted_user_id;
+      } else {
+        displayName =
+          item?.inviter?.name ||
+          item?.inviter?.phone_number ||
+          item.nickname ||
+          'Unknown';
+        receipentId = item.user_id;
+      }
+      dispatch(
+        chatSelectedTrustedContactActions.setSelectedTrustedContact({
+          id: item.id,
+          name: displayName,
+          initial: displayName.charAt(0).toUpperCase(),
+          receipent_id: receipentId,
+          phone_number:
+            item.trusted_contact?.phone_number ||
+            item?.inviter?.phone_number ||
+            '',
+          roomId: roomid,
+          isOnline: false,
+        }),
+      );
+      navigation.navigate('MainTabs', { screen: 'Chat' });
+      return;
+    }
     if (action === 'cancel' && tab === 'outgoing') {
       //need a confirm and cancel alert
       Alert.alert(

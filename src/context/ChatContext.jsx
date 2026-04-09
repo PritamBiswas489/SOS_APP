@@ -4,12 +4,19 @@ import React, {
   useReducer,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
 } from 'react';
 import { useSelector } from 'react-redux';
 import { useSocket } from './SocketContext';
+import { useChatContacts } from '../hook/useChatContacts';
 
 const ChatContext = createContext(null);
+const ChatMessagesContext = createContext(null);
+const ChatTypingContext = createContext(null);
+const ChatPresenceContext = createContext(null);
+const ChatActionsContext = createContext(null);
+
 
 const initialState = {
   /** Object<chatId, Message[]> — chatId is recipientId for 1-on-1 or groupId for groups */
@@ -69,8 +76,8 @@ const chatReducer = (state, action) => {
           [chatId]: [...existing, message],
         },
       };
-      console.log('===============================================');
-      console.log(d);
+      //console.log('===============================================');
+      //console.log(d);
       //console.log("ChatProvider: Updated conversations state:", d.conversations);
       return d;
     }
@@ -135,28 +142,25 @@ const chatReducer = (state, action) => {
 };
 
 export const ChatProvider = ({ children }) => {
-  console.log('=====================================');
-  console.log('ChatProvider initialized');
-  console.log('=====================================');
+  //console.log('=====================================');
+  //console.log('ChatProvider initialized');
+  //console.log('=====================================');
 
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const { on, off, emit, isConnected } = useSocket();
   const typingTimers = useRef({});
   const userData = useSelector(state => state.userProviderData);
-  const chatContactList = useSelector(state => state.chatContactList);
+  const { contactList } = useChatContacts();
   const currentUserId = userData?.id;
 
   useEffect(() => {
     if (!isConnected) {
-      console.log(
-        'ChatProvider: Socket not connected, skipping event listener setup',
-      );
       return;
     }
     const handleNewMessage = message => {
-      console.log('===============================================');
-      console.log('ChatProvider: Received new message:', message);
-      console.log('===============================================');
+      // console.log('===============================================');
+      // console.log('ChatProvider: Received new message:', message);
+      // console.log('===============================================');
       const chatId = message.roomId; // Assuming message has roomId to identify conversation
       dispatch({ type: 'ADD_MESSAGE', chatId, message });
       // Auto-acknowledge delivery
@@ -178,9 +182,9 @@ export const ChatProvider = ({ children }) => {
     // Typing indicators
     const handleTypingStart = ({ userId, userName, chatWith, roomId }) => {
       const chatId = roomId;
-      console.log('===============================================');
-      console.log(`User ${userName} (${userId}) started typing in chat ${chatId}`);
-      console.log('===============================================');
+      // console.log('===============================================');
+      // console.log(`User ${userName} (${userId}) started typing in chat ${chatId}`);
+      // console.log('===============================================');
       dispatch({ type: 'SET_TYPING', chatId, userId, userName, isTyping: true });
     };
 
@@ -214,7 +218,7 @@ export const ChatProvider = ({ children }) => {
   useEffect(() => {
     if (!isConnected || !currentUserId) return;
 
-    const list = chatContactList?.contact_list;
+    const list = contactList;
     if (!Array.isArray(list) || list.length === 0) return;
 
     const userIds = [...new Set(
@@ -242,15 +246,21 @@ export const ChatProvider = ({ children }) => {
         });
       })
       .catch(() => {});
-  }, [isConnected, currentUserId, chatContactList?.contact_list, emit]);
+  }, [isConnected, currentUserId, contactList, emit]);
 
   const sendMessage = useCallback(
-    async (roomId, recipientId, text, media = null) => {
+    async (roomId, recipientId, text, media = null, location = null) => {
       const payload = { roomId, recipientId, text };
       if (media) {
         payload.mediaUrl = media.url;
         payload.mediaType = media.mediaType;
       }
+      if (location?.latitude && location?.longitude) {
+        payload.locationJson = location;
+      }
+      //console.log('===============================================');
+      //console.log('ChatProvider: Sending message with payload:', payload);
+      //console.log('===============================================');
       const response = await emit('message:send', JSON.stringify(payload));
       if (response?.message) {
         dispatch({ type: 'ADD_MESSAGE', chatId: roomId, message: response.message });
@@ -343,14 +353,58 @@ export const ChatProvider = ({ children }) => {
     [emit],
   );
 
-  const value = {
-    ...state, 
-    sendMessage,
-    loadMessages,
-    sendTyping,
-    markAsRead,
-  };
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+  const messagesValue = useMemo(
+    () => ({
+      conversations: state.conversations,
+      messageStatuses: state.messageStatuses,
+      pagination: state.pagination,
+    }),
+    [state.conversations, state.messageStatuses, state.pagination],
+  );
+
+  const typingValue = useMemo(
+    () => state.typingIndicators,
+    [state.typingIndicators],
+  );
+
+  const presenceValue = useMemo(
+    () => state.onlineUsers,
+    [state.onlineUsers],
+  );
+
+  const actionsValue = useMemo(
+    () => ({
+      sendMessage,
+      loadMessages,
+      sendTyping,
+      markAsRead,
+    }),
+    [sendMessage, loadMessages, sendTyping, markAsRead],
+  );
+
+  const value = useMemo(
+    () => ({
+      ...messagesValue,
+      typingIndicators: typingValue,
+      onlineUsers: presenceValue,
+      ...actionsValue,
+    }),
+    [messagesValue, typingValue, presenceValue, actionsValue],
+  );
+
+  return (
+    <ChatContext.Provider value={value}>
+      <ChatActionsContext.Provider value={actionsValue}>
+        <ChatPresenceContext.Provider value={presenceValue}>
+          <ChatTypingContext.Provider value={typingValue}>
+            <ChatMessagesContext.Provider value={messagesValue}>
+              {children}
+            </ChatMessagesContext.Provider>
+          </ChatTypingContext.Provider>
+        </ChatPresenceContext.Provider>
+      </ChatActionsContext.Provider>
+    </ChatContext.Provider>
+  );
 };
 
 export const useChat = () => {
@@ -358,4 +412,29 @@ export const useChat = () => {
   if (!ctx) throw new Error('useChat must be used within ChatProvider');
   return ctx;
 };
+
+export const useChatMessages = () => {
+  const ctx = useContext(ChatMessagesContext);
+  if (!ctx) throw new Error('useChatMessages must be used within ChatProvider');
+  return ctx;
+};
+
+export const useChatTyping = () => {
+  const ctx = useContext(ChatTypingContext);
+  if (!ctx) throw new Error('useChatTyping must be used within ChatProvider');
+  return ctx;
+};
+
+export const useChatPresence = () => {
+  const ctx = useContext(ChatPresenceContext);
+  if (!ctx) throw new Error('useChatPresence must be used within ChatProvider');
+  return ctx;
+};
+
+export const useChatActions = () => {
+  const ctx = useContext(ChatActionsContext);
+  if (!ctx) throw new Error('useChatActions must be used within ChatProvider');
+  return ctx;
+};
+
 export default ChatContext;
