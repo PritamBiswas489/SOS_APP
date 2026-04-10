@@ -6,12 +6,14 @@ import {
   FlatList,
   Image,
   Linking,
+  Modal,
   PanResponder,
   PermissionsAndroid,
   Platform,
   RefreshControl,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import RNBlobUtil from 'react-native-blob-util';
@@ -27,7 +29,7 @@ import { useChatActions, useChatMessages } from '../../context/ChatContext';
 import useToast from '../../hook/useToast';
 import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
 
-const loadedRoomIds = new Set();
+ 
  
 const getMessageTimestamp = message => {
   return (
@@ -315,6 +317,7 @@ const ConversationList = ({
   styles,
 }) => {
   const flatListRef = useRef(null);
+  const loadedRoomIdsRef = useRef(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -325,6 +328,7 @@ const ConversationList = ({
 //   console.log("replyingItem", replyingItem);
 
   const [forwardingItem, setForwardingItem] = useState(null);
+  const [menuItem, setMenuItem] = useState(null);
    
 
   const { loadMessages, markAsRead, sendMessage:sendMessageToRecipent } = useChatActions();
@@ -496,7 +500,7 @@ const ConversationList = ({
 
   const handleReplyPress = useCallback(item => {
     dispatch(selectedReplyMessageActions.setSelectedReplyMessage(item));
-  }, []);
+  }, [dispatch]);
 
   const handleForwardPress = useCallback(item => {
     setForwardingItem(item);
@@ -508,6 +512,14 @@ const ConversationList = ({
 
   const handleReplyClose = useCallback(() => {
     dispatch(selectedReplyMessageActions.resetState());
+  }, [dispatch]);
+
+  const handleMenuToggle = useCallback(item => {
+    setMenuItem(item);
+  }, []);
+
+  const handleMenuClose = useCallback(() => {
+    setMenuItem(null);
   }, []);
 
   const chatItems = useMemo(
@@ -574,44 +586,47 @@ const ConversationList = ({
     lastSeenMessageKeyRef.current = lastMessageKey;
   }, [currentRoomConversations, isNearBottom]);
 
-  useEffect(() => {
+  
+
+   useEffect(() => {
     if (!currentRoomId) return;
     const roomKey = String(currentRoomId);
-    if (loadedRoomIds.has(roomKey)) return;
-    loadedRoomIds.add(roomKey);
+
+    if (loadedRoomIdsRef.current.has(roomKey)) return; // ✅ use ref
+    loadedRoomIdsRef.current.add(roomKey);              // ✅ use ref
+
     loadMessages(currentRoomId, 1, 50).catch(() => {});
   }, [currentRoomId, loadMessages]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!currentRoomId || !currentRoomConversations?.length) return;
+ 
+const focusCallback = useCallback(() => {
+  if (!currentRoomId || !currentRoomConversations?.length) return;
 
-      const unreadMessages = currentRoomConversations.filter(msg => {
-        const isIncoming = !msg.isSelf;
-        const messageStatus = msg?.status || messageStatuses[msg?.id];
-        const isUnread = messageStatus !== 'read';
-        return isIncoming && isUnread;
-      });
+  const unreadMessages = currentRoomConversations.filter(msg => {
+    const isIncoming = !msg.isSelf;
+    const messageStatus = msg?.status || messageStatuses[msg?.id];
+    const isUnread = messageStatus !== 'read';
+    return isIncoming && isUnread;
+  });
 
-      if (unreadMessages.length > 0) {
-        const messagesById = unreadMessages.map(m => m?.id).filter(Boolean).sort();
-        const senderId = unreadMessages[0]?.senderId || selectedContact?.receipent_id;
+  if (unreadMessages.length > 0) {
+    const messagesById = unreadMessages.map(m => m?.id).filter(Boolean).sort();
+    const senderId = unreadMessages[0]?.senderId || selectedContact?.receipent_id;
+    const unreadBatchKey = `${currentRoomId}:${senderId || 'unknown'}:${messagesById.join(',')}`;
 
-        const unreadBatchKey = `${currentRoomId}:${senderId || 'unknown'}:${messagesById.join(',')}`;
+    if (unreadBatchKey === lastReadBatchKeyRef.current) return;
 
-        if (unreadBatchKey === lastReadBatchKeyRef.current) {
-          return;
-        }
+    if (messagesById.length > 0 && senderId) {
+      lastReadBatchKeyRef.current = unreadBatchKey;
+      markAsRead(messagesById, senderId).catch(() => {});
+    }
+  } else {
+    lastReadBatchKeyRef.current = '';
+  }
+}, [currentRoomId, currentRoomConversations, messageStatuses, selectedContact, markAsRead]);
 
-        if (messagesById.length > 0 && senderId) {
-          lastReadBatchKeyRef.current = unreadBatchKey;
-          markAsRead(messagesById, senderId).catch(() => {});
-        }
-      } else {
-        lastReadBatchKeyRef.current = '';
-      }
-    }, [currentRoomId, currentRoomConversations, messageStatuses, selectedContact, markAsRead]),
-  );
+ 
+useFocusEffect(focusCallback);
 
   const handleRefresh = useCallback(async () => {
     if (!currentRoomId || isHistoryLoading || !hasMoreHistory) {
@@ -693,7 +708,7 @@ const ConversationList = ({
 
     const targetIndex = messageIndexById.get(String(replyTargetId));
     if (targetIndex === undefined) {
-      //showError('Message not found', 'Replied message is not loaded in this list yet.');
+      
       return;
     }
 
@@ -702,7 +717,7 @@ const ConversationList = ({
       animated: true,
       viewPosition: 0.5,
     });
-  }, [messageIndexById, showError]);
+  }, [messageIndexById]);
 
   const renderReplyPreview = (item, isSelfMessage) => {
     const replyData = item?.reply_to_message || item?.replyTo;
@@ -778,11 +793,16 @@ const ConversationList = ({
 
     return (
       <View style={[styles.messageActionsRow, actionRowStyle]}>
-        {renderMessageActionButton(styles, 'reply', () => handleReplyPress(item))}
-        {renderMessageActionButtonSecondary(styles, 'forward', () => handleForwardPress(item))}
+        <TouchableOpacity
+          activeOpacity={0.82}
+          onPress={() => handleMenuToggle(item)}
+          style={styles.messageActionButton}
+        >
+          <Icon name="more-vert" size={16} color="#D7E3FF" />
+        </TouchableOpacity>
       </View>
     );
-  }, [handleForwardPress, handleReplyPress, styles]);
+  }, [handleMenuToggle, styles]);
 
   const renderChatItem = ({ item }) => {
     if (item.type === 'day') {
@@ -862,10 +882,10 @@ const ConversationList = ({
     return null;
   };
 
-  const handleReload = useCallback(() => {
+const handleReload = useCallback(() => {
     if (!currentRoomId) return;
     const roomKey = String(currentRoomId);
-    loadedRoomIds.delete(roomKey);
+    loadedRoomIdsRef.current.delete(roomKey); // ✅ use ref
     loadMessages(currentRoomId, 1, 50).catch(() => {});
   }, [currentRoomId, loadMessages]);
 
@@ -933,7 +953,10 @@ const ConversationList = ({
         ListEmptyComponent={renderNoConversation}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        onScroll={handleScroll}
+        onScroll={event => {
+          if (menuItem !== null) handleMenuClose();
+          handleScroll(event);
+        }}
         onScrollToIndexFailed={info => {
           flatListRef.current?.scrollToOffset({
             offset: Math.max(0, info.averageItemLength * info.index),
@@ -987,6 +1010,62 @@ const ConversationList = ({
         item={replyingItem}
         onClose={handleReplyClose}
       />
+
+      <Modal
+        visible={menuItem !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={handleMenuClose}
+        statusBarTranslucent
+      >
+        <TouchableWithoutFeedback onPress={handleMenuClose}>
+          <View style={styles.messageActionModalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.messageActionModalSheet}>
+                <View style={styles.messageActionModalHandle} />
+
+                <TouchableOpacity
+                  activeOpacity={0.82}
+                  style={styles.messageActionModalItem}
+                  onPress={() => {
+                    handleMenuClose();
+                    handleReplyPress(menuItem);
+                  }}
+                >
+                  <View style={styles.messageActionModalIconWrap}>
+                    <Icon name="reply" size={18} color="#60A6FF" />
+                  </View>
+                  <Text style={styles.messageActionModalText}>Reply</Text>
+                </TouchableOpacity>
+
+                <View style={styles.messageActionModalDivider} />
+
+                <TouchableOpacity
+                  activeOpacity={0.82}
+                  style={styles.messageActionModalItem}
+                  onPress={() => {
+                    handleMenuClose();
+                    handleForwardPress(menuItem);
+                  }}
+                >
+                  <View style={styles.messageActionModalIconWrap}>
+                    <Icon name="forward" size={18} color="#60A6FF" />
+                  </View>
+                  <Text style={styles.messageActionModalText}>Forward</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.82}
+                  style={[styles.messageActionModalItem, styles.messageActionModalCancelItem]}
+                  onPress={handleMenuClose}
+                >
+                  <Text style={styles.messageActionModalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </>
   );
 };

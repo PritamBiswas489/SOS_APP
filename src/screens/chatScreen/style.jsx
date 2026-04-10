@@ -307,7 +307,6 @@ export default StyleSheet.create({
   bubbleLeftWrapper: {
     marginTop: SW(14),
     marginLeft: SW(14),
-   
   },
 
   messageFooterLeft: {
@@ -362,8 +361,72 @@ export default StyleSheet.create({
     borderColor: 'rgba(143, 163, 200, 0.22)',
   },
 
-  messageActionButtonSecondary: {
-    marginTop: SW(6),
+  messageActionModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'flex-end',
+  },
+
+  messageActionModalSheet: {
+    backgroundColor: '#0E1E35',
+    borderTopLeftRadius: SW(20),
+    borderTopRightRadius: SW(20),
+    paddingBottom: SH(28),
+    paddingTop: SH(10),
+    paddingHorizontal: SW(16),
+    borderTopWidth: 1,
+    borderColor: 'rgba(143, 163, 200, 0.18)',
+  },
+
+  messageActionModalHandle: {
+    width: SW(36),
+    height: SW(4),
+    borderRadius: SW(2),
+    backgroundColor: 'rgba(143, 163, 200, 0.35)',
+    alignSelf: 'center',
+    marginBottom: SH(16),
+  },
+
+  messageActionModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SH(14),
+    paddingHorizontal: SW(8),
+  },
+
+  messageActionModalIconWrap: {
+    width: SW(36),
+    height: SW(36),
+    borderRadius: SW(18),
+    backgroundColor: 'rgba(96, 166, 255, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SW(14),
+  },
+
+  messageActionModalText: {
+    color: '#D7E3FF',
+    fontSize: SF(15),
+    fontFamily: appFonts.NunitoSemiBold,
+  },
+
+  messageActionModalDivider: {
+    height: 1,
+    backgroundColor: 'rgba(143, 163, 200, 0.12)',
+    marginHorizontal: SW(4),
+  },
+
+  messageActionModalCancelItem: {
+    justifyContent: 'center',
+    marginTop: SH(6),
+  },
+
+  messageActionModalCancelText: {
+    color: appColors.bodyColor,
+    fontSize: SF(14),
+    fontFamily: appFonts.NunitoRegular,
+    textAlign: 'center',
+    flex: 1,
   },
 
   messageText: {
@@ -443,7 +506,6 @@ export default StyleSheet.create({
     padding: SW(10),
     borderRadius: 14,
     maxWidth: '75%',
-    overflow: 'hidden',
   },
 
   avatarSmallPink: {

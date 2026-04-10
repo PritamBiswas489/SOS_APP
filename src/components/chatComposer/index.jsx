@@ -24,7 +24,7 @@ import styles from './style';
 import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
-const MAX_VIDEO_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_SIZE_BYTES = 30 * 1024 * 1024;
 const MAX_AUDIO_SIZE_BYTES = 20 * 1024 * 1024;
 const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024;
 const TYPING_DEBOUNCE_MS = 1000;
