@@ -6,6 +6,7 @@ import trustedContactOutgongRequestSlice from './redux/trustedContactOutgongRequ
 import chatSelectedTrustedContactSlice from './redux/chatSelectedTrustedContact.redux';
 import selectedReplyMessageSlice from './redux/selectedReplyMessage.redux';
 import chatContactSlice from './redux/chatContactList.redux';
+import currentScreenSlice from './redux/currentScreen.redux';
 
 export const resetAllState = createAction('store/resetAll');
 
@@ -17,6 +18,7 @@ const appReducer = combineReducers({
   chatSelectedTrustedContact: chatSelectedTrustedContactSlice.reducer,
   selectedReplyMessage: selectedReplyMessageSlice.reducer,
   chatContactList: chatContactSlice.reducer,
+  currentScreen: currentScreenSlice.reducer,
 });
 
 const rootReducer = (state, action) => {

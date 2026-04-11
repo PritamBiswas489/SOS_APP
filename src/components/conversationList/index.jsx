@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  DeviceEventEmitter,
 } from 'react-native';
 import RNBlobUtil from 'react-native-blob-util';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -26,6 +27,7 @@ import ReplyMessageModal from '../replyMessageModal';
 import { useSelector, useDispatch } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { useChatActions, useChatMessages } from '../../context/ChatContext';
+import { useSocket } from '../../context/SocketContext';
 import useToast from '../../hook/useToast';
 import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
 
@@ -318,11 +320,16 @@ const ConversationList = ({
 }) => {
   const flatListRef = useRef(null);
   const loadedRoomIdsRef = useRef(new Set());
+  const shouldScrollAfterLoadRef = useRef(false);
+  const pendingAutoScrollPassesRef = useRef(0);
+  const wasConnectedRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const lastSeenMessageKeyRef = useRef(null);
+  const lastBannerEventKeyRef = useRef('');
   const lastReadBatchKeyRef = useRef('');
+  const didInitialRoomScrollRef = useRef(false);
   const dispatch = useDispatch();
   const replyingItem = useSelector(state => state.selectedReplyMessage);
 //   console.log("replyingItem", replyingItem);
@@ -332,6 +339,7 @@ const ConversationList = ({
    
 
   const { loadMessages, markAsRead, sendMessage:sendMessageToRecipent } = useChatActions();
+    const { isConnected } = useSocket();
   const { showSuccess, showError } = useToast();
   const { conversations, pagination, messageStatuses } = useChatMessages();
   const chatSelectedTrustedContact = useSelector(state => state.chatSelectedTrustedContact);
@@ -546,19 +554,26 @@ const ConversationList = ({
 
   const handleScroll = useCallback(event => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const threshold = 80;
+    const threshold = 150;
     const nearBottom =
       layoutMeasurement.height + contentOffset.y >= contentSize.height - threshold;
 
     setIsNearBottom(nearBottom);
-    if (nearBottom) {
-      setShowScrollToBottom(false);
-    }
+    setShowScrollToBottom(!nearBottom);
   }, []);
 
   const scrollToBottom = useCallback(() => {
     flatListRef.current?.scrollToEnd({ animated: true });
     setShowScrollToBottom(false);
+  }, []);
+
+  const scrollToBottomImmediate = useCallback(() => {
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToEnd({ animated: false });
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      });
+    });
   }, []);
 
   useEffect(() => {
@@ -574,7 +589,14 @@ const ConversationList = ({
 
     const isIncomingMessage = !lastMessage?.isSelf;
     if (isIncomingMessage && !isNearBottom) {
-      setShowScrollToBottom(true);
+      const bannerEventKey = `${currentRoomId || 'unknown-room'}:${lastMessageKey}`;
+      if (bannerEventKey !== lastBannerEventKeyRef.current) {
+        lastBannerEventKeyRef.current = bannerEventKey;
+        DeviceEventEmitter.emit('chat:new-message-banner', {
+          title: selectedContact?.name || 'New Message',
+          body: lastMessage?.text || lastMessage?.message || 'You have received a new message.',
+        });
+      }
     }
 
     if (isNearBottom) {
@@ -584,7 +606,7 @@ const ConversationList = ({
     }
 
     lastSeenMessageKeyRef.current = lastMessageKey;
-  }, [currentRoomConversations, isNearBottom]);
+  }, [currentRoomConversations, isNearBottom, selectedContact, currentRoomId]);
 
   
 
@@ -594,9 +616,21 @@ const ConversationList = ({
 
     if (loadedRoomIdsRef.current.has(roomKey)) return; // ✅ use ref
     loadedRoomIdsRef.current.add(roomKey);              // ✅ use ref
+    shouldScrollAfterLoadRef.current = true;
+    pendingAutoScrollPassesRef.current = 2;
+    didInitialRoomScrollRef.current = false;
 
     loadMessages(currentRoomId, 1, 50).catch(() => {});
   }, [currentRoomId, loadMessages]);
+
+  useEffect(() => {
+    if (!currentRoomId || isHistoryLoading || chatItems.length === 0) return;
+    if (didInitialRoomScrollRef.current) return;
+
+    scrollToBottomImmediate();
+    didInitialRoomScrollRef.current = true;
+    setShowScrollToBottom(false);
+  }, [currentRoomId, isHistoryLoading, chatItems.length, scrollToBottomImmediate]);
 
  
 const focusCallback = useCallback(() => {
@@ -643,9 +677,19 @@ useFocusEffect(focusCallback);
   }, [currentRoomId, isHistoryLoading, hasMoreHistory, currentRoomPagination.page, currentRoomPagination.limit, loadMessages]);
 
   useEffect(() => {
+    const lastRoomMessage = currentRoomConversations[currentRoomConversations.length - 1];
+    const baselineKey = lastRoomMessage
+      ? (lastRoomMessage?.id || `${getMessageTimestamp(lastRoomMessage) || 'no-time'}-${lastRoomMessage?.text || lastRoomMessage?.message || ''}`)
+      : null;
+
+    lastSeenMessageKeyRef.current = baselineKey;
+    lastBannerEventKeyRef.current = baselineKey
+      ? `${currentRoomId || 'unknown-room'}:${baselineKey}`
+      : '';
+
     setShowScrollToBottom(false);
     setIsNearBottom(true);
-    lastSeenMessageKeyRef.current = null;
+    didInitialRoomScrollRef.current = false;
   }, [currentRoomId]);
 
   const renderMediaContent = item => {
@@ -886,8 +930,26 @@ const handleReload = useCallback(() => {
     if (!currentRoomId) return;
     const roomKey = String(currentRoomId);
     loadedRoomIdsRef.current.delete(roomKey); // ✅ use ref
+  shouldScrollAfterLoadRef.current = true;
+    pendingAutoScrollPassesRef.current = 2;
+    didInitialRoomScrollRef.current = false;
     loadMessages(currentRoomId, 1, 50).catch(() => {});
   }, [currentRoomId, loadMessages]);
+
+  useEffect(() => {
+    const reconnected = !wasConnectedRef.current && isConnected;
+
+    if (reconnected && currentRoomId) {
+      const roomKey = String(currentRoomId);
+      loadedRoomIdsRef.current.delete(roomKey);
+      shouldScrollAfterLoadRef.current = true;
+      pendingAutoScrollPassesRef.current = 2;
+      didInitialRoomScrollRef.current = false;
+      loadMessages(currentRoomId, 1, 50).catch(() => {});
+    }
+
+    wasConnectedRef.current = isConnected;
+  }, [isConnected, currentRoomId, loadMessages]);
 
   const renderNoConversation = () => {
     if (isInitialConversationLoading) {
@@ -962,6 +1024,25 @@ const handleReload = useCallback(() => {
             offset: Math.max(0, info.averageItemLength * info.index),
             animated: true,
           });
+        }}
+        onContentSizeChange={() => {
+          if (
+            !shouldScrollAfterLoadRef.current ||
+            chatItems.length === 0 ||
+            isHistoryLoading
+          ) {
+            return;
+          }
+
+          requestAnimationFrame(() => {
+            flatListRef.current?.scrollToEnd({ animated: false });
+          });
+
+          pendingAutoScrollPassesRef.current -= 1;
+          if (pendingAutoScrollPassesRef.current <= 0) {
+            shouldScrollAfterLoadRef.current = false;
+            pendingAutoScrollPassesRef.current = 0;
+          }
         }}
         scrollEventThrottle={16}
         refreshControl={

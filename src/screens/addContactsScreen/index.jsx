@@ -18,6 +18,7 @@ import useToast from '../../hook/useToast';
 import { TrustedContactService } from '../../services/trustedContact.service';
 import { useDispatch } from 'react-redux';
 import { trustedContactOutgongRequestActions } from '../../store/redux/trustedContactOutgongRequest.redux';
+import { useOutgoingRequests } from '../../hook/useOutgoingRequests';
 
 const getFlagEmoji = countryCode => {
   const codePoints = countryCode
@@ -56,6 +57,7 @@ const AddContactsScreen = () => {
    const [deviceCountryCode, setDeviceCountryCode] = useState(
       getDeviceCountryCode() || 'NG',
     ); // Default to 'NG' if detection fails
+    const { fetchOutgoingRequests } = useOutgoingRequests();
 
     useEffect(() => {
       if (deviceCountryCode) {
@@ -111,7 +113,7 @@ const AddContactsScreen = () => {
         if (response.success) {
           resolve(response.data);
           showSuccess('SUCCESS','Trusted contact saved successfully');
-          dispatch(trustedContactOutgongRequestActions.setRefresh(true));
+          fetchOutgoingRequests();
           navigation.goBack();
         } else {
           reject(

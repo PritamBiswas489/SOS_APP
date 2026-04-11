@@ -1,7 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
-  contact_list: [],
-  refresh: true,
+  contact_list: []
 };
 const trustedContactOutgongRequestSlice = createSlice({
   name: 'trustedContactOutgongRequest',
@@ -9,9 +8,6 @@ const trustedContactOutgongRequestSlice = createSlice({
   reducers: {
     setTrustedContactList(state, action) {
       state.contact_list = action.payload;
-    },
-    setRefresh(state, action) {
-      state.refresh = action.payload;
     },
     resetState(state) {
       return initialState;

@@ -36,6 +36,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  listLoaderWrap: {
+    flex: 1,
+    minHeight: SW(260),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SW(24),
+  },
+
+  listLoaderText: {
+    color: appColors.bodyColor,
+    fontSize: SF(13),
+    fontFamily: appFonts.NunitoSemiBold,
+    marginTop: SW(10),
+  },
+
   emptyState: {
     flex: 1,
     alignItems: 'center',

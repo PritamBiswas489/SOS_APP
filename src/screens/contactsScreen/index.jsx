@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   ScrollView,
@@ -18,8 +19,16 @@ import { trustedContactActions } from '../../store/redux/trustedContactList.redu
 import { trustedContactIncommingRequestActions } from '../../store/redux/trustedContactIncommingRequest.redux';
 import { trustedContactOutgongRequestActions } from '../../store/redux/trustedContactOutgongRequest.redux';
 import { chatSelectedTrustedContactActions } from '../../store/redux/chatSelectedTrustedContact.redux';
+
+import { useChatContacts } from '../../hook/useChatContacts';
+import { useTrustedContacts } from '../../hook/useTrustedContacts';
+import { useIncommingRequests } from '../../hook/useIncommingRequests';
+import { useOutgoingRequests } from '../../hook/useOutgoingRequests';
+
+
+
+
 import useToast from '../../hook/useToast';
-import Spinner from 'react-native-loading-spinner-overlay';
 const ContactsScreen = () => {
   console.log('Rendering ContactsScreen');
   const [editModal, setEditModal] = useState(false);
@@ -29,89 +38,53 @@ const ContactsScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { showError, showSuccess } = useToast();
-  const contacts = useSelector(state => state.trustedContactList);
-  const incomingRequests = useSelector(
-    state => state.trustedContactIncommingRequest,
-  );
-  const outgoingRequests = useSelector(
-    state => state.trustedContactOutgongRequest,
-  );
+  const { contactList: contacts, fetchTrustedContacts } = useTrustedContacts();
+  const { contactList: incomingRequests, fetchIncommingRequests } = useIncommingRequests();
+  const { contactList: outgoingRequests, fetchOutgoingRequests } = useOutgoingRequests();
+  const {  fetchChatContacts } = useChatContacts();
+  const loadDataRef = useRef(new Set());
+ 
   const userData = useSelector(state => state.userProviderData);
-
-  const contactRefresh = contacts.refresh;
-  const incomingRequestRefresh = incomingRequests.refresh;
-  const outgoingRequestRefresh = outgoingRequests.refresh;
-
-  /**
-   * This useEffect hook is responsible for fetching the trusted contacts, incoming requests, and outgoing requests whenever their respective refresh flags are set to true. It calls the appropriate service methods to retrieve the data and updates the Redux store with the results. After fetching, it sets the refresh flags back to false to prevent continuous fetching.
-   */
+  
   useEffect(() => {
-    if (contactRefresh) {
-      TrustedContactService.getTrustedContacts(result => {
-        if (result.success) {
-          dispatch(
-            trustedContactActions.setTrustedContactList(result.data.data.rows),
-          );
+    const loadData = async () => {
+      try {
+        setLoader(true);
+        if (!loadDataRef.current.has('trustedContacts')) {
+          await fetchTrustedContacts();
+          loadDataRef.current.add('trustedContacts');
         }
-        dispatch(trustedContactActions.setRefresh(false));
-      });
-    }
-    if (incomingRequestRefresh) {
-      TrustedContactService.incommingInvitations(result => {
-        if (result.success) {
-          dispatch(
-            trustedContactIncommingRequestActions.setTrustedContactList(
-              result.data.data.rows,
-            ),
-          );
+        if (!loadDataRef.current.has('incomingRequests')) {
+          await fetchIncommingRequests();
+          loadDataRef.current.add('incomingRequests');
         }
-        dispatch(trustedContactIncommingRequestActions.setRefresh(false));
-      });
-    }
-    if (outgoingRequestRefresh) {
-      TrustedContactService.outgoingInvitations(result => {
-        if (result.success) {
-          dispatch(
-            trustedContactOutgongRequestActions.setTrustedContactList(
-              result.data.data.rows,
-            ),
-          );
+        if (!loadDataRef.current.has('outgoingRequests')) {
+          await fetchOutgoingRequests();
+          loadDataRef.current.add('outgoingRequests');
         }
-        dispatch(trustedContactOutgongRequestActions.setRefresh(false));
-      });
-    }
-  }, [contactRefresh, incomingRequestRefresh, outgoingRequestRefresh]);
+      } finally {
+        setLoader(false);
+      }
+    };
 
-  /**
-   * This useEffect hook manages the loading state of the component based on the refresh flags for contacts, incoming requests, and outgoing requests. If any of these flags are true, it sets the loader state to true, which can be used to display a loading spinner. Once all refresh operations are complete (i.e., all flags are false), it sets the loader state back to false, hiding the spinner. This provides visual feedback to the user while data is being fetched.
-   */
-  useEffect(() => {
-    if (contactRefresh || incomingRequestRefresh || outgoingRequestRefresh) {
-      setLoader(true);
-    } else {
-      setLoader(false);
-    }
-  }, [contactRefresh, incomingRequestRefresh, outgoingRequestRefresh]);
+    loadData();
+  }, [fetchTrustedContacts, fetchIncommingRequests, fetchOutgoingRequests]);
+ 
 
-  // useEffect(() => {
-  //   return () => {
-  //     dispatch(trustedContactActions.resetState());
-  //     dispatch(trustedContactIncommingRequestActions.resetState());
-  //     dispatch(trustedContactOutgongRequestActions.resetState());
-  //   };
-  // }, [dispatch]);
-
+   
+ 
+  
   /**
    * This function determines which list of contacts to display based on the currently active tab. If the active tab is 'incoming', it returns the list of incoming requests from the Redux store. If the active tab is 'outgoing', it returns the list of outgoing requests. For any other case (which would be the 'contact' tab), it returns the main trusted contact list. This allows the component to dynamically display the appropriate set of contacts based on user interaction with the tabs.
    */
   const getCurrentList = () => {
     if (activeTab === 'incoming') {
-      return incomingRequests.contact_list;
+      return incomingRequests;
     }
     if (activeTab === 'outgoing') {
-      return outgoingRequests.contact_list;
+      return outgoingRequests;
     }
-    return contacts.contact_list;
+    return contacts;
   };
   const currentList = getCurrentList() ?? [];
 
@@ -155,33 +128,22 @@ const ContactsScreen = () => {
     if (action === 'chat' && tab === 'contact') {
       const usrId = userData?.id;
       const roomid = [item.user_id, item.trusted_user_id].sort().join(':');
-      let displayName, receipentId;
-      if (item.user_id === usrId) {
-        displayName = item.nickname || item.trusted_contact?.name || 'Unknown';
-        receipentId = item.trusted_user_id;
-      } else {
-        displayName =
-          item?.inviter?.name ||
-          item?.inviter?.phone_number ||
-          item.nickname ||
-          'Unknown';
-        receipentId = item.user_id;
-      }
+      const displayName = item.nickname || item.trusted_contact?.name || `${item.trusted_contact?.phone_number}` || 'Unknown';
       dispatch(
         chatSelectedTrustedContactActions.setSelectedTrustedContact({
           id: item.id,
           name: displayName,
           initial: displayName.charAt(0).toUpperCase(),
-          receipent_id: receipentId,
-          phone_number:
-            item.trusted_contact?.phone_number ||
-            item?.inviter?.phone_number ||
-            '',
+          receipent_id: item.trusted_user_id,
+          phone_number: item.trusted_contact?.phone_number,
           roomId: roomid,
           isOnline: false,
         }),
       );
-      navigation.navigate('MainTabs', { screen: 'Chat' });
+      navigation.navigate('Main', {
+        screen: 'MainTabs',
+        params: { screen: 'Chat' },
+        });
       return;
     }
     if (action === 'cancel' && tab === 'outgoing') {
@@ -202,7 +164,7 @@ const ContactsScreen = () => {
                 TrustedContactService.deleteInvitation(item.id, response => {
                   if (response.success) {
                     showSuccess('SUCCESS', 'Request has been cancelled.');
-                    dispatch(trustedContactOutgongRequestActions.setRefresh(true));
+                    fetchOutgoingRequests();
                     resolve();
                   } else {
                     showError(
@@ -240,7 +202,8 @@ const ContactsScreen = () => {
                       'SUCCESS',
                       'Incoming trusted contact request has been rejected.',
                     );
-                    dispatch(trustedContactIncommingRequestActions.setRefresh(true));
+                    fetchIncommingRequests();
+                   
                     resolve();
                   } else {
                     showError(
@@ -278,8 +241,9 @@ const ContactsScreen = () => {
                       'SUCCESS',
                       'Incoming trusted contact request has been accepted.',
                     );
-                    dispatch(trustedContactIncommingRequestActions.setRefresh(true));
-                    dispatch(trustedContactActions.setRefresh(true));
+                    fetchIncommingRequests();
+                    fetchTrustedContacts();
+                    fetchChatContacts();
                     setActiveTab('contact');
                     resolve();
                   } else {
@@ -319,7 +283,8 @@ const ContactsScreen = () => {
                       'SUCCESS',
                       'Trusted contact has been deleted.',
                     );
-                    dispatch(trustedContactActions.setRefresh(true));
+                    fetchTrustedContacts();
+                    fetchChatContacts();
                     resolve();
                   } else {
                     showError(
@@ -347,19 +312,15 @@ const ContactsScreen = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    dispatch(trustedContactActions.setRefresh(true));
-    dispatch(trustedContactIncommingRequestActions.setRefresh(true));
-    dispatch(trustedContactOutgongRequestActions.setRefresh(true));
-    setRefreshing(false);
+    Promise.all([
+        fetchTrustedContacts(),
+        fetchIncommingRequests(),
+        fetchOutgoingRequests(),
+    ]).finally(() => setRefreshing(false));
   };
 
   return (
     <View style={styles.container}>
-      <Spinner
-        visible={loader}
-        textContent={'Loading...'}
-        textStyle={{ color: '#FFF' }}
-      />
       {/* Header — fixed */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -437,7 +398,14 @@ const ContactsScreen = () => {
           />
         }
       >
-        {currentList.length === 0 && (
+        {loader && (
+          <View style={styles.listLoaderWrap}>
+            <ActivityIndicator size="large" color="#2F6BFF" />
+            <Text style={styles.listLoaderText}>Loading contacts...</Text>
+          </View>
+        )}
+
+        {!loader && currentList.length === 0 && (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconWrap}>
               <Icon
@@ -475,7 +443,7 @@ const ContactsScreen = () => {
           </View>
         )}
 
-        {currentList.map(item => (
+        {!loader && currentList.map(item => (
           <View key={item.id} style={styles.contactRow}>
             <View
               style={[styles.avatar, { backgroundColor: getAvatarColor(item) }]}
@@ -513,12 +481,12 @@ const ContactsScreen = () => {
       </ScrollView>
 
       {/* Add Trusted Contact — fixed */}
-      <TouchableOpacity onPress={gotToAddContactScreen} style={styles.addBtn}>
+      {!loader && <TouchableOpacity onPress={gotToAddContactScreen} style={styles.addBtn}>
         <Text style={styles.addText}>+ Add Trusted Contact</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       {/* Emergency Info — fixed */}
-      <View style={styles.infoCard}>
+      {!loader && <View style={styles.infoCard}>
         <Icon name="warning" size={18} color="#FFC107" />
         <Text style={styles.infoText}>
           <Text style={{ color: '#2ED573', fontWeight: '600' }}>
@@ -526,7 +494,7 @@ const ContactsScreen = () => {
           </Text>{' '}
           will instantly notify all contacts with your live GPS location.
         </Text>
-      </View>
+      </View>}
 
       <Modal visible={editModal} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>

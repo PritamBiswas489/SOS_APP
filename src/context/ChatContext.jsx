@@ -10,13 +10,13 @@ import React, {
 import { useSelector } from 'react-redux';
 import { useSocket } from './SocketContext';
 import { useChatContacts } from '../hook/useChatContacts';
+import { displayRemoteNotification } from '../services/notification.service';
 
 const ChatContext = createContext(null);
 const ChatMessagesContext = createContext(null);
 const ChatTypingContext = createContext(null);
 const ChatPresenceContext = createContext(null);
 const ChatActionsContext = createContext(null);
-
 
 const initialState = {
   /** Object<chatId, Message[]> — chatId is recipientId for 1-on-1 or groupId for groups */
@@ -54,7 +54,11 @@ const mergeUniqueMessages = (baseMessages, incomingMessages) => {
   const deduped = [];
 
   for (const msg of combined) {
-    const key = msg?.id || `${msg?.senderId || ''}-${msg?.text || ''}-${msg?.timestamp || msg?.createdAt || ''}`;
+    const key =
+      msg?.id ||
+      `${msg?.senderId || ''}-${msg?.text || ''}-${
+        msg?.timestamp || msg?.createdAt || ''
+      }`;
     if (seen.has(key)) continue;
     seen.add(key);
     deduped.push(msg);
@@ -152,15 +156,45 @@ export const ChatProvider = ({ children }) => {
   const userData = useSelector(state => state.userProviderData);
   const { contactList } = useChatContacts();
   const currentUserId = userData?.id;
+  const currentScreenName = useSelector(state => state.currentScreen?.name);
+  const chatSelectedTrustedContact = useSelector(
+    state => state.chatSelectedTrustedContact,
+  );
+  const currentScreenRef = useRef(currentScreenName);
+  const chatSelectedTrustedContactRef = useRef(chatSelectedTrustedContact);
+
+  useEffect(() => {
+    currentScreenRef.current = currentScreenName;
+  }, [currentScreenName]);
+  useEffect(() => {
+    chatSelectedTrustedContactRef.current = chatSelectedTrustedContact;
+  }, [chatSelectedTrustedContact]);
 
   useEffect(() => {
     if (!isConnected) {
       return;
     }
-    const handleNewMessage = message => {
-      // console.log('===============================================');
-      // console.log('ChatProvider: Received new message:', message);
-      // console.log('===============================================');
+    const handleNewMessage = async message => {
+      if (
+        !message?.isSelf &&
+        (currentScreenRef.current !== 'Chat' ||
+          (chatSelectedTrustedContactRef.current.roomId !== message.roomId &&
+            currentScreenRef.current === 'Chat'))
+      ) {
+        const senderName = message?.senderName;
+        ('New Message');
+        const messageText = message?.text || 'You have a new message';
+
+        await displayRemoteNotification({
+          data: {
+            type: 'chat',
+            messageType: 'CHAT_MESSAGE',
+            title: senderName,
+            body: messageText,
+          },
+        }).catch(() => {});
+      }
+
       const chatId = message.roomId; // Assuming message has roomId to identify conversation
       dispatch({ type: 'ADD_MESSAGE', chatId, message });
       // Auto-acknowledge delivery
@@ -174,18 +208,24 @@ export const ChatProvider = ({ children }) => {
         ).catch(() => {});
       }
     };
-     // Message status updates
+    // Message status updates
     const handleStatus = ({ messageId, status }) => {
       dispatch({ type: 'UPDATE_MESSAGE_STATUS', messageId, status });
     };
-     
+
     // Typing indicators
     const handleTypingStart = ({ userId, userName, chatWith, roomId }) => {
       const chatId = roomId;
       // console.log('===============================================');
       // console.log(`User ${userName} (${userId}) started typing in chat ${chatId}`);
       // console.log('===============================================');
-      dispatch({ type: 'SET_TYPING', chatId, userId, userName, isTyping: true });
+      dispatch({
+        type: 'SET_TYPING',
+        chatId,
+        userId,
+        userName,
+        isTyping: true,
+      });
     };
 
     const handleTypingStop = ({ userId, chatWith, roomId }) => {
@@ -193,8 +233,7 @@ export const ChatProvider = ({ children }) => {
       dispatch({ type: 'SET_TYPING', chatId, userId, isTyping: false });
     };
 
-
-      // Online presence
+    // Online presence
     const handleOnline = ({ userId }) => {
       dispatch({ type: 'SET_ONLINE', userId, online: true });
     };
@@ -202,7 +241,8 @@ export const ChatProvider = ({ children }) => {
     const handleOffline = ({ userId }) => {
       dispatch({ type: 'SET_ONLINE', userId, online: false });
     };
-    const unsubs = [ // setup event listeners
+    const unsubs = [
+      // setup event listeners
       on('message:new', handleNewMessage),
       on('typing:start', handleTypingStart),
       on('typing:stop', handleTypingStop),
@@ -221,15 +261,19 @@ export const ChatProvider = ({ children }) => {
     const list = contactList;
     if (!Array.isArray(list) || list.length === 0) return;
 
-    const userIds = [...new Set(
-      list
-        .map(contact => {
-          if (contact?.user_id === currentUserId) return contact?.trusted_user_id;
-          if (contact?.trusted_user_id === currentUserId) return contact?.user_id;
-          return null;
-        })
-        .filter(Boolean),
-    )];
+    const userIds = [
+      ...new Set(
+        list
+          .map(contact => {
+            if (contact?.user_id === currentUserId)
+              return contact?.trusted_user_id;
+            if (contact?.trusted_user_id === currentUserId)
+              return contact?.user_id;
+            return null;
+          })
+          .filter(Boolean),
+      ),
+    ];
 
     if (userIds.length === 0) return;
 
@@ -249,7 +293,14 @@ export const ChatProvider = ({ children }) => {
   }, [isConnected, currentUserId, contactList, emit]);
 
   const sendMessage = useCallback(
-    async (roomId, recipientId, text, media = null, location = null, replyTo = null ) => {
+    async (
+      roomId,
+      recipientId,
+      text,
+      media = null,
+      location = null,
+      replyTo = null,
+    ) => {
       const payload = { roomId, recipientId, text };
       if (media) {
         payload.mediaUrl = media.url;
@@ -258,7 +309,7 @@ export const ChatProvider = ({ children }) => {
       if (location?.latitude && location?.longitude) {
         payload.locationJson = location;
       }
-      if(replyTo){
+      if (replyTo) {
         payload.replyTo = replyTo;
       }
       //console.log('===============================================');
@@ -266,7 +317,11 @@ export const ChatProvider = ({ children }) => {
       //console.log('===============================================');
       const response = await emit('message:send', JSON.stringify(payload));
       if (response?.message) {
-        dispatch({ type: 'ADD_MESSAGE', chatId: roomId, message: response.message });
+        dispatch({
+          type: 'ADD_MESSAGE',
+          chatId: roomId,
+          message: response.message,
+        });
       }
       return response;
     },
@@ -278,6 +333,11 @@ export const ChatProvider = ({ children }) => {
       if (!roomId) {
         return { ok: false, error: 'roomId is required' };
       }
+      console.log('===============================================');
+      console.log(
+        `ChatProvider: Loading messages for roomId=${roomId}, page=${page}, limit=${limit}`,
+      );
+      console.log('===============================================');
 
       dispatch({
         type: 'SET_PAGINATION',
@@ -298,9 +358,17 @@ export const ChatProvider = ({ children }) => {
         const normalizedMessages = Array.isArray(messages) ? messages : [];
 
         if (page <= 1) {
-          dispatch({ type: 'LOAD_MESSAGES', chatId: roomId, messages: sortMessagesByTime(normalizedMessages) });
+          dispatch({
+            type: 'LOAD_MESSAGES',
+            chatId: roomId,
+            messages: sortMessagesByTime(normalizedMessages),
+          });
         } else {
-          dispatch({ type: 'PREPEND_MESSAGES', chatId: roomId, messages: normalizedMessages });
+          dispatch({
+            type: 'PREPEND_MESSAGES',
+            chatId: roomId,
+            messages: normalizedMessages,
+          });
         }
 
         const hasMore =
@@ -327,8 +395,8 @@ export const ChatProvider = ({ children }) => {
     [emit],
   );
 
-    const sendTyping = useCallback(
-    (roomId) => {
+  const sendTyping = useCallback(
+    roomId => {
       const key = roomId;
       // Clear existing timer
       if (typingTimers.current[key]) {
@@ -351,7 +419,7 @@ export const ChatProvider = ({ children }) => {
   const markAsRead = useCallback(
     async (messageIds, senderId) => {
       if (!messageIds.length) return;
-       await emit('message:read', JSON.stringify({ messageIds, senderId }));
+      await emit('message:read', JSON.stringify({ messageIds, senderId }));
     },
     [emit],
   );
@@ -370,10 +438,7 @@ export const ChatProvider = ({ children }) => {
     [state.typingIndicators],
   );
 
-  const presenceValue = useMemo(
-    () => state.onlineUsers,
-    [state.onlineUsers],
-  );
+  const presenceValue = useMemo(() => state.onlineUsers, [state.onlineUsers]);
 
   const actionsValue = useMemo(
     () => ({

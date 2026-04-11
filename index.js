@@ -8,6 +8,9 @@ import App from './App';
 import { name as appName } from './app.json';
 import { Provider } from 'react-redux';
 import store from './src/store';
+import { setBackgroundMessageHandler } from './src/services/notification.service';
+
+setBackgroundMessageHandler();
 
 const RootApp = () => (
   <Provider store={store}>
