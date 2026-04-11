@@ -50,11 +50,11 @@ const ContactAvatarList = ({
       for (const contact of list) {
         const roomid = [contact.user_id, contact.trusted_user_id].sort().join(':');
         if (contact.user_id === usrId) {
-          const displayName = contact.nickname || contact.trusted_contact.name;
+          const displayName = contact.nickname || contact.trusted_contact.name || contact.relationship || '?';
           trustedContacts.push({
             id: contact.id,
             name: displayName,
-            initial: displayName.charAt(0).toUpperCase(),
+            initial: displayName?.charAt(0).toUpperCase(),
             isOnline: onlineUsers[contact.trusted_user_id] || false,
             receipent_id: contact.trusted_user_id,
             phone_number: contact.trusted_contact.phone_number,

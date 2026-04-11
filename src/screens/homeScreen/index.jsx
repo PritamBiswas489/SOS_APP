@@ -52,7 +52,8 @@ const HomeScreen = ({ navigation }) => {
       {/* Greeting */}
       <View style={styles.greetingContainer}>
         <Text style={styles.goodMorning}>GOOD MORNING,</Text>
-        <Text style={styles.userName}>{userData.name} 👋</Text>
+        <Text style={styles.userName}>{userData?.name 
+          || userData?.phone_number} 👋</Text>
       </View>
 
       {/* SOS Button */}

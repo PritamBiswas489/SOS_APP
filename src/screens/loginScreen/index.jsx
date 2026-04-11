@@ -183,7 +183,7 @@ const LoginScreen = () => {
       setIsLoading(false);
       showSuccess(
         'SUCCESS',
-        processUserLogin?.data?.message || 'OTP verified successfully and login processed',
+        'OTP verified successfully and login processed',
       );
       navigation.replace('Process',{action: 'retrieveDataAfterLogin'});
     } catch (error) {

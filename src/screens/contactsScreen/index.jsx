@@ -29,10 +29,10 @@ import { useOutgoingRequests } from '../../hook/useOutgoingRequests';
 
 
 import useToast from '../../hook/useToast';
-const ContactsScreen = () => {
+const ContactsScreen = ({ route }) => {
   console.log('Rendering ContactsScreen');
   const [editModal, setEditModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('contact');
+  const [activeTab, setActiveTab] = useState(route?.params?.tab ?? 'contact');
   const [refreshing, setRefreshing] = useState(false);
   const [loader, setLoader] = useState(false);
   const navigation = useNavigation();
@@ -43,8 +43,15 @@ const ContactsScreen = () => {
   const { contactList: outgoingRequests, fetchOutgoingRequests } = useOutgoingRequests();
   const {  fetchChatContacts } = useChatContacts();
   const loadDataRef = useRef(new Set());
+  const requestedTab = route?.params?.tab;
  
   const userData = useSelector(state => state.userProviderData);
+
+  useEffect(() => {
+    if (requestedTab) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab]);
   
   useEffect(() => {
     const loadData = async () => {
@@ -443,19 +450,25 @@ const ContactsScreen = () => {
           </View>
         )}
 
-        {!loader && currentList.map(item => (
-          <View key={item.id} style={styles.contactRow}>
+        {!loader && currentList.map(item => {
+          console.log('Rendering contact item:', item);
+          let displayName  = '?';
+          if(activeTab === 'incoming') {
+             displayName = item?.inviter?.name  || item?.relationship || '?';
+          }
+          if(activeTab === 'outgoing') {
+              displayName = item?.nickname || item?.trusted_contact?.name || item?.relationship || '?';
+          }
+          displayName = item?.nickname || item?.trusted_contact?.name || item?.relationship || displayName;
+          return (<View key={item.id} style={styles.contactRow}>
             <View
               style={[styles.avatar, { backgroundColor: getAvatarColor(item) }]}
             >
-              <Text style={styles.avatarText}>{item.nickname.charAt(0)}</Text>
+              <Text style={styles.avatarText}>{displayName.charAt(0)}</Text>
             </View>
             <View style={styles.contactInfo}>
               <Text style={styles.contactName}>
-                {activeTab === 'incoming'
-                  ? item?.inviter?.name ||
-                    `Phone number - ${item?.inviter?.phone_number}`
-                  : item.nickname}{' '}
+                {displayName}
               </Text>
               {/* small text */}
               <Text style={styles.contactRelation}>{item.relationship}</Text>
@@ -476,8 +489,8 @@ const ContactsScreen = () => {
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-        ))}
+          </View>)
+})}
       </ScrollView>
 
       {/* Add Trusted Contact — fixed */}

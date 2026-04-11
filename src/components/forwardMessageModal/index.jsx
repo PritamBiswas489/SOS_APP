@@ -51,7 +51,7 @@ const ForwardMessageModal = ({ visible, item, onClose, onSend }) => {
     for (const contact of contactList) {
       const roomId = [contact.user_id, contact.trusted_user_id].sort().join(':');
       if (contact.user_id === currentUserId) {
-        const displayName = contact.nickname || contact.trusted_contact?.name || 'Unknown';
+        const displayName = contact.nickname || contact.trusted_contact?.name || contact.relationship || '?';
         trustedContacts.push({
           id: contact.id,
           name: displayName,
@@ -63,7 +63,7 @@ const ForwardMessageModal = ({ visible, item, onClose, onSend }) => {
         });
       } else if (contact.trusted_user_id === currentUserId) {
         const displayName =
-          contact?.inviter?.name || contact?.inviter?.phone_number || 'Unknown';
+          contact?.inviter?.name || contact?.inviter?.phone_number || contact?.relationship || '?';
         otherContacts.push({
           id: contact.id,
           name: displayName,

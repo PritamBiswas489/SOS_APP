@@ -114,7 +114,12 @@ const AddContactsScreen = () => {
           resolve(response.data);
           showSuccess('SUCCESS','Trusted contact saved successfully');
           fetchOutgoingRequests();
-          navigation.goBack();
+          navigation.navigate('Main', {
+            screen: 'Contacts',
+            params: {
+              tab: 'outgoing',
+            },
+          });
         } else {
           reject(
             new Error(response?.error || 'Failed to save trusted contact'),
