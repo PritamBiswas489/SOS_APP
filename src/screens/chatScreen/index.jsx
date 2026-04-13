@@ -21,7 +21,7 @@ const ChatScreen = () => {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      enabled={Platform.OS === 'ios'}
     >
       {/* FIXED HEADER */}
       <View style={styles.header}>
@@ -36,9 +36,11 @@ const ChatScreen = () => {
         
       />
       {/* MESSAGE LIST */}
-      <ConversationList
-        styles={styles}
-      />
+      <View style={{ flex: 1 }}>
+        <ConversationList
+          styles={styles}
+        />
+      </View>
 
       <ChatComposer />
     </KeyboardAvoidingView>

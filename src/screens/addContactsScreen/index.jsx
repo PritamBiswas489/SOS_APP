@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import styles from './style';
@@ -19,6 +20,7 @@ import { TrustedContactService } from '../../services/trustedContact.service';
 import { useDispatch } from 'react-redux';
 import { trustedContactOutgongRequestActions } from '../../store/redux/trustedContactOutgongRequest.redux';
 import { useOutgoingRequests } from '../../hook/useOutgoingRequests';
+import { useTrustedContactActions } from '../../context/TrustedProviderContext';
 
 const getFlagEmoji = countryCode => {
   const codePoints = countryCode
@@ -50,7 +52,9 @@ const AddContactsScreen = () => {
     dial_code: '+234',
   });
   const dispatch = useDispatch();
+  const trustedContactActions = useTrustedContactActions();
   const [userPhone, setUserPhone] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
   const [isPhoneBookModalVisible, setIsPhoneBookModalVisible] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -98,7 +102,12 @@ const AddContactsScreen = () => {
       showError('Please fill in all required fields');
       return;
     }
-    const fullPhone = `${selectedCountry.dial_code}${userPhone}`;
+    let requestPhone = userPhone.trim();
+    if (requestPhone.startsWith('0')) {
+      requestPhone = requestPhone.slice(1);
+    }
+    setIsLoading(true);
+    const fullPhone = `${selectedCountry.dial_code}${requestPhone}`;
     const contactData = {
       name: fullName,
       mobile_number: fullPhone,
@@ -108,27 +117,17 @@ const AddContactsScreen = () => {
     };
 
     console.log('Constructed contact data:', contactData);
-    const saveContact = await new Promise((resolve, reject) => {
-      TrustedContactService.saveTrustedContact(contactData, response => {
-        if (response.success) {
-          resolve(response.data);
-          showSuccess('SUCCESS','Trusted contact saved successfully');
-          fetchOutgoingRequests();
-          navigation.navigate('Main', {
-            screen: 'Contacts',
-            params: {
-              tab: 'outgoing',
-            },
-          });
-        } else {
-          reject(
-            new Error(response?.error || 'Failed to save trusted contact'),
-          );
-          showError('ERROR', response?.error || 'Failed to save trusted contact');
-        }
-      });
-    });
-  }
+    try {
+      const sendRequest = await trustedContactActions.sendTrustedContactRequest(contactData);
+      console.log('Send request response:', sendRequest);
+      showSuccess('SUCCESS', 'Trusted contact request sent successfully');
+      navigation.goBack();
+    } catch (error) {
+      showError(error?.message || 'Failed to send trusted contact request');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -270,8 +269,15 @@ const AddContactsScreen = () => {
 
       {/* SAVE BUTTON */}
 
-      <TouchableOpacity onPress={handleSaveContact} style={styles.saveBtn}>
-        <Text style={styles.saveText}>✓ Save Trusted Contact</Text>
+      <TouchableOpacity onPress={handleSaveContact} style={styles.saveBtn} disabled={isLoading}>
+        {isLoading ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.saveText}>Saving...</Text>
+          </View>
+        ) : (
+          <Text style={styles.saveText}>✓ Save Trusted Contact</Text>
+        )}
       </TouchableOpacity>
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <Text style={styles.cancel}>Cancel</Text>

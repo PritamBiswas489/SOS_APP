@@ -8,11 +8,13 @@ const ChatActionSheet = ({
   onClose,
   onPickFromGallery,
   onPickAudio,
+    onRecordAudio,
+    isRecordingAudio = false,
     onPickDocument,
   onCaptureFromCamera,
   onShareCurrentLocation,
 }) => {
-return (
+    return (
     <Modal
         visible={visible}
         transparent
@@ -33,8 +35,15 @@ return (
 
                 <TouchableOpacity style={styles.actionItem} onPress={onPickAudio}>
                     <Icon name="headset" size={20} color="#FFFFFF" />
-                    <Text style={styles.actionText}>Audio</Text>
+                    <Text style={styles.actionText}>Audio File</Text>
                 </TouchableOpacity>
+
+                {typeof onRecordAudio === 'function' && (
+                    <TouchableOpacity style={styles.actionItem} onPress={onRecordAudio}>
+                        <Icon name={isRecordingAudio ? 'stop-circle' : 'keyboard-voice'} size={20} color="#FFFFFF" />
+                        <Text style={styles.actionText}>{isRecordingAudio ? 'Stop Recording' : 'Record Audio'}</Text>
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity style={styles.actionItem} onPress={onPickDocument}>
                     <Icon name="description" size={20} color="#FFFFFF" />

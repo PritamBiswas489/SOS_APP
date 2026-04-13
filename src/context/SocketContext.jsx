@@ -138,29 +138,35 @@ export const SocketProvider = ({children}) => {
         }, [isAuthenticated, token]);
 
         useEffect(() => {
-            const handleAppStateChange = nextAppState => {
-                const prevAppState = appState.current;
-                appState.current = nextAppState;
+    if (!isAuthenticated || !token || !socketRef.current) return;
 
-                if (
-                    prevAppState?.match(/inactive|background/) &&
-                    nextAppState === 'active' &&
-                    isAuthenticated &&
-                    token &&
-                    socketRef.current &&
-                    !socketRef.current.connected
-                ) {
-                    socketRef.current.connect();
-                }
+    const handleAppStateChange = nextAppState => {
+        const prevAppState = appState.current;
+        appState.current = nextAppState;
 
-                if (nextAppState.match(/inactive|background/) && socketRef.current?.connected) {
-                    socketRef.current.disconnect();
-                }
-            };
+        const comingToForeground =
+            prevAppState?.match(/inactive|background/) &&
+            nextAppState === 'active';
 
-            const subscription = AppState.addEventListener('change', handleAppStateChange);
-            return () => subscription.remove();
-        }, [isAuthenticated, token]);
+        if (comingToForeground && !socketRef.current?.connected) {
+            socketRef.current.connect();
+        }
+    };
+
+    const pingInterval = setInterval(() => {
+        if (socketRef.current?.connected) {
+            socketRef.current.emit('ping');
+        }
+    }, 25000);
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+        subscription.remove();
+        clearInterval(pingInterval);
+    };
+
+}, [isAuthenticated, token]);
 
     const emit = useCallback((event, data) => {
         return new Promise((resolve, reject) => {

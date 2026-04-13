@@ -57,7 +57,9 @@ const ContactsScreen = ({ route }) => {
     const loadData = async () => {
       try {
         setLoader(true);
+        console.log("loadref",loadDataRef.current.has('trustedContacts'));  
         if (!loadDataRef.current.has('trustedContacts')) {
+          console.log("Fetching trusted contacts...");
           await fetchTrustedContacts();
           loadDataRef.current.add('trustedContacts');
         }
@@ -69,7 +71,7 @@ const ContactsScreen = ({ route }) => {
           await fetchOutgoingRequests();
           loadDataRef.current.add('outgoingRequests');
         }
-      } finally {
+      } finally {   
         setLoader(false);
       }
     };
@@ -451,7 +453,7 @@ const ContactsScreen = ({ route }) => {
         )}
 
         {!loader && currentList.map(item => {
-          console.log('Rendering contact item:', item);
+          // console.log('Rendering contact item:', item);
           let displayName  = '?';
           if(activeTab === 'incoming') {
              displayName = item?.inviter?.name  || item?.relationship || '?';

@@ -939,7 +939,8 @@ const handleReload = useCallback(() => {
   useEffect(() => {
     const reconnected = !wasConnectedRef.current && isConnected;
 
-    if (reconnected && currentRoomId) {
+    if (reconnected && currentRoomId ) {
+      
       const roomKey = String(currentRoomId);
       loadedRoomIdsRef.current.delete(roomKey);
       shouldScrollAfterLoadRef.current = true;
@@ -949,7 +950,7 @@ const handleReload = useCallback(() => {
     }
 
     wasConnectedRef.current = isConnected;
-  }, [isConnected, currentRoomId, loadMessages]);
+  }, [isConnected, currentRoomId,   loadMessages]);
 
   const renderNoConversation = () => {
     if (isInitialConversationLoading) {

@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useRef, use } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,16 @@ import {
   Alert,
   Keyboard,
   PermissionsAndroid,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSelector, useDispatch } from 'react-redux';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-import { pick, types, isCancel } from '@react-native-documents/picker';
+import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import Geolocation from '@react-native-community/geolocation';
+import AudioRecord from 'react-native-audio-record';
 import ChatActionSheet from '../chatActionSheet';
+import MediaPreviewModal from '../mediaPreviewModal';
 import { useChatActions, useChatTyping } from '../../context/ChatContext';
 import api from '../../config/authApiFormData.config';
 import { getAppUrl } from '../../config/utility';
@@ -34,6 +37,15 @@ const getMediaSizeLimit = mediaCategory =>
 
 const formatMegabytes = bytes => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
+// Initialize AudioRecord at module level so it's ready before any interaction.
+AudioRecord.init({
+  sampleRate: 16000,
+  channels: 1,
+  bitsPerSample: 16,
+  audioSource: 6,
+  wavFile: 'recording.wav',
+});
+
 const ChatComposer = ({
   onSendComplete,
   placeholder = 'Type a message...',
@@ -45,9 +57,15 @@ const ChatComposer = ({
   const [selectedMediaType, setSelectedMediaType] = useState(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadingLocalUri, setUploadingLocalUri] = useState(null);
+  const [showMediaPreview, setShowMediaPreview] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const typingDebounceRef = useRef(null);
+  const recordingTimerRef = useRef(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const chatSelectedTrustedContact = useSelector(state => state.chatSelectedTrustedContact);
   const userData = useSelector(state => state.userProviderData);
@@ -71,9 +89,11 @@ const ChatComposer = ({
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, e => {
       setKeyboardHeight(e?.endCoordinates?.height || 0);
+      setIsKeyboardOpen(true);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
+      setIsKeyboardOpen(false);
     });
     return () => {
       showSub.remove();
@@ -82,13 +102,45 @@ const ChatComposer = ({
   }, []);
 
   useEffect(() => {
+    if (isRecordingAudio) {
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ]),
+      ).start();
+    } else {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      setRecordingDuration(0);
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
     return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+    };
+  }, [isRecordingAudio, pulseAnim]);
+
+  useEffect(() => {
+    return () => {
+      if (isRecordingAudio) {
+        AudioRecord.stop();
+      }
       if (typingDebounceRef.current) {
         clearTimeout(typingDebounceRef.current);
         typingDebounceRef.current = null;
       }
     };
-  }, [currentRoomId]);
+  }, [currentRoomId, isRecordingAudio]);
 
   const openActionMenu = useCallback(() => setShowActionMenu(true), []);
   const closeActionMenu = useCallback(() => setShowActionMenu(false), []);
@@ -117,7 +169,42 @@ const ChatComposer = ({
     setSelectedMediaType(null);
     setIsUploadingMedia(false);
     setUploadingLocalUri(null);
+    setShowMediaPreview(false);
   }, []);
+
+  const handlePreviewSend = useCallback(async () => {
+    if (isSendingMessage || !selectedMedia) return;
+    try {
+      setIsSendingMessage(true);
+      setShowMediaPreview(false);
+      await chatActions.sendMessage(
+        chatSelectedTrustedContact?.roomId,
+        chatSelectedTrustedContact?.receipent_id,
+        message.trim(),
+        { url: selectedMedia, mediaType: selectedMediaType || 'image' },
+        null,
+        selectedReplyMessage?.id || null,
+      );
+      setMessage('');
+      setSelectedMedia(null);
+      setSelectedMediaType(null);
+      setUploadingLocalUri(null);
+      if (onSendComplete) {
+        onSendComplete();
+      }
+    } finally {
+      setIsSendingMessage(false);
+    }
+  }, [
+    isSendingMessage,
+    selectedMedia,
+    selectedMediaType,
+    message,
+    chatActions,
+    chatSelectedTrustedContact,
+    onSendComplete,
+    selectedReplyMessage,
+  ]);
 
   const handleSendMessage = useCallback(async () => {
     
@@ -201,20 +288,14 @@ const ChatComposer = ({
           Alert.alert('Upload failed', 'Could not upload the media. Please try again.');
         } finally {
           setIsUploadingMedia(false);
-          setUploadingLocalUri(null);
         }
       },
     );
   }, [closeActionMenu]);
 
-  const handlePickAudio = useCallback(async () => {
-    closeActionMenu();
-    try {
-      const [file] = await pick({ type: [types.audio] });
-      const uri = file?.uri;
+  const uploadAudioUri = useCallback(
+    async ({ uri, mimeType = 'audio/wav', name = 'audio.wav', fileSize = 0 }) => {
       if (!uri) return;
-      const mimeType = file?.type || 'audio/mpeg';
-      const fileSize = Number(file?.size || 0);
       if (fileSize > 0 && fileSize > MAX_AUDIO_SIZE_BYTES) {
         Alert.alert(
           'File too large',
@@ -222,12 +303,13 @@ const ChatComposer = ({
         );
         return;
       }
+
       setSelectedMediaType('audio');
       setIsUploadingMedia(true);
       setUploadingLocalUri(uri);
       try {
         const uploads = await api.post('/chat/upload-media', {
-          file: { uri, type: mimeType, name: file?.name || 'audio' },
+          file: { uri, type: mimeType, name },
         });
         const rawUrl = uploads?.data?.data?.url;
         if (rawUrl) {
@@ -242,14 +324,77 @@ const ChatComposer = ({
         Alert.alert('Upload failed', 'Could not upload the audio. Please try again.');
       } finally {
         setIsUploadingMedia(false);
-        setUploadingLocalUri(null);
       }
+    },
+    [],
+  );
+
+  const handlePickAudio = useCallback(async () => {
+    closeActionMenu();
+    try {
+      const [file] = await pick({ type: [types.audio] });
+      const uri = file?.uri;
+      if (!uri) return;
+      const mimeType = file?.type || 'audio/mpeg';
+      const fileSize = Number(file?.size || 0);
+      await uploadAudioUri({ uri, mimeType, name: file?.name || 'audio', fileSize });
     } catch (err) {
-      if (!isCancel(err)) {
+      if (!isErrorWithCode(err) || err.code !== errorCodes.OPERATION_CANCELED) {
         Alert.alert('Error', 'Could not open audio picker. Please try again.');
       }
     }
-  }, [closeActionMenu]);
+  }, [closeActionMenu, uploadAudioUri]);
+
+  const handleRecordAudio = useCallback(async () => {
+    closeActionMenu();
+    try {
+      if (!isRecordingAudio) {
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            Alert.alert('Permission denied', 'Microphone permission is required to record audio.');
+            return;
+          }
+        }
+
+        AudioRecord.start();
+        setIsRecordingAudio(true);
+        return;
+      }
+
+      const recordedPath = await AudioRecord.stop();
+      setIsRecordingAudio(false);
+
+      if (!recordedPath) {
+        Alert.alert('Recording failed', 'Could not resolve recorded file path.');
+        return;
+      }
+      const recordedUri =
+        recordedPath.startsWith('file://') || recordedPath.startsWith('content://')
+          ? recordedPath
+          : `file://${recordedPath}`;
+
+      await uploadAudioUri({
+        uri: recordedUri,
+        mimeType: 'audio/wav',
+        name: recordedPath.split('/').pop() || `voice-note-${Date.now()}.wav`,
+      });
+    } catch {
+      setIsRecordingAudio(false);
+      Alert.alert('Recording error', 'Could not record audio. Please try again.');
+    }
+  }, [closeActionMenu, isRecordingAudio, uploadAudioUri]);
+
+  const handleCancelRecording = useCallback(async () => {
+    try {
+      await AudioRecord.stop();
+    } catch {
+      // ignore
+    }
+    setIsRecordingAudio(false);
+  }, []);
 
   const handlePickDocument = useCallback(async () => {
     closeActionMenu();
@@ -288,10 +433,9 @@ const ChatComposer = ({
         Alert.alert('Upload failed', 'Could not upload the document. Please try again.');
       } finally {
         setIsUploadingMedia(false);
-        setUploadingLocalUri(null);
       }
     } catch (err) {
-      if (!isCancel(err)) {
+      if (!isErrorWithCode(err) || err.code !== errorCodes.OPERATION_CANCELED) {
         Alert.alert('Error', 'Could not open document picker. Please try again.');
       }
     }
@@ -334,7 +478,6 @@ const ChatComposer = ({
           Alert.alert('Upload failed', 'Could not upload the image. Please try again.');
         } finally {
           setIsUploadingMedia(false);
-          setUploadingLocalUri(null);
         }
       },
     );
@@ -409,8 +552,22 @@ const ChatComposer = ({
         </View>
       )}
 
+      <MediaPreviewModal
+        visible={showMediaPreview}
+        mediaType={selectedMediaType}
+        localUri={uploadingLocalUri}
+        uploadedUrl={selectedMedia}
+        isUploading={isUploadingMedia}
+        onSend={handlePreviewSend}
+        onCancel={() => setShowMediaPreview(false)}
+      />
+
       {(isUploadingMedia || selectedMedia) && (
-        <View style={styles.previewWrapper}>
+        <TouchableOpacity
+          style={styles.previewWrapper}
+          activeOpacity={0.8}
+          onPress={() => setShowMediaPreview(true)}
+        >
           <View style={styles.previewImageContainer}>
             {selectedMediaType === 'video' ? (
               <View style={styles.previewImage}>
@@ -449,15 +606,7 @@ const ChatComposer = ({
                 : 'Ready to send image'}
             </Text>
             <Text style={styles.previewSubtitle}>
-              {isUploadingMedia
-                ? 'Please wait'
-                : selectedMediaType === 'video'
-                ? 'Tap send to share video'
-                : selectedMediaType === 'audio'
-                ? 'Tap send to share audio'
-                : selectedMediaType === 'document'
-                ? 'Tap send to share document'
-                : 'Tap send to share'}
+              {isUploadingMedia ? 'Please wait' : 'Tap to preview'}
             </Text>
           </View>
           <TouchableOpacity
@@ -467,43 +616,64 @@ const ChatComposer = ({
           >
             <Icon name="close" size={18} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       )}
 
       <View
         style={[
           styles.inputContainer,
-          Platform.OS === 'android' && keyboardHeight > 0 ? { marginBottom: 10 } : null,
+          Platform.OS === 'android' && isKeyboardOpen ? { marginBottom: 30 } : null,
         ]}
       >
-        <View style={styles.inputField}>
-          <TouchableOpacity style={styles.micBtn} onPress={openActionMenu}>
-            <Icon name="add" size={22} color="#6B7C99" />
-          </TouchableOpacity>
+        {isRecordingAudio ? (
+          <View style={styles.recordingBar}>
+            <Animated.View style={[styles.recordingPulse, { opacity: pulseAnim }]}>
+              <Icon name="mic" size={22} color="#FF3B5C" />
+            </Animated.View>
+            <View style={styles.recordingInfo}>
+              <Text style={styles.recordingLabel}>Recording</Text>
+              <Text style={styles.recordingTimer}>
+                {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:
+                {String(recordingDuration % 60).padStart(2, '0')}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.recordingCancelBtn} onPress={handleCancelRecording}>
+              <Icon name="delete-outline" size={20} color="#FF6B6B" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.recordingStopBtn} onPress={handleRecordAudio}>
+              <Icon name="stop" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.inputField}>
+            <TouchableOpacity style={styles.micBtn} onPress={openActionMenu}>
+              <Icon name="add" size={22} color="#6B7C99" />
+            </TouchableOpacity>
 
-          <TextInput
-            style={styles.input}
-            placeholder={placeholder}
-            placeholderTextColor="#6B7C99"
-            value={message}
-            onChangeText={handleMessageChange}
-            multiline
-            textAlignVertical="top"
-            scrollEnabled
-          />
+            <TextInput
+              style={styles.input}
+              placeholder={placeholder}
+              placeholderTextColor="#6B7C99"
+              value={message}
+              onChangeText={handleMessageChange}
+              multiline
+              textAlignVertical="top"
+              scrollEnabled
+            />
 
-          <TouchableOpacity
-            onPress={handleSendMessage}
-            style={[styles.sendBtn, (isSendingMessage || isUploadingMedia) && styles.sendBtnDisabled]}
-            disabled={isSendingMessage || isUploadingMedia}
-          >
-            {isSendingMessage ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Icon name="send" size={20} color="#fff" />
-            )}
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              onPress={handleSendMessage}
+              style={[styles.sendBtn, (isSendingMessage || isUploadingMedia) && styles.sendBtnDisabled]}
+              disabled={isSendingMessage || isUploadingMedia}
+            >
+              {isSendingMessage ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Icon name="send" size={20} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <ChatActionSheet
@@ -511,6 +681,8 @@ const ChatComposer = ({
         onClose={closeActionMenu}
         onPickFromGallery={handlePickFromGallery}
         onPickAudio={handlePickAudio}
+        onRecordAudio={handleRecordAudio}
+        isRecordingAudio={isRecordingAudio}
         onPickDocument={handlePickDocument}
         onCaptureFromCamera={handleCaptureFromCamera}
         onShareCurrentLocation={handleShareCurrentLocation}

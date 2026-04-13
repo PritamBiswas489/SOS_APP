@@ -12,6 +12,7 @@ import AddContactsScreen from './src/screens/addContactsScreen/index.jsx';
 import ProcessScreen from './src/screens/processScreen/index.jsx';
 import { SocketProvider } from './src/context/SocketContext';
 import { ChatProvider } from './src/context/ChatContext';
+import { TrustedContactsProvider } from './src/context/TrustedProviderContext.jsx';
 import NetInfo from '@react-native-community/netinfo';
 import InAppNotificationBanner from './src/components/inAppNotificationBanner/index.jsx'; 
 import NoInternetScreen from './src/components/noInternetScreen/index.jsx';
@@ -158,13 +159,14 @@ const App = () => {
         'ACCEPTED_TRUSTED_CONTACT',
         'DELETED_TRUSTED_CONTACT',
         'REMOVED_BY_TRUSTED_CONTACT',
+        'NEW_TRUSTED_CONTACT_INVITATION'
       ];
 
       if (refreshMessageTypes.includes(messageType)) {
-         fetchChatContacts();
-         fetchTrustedContacts();
-         fetchIncommingRequests();
-         fetchOutgoingRequests();
+        //  fetchChatContacts();
+        //  fetchTrustedContacts();
+        //  fetchIncommingRequests();
+        //  fetchOutgoingRequests();
          if (source === 'mobilenotification') {
           navigateToContacts();
          }
@@ -236,42 +238,48 @@ const App = () => {
 
   return (
     <SocketProvider>
-      <ChatProvider>
-        <GestureHandlerRootView style={{flex: 1}}>
-          <SafeAreaProvider>
-            <StatusBar barStyle="light-content" backgroundColor="#1A1A2E" />
-            <InAppNotificationBanner
-              visible={banner.visible}
-              title={banner.title}
-              body={banner.body}
-              onClose={closeBanner}
-            />
-            <NavigationContainer
-              ref={navigationRef}
-              onReady={() => {
-                if (pendingNavigationRef.current) {
-                  pendingNavigationRef.current();
-                  pendingNavigationRef.current = null;
-                }
-                syncCurrentScreen();
-              }}
-              onStateChange={syncCurrentScreen}
-            >
-              <Stack.Navigator
-            initialRouteName="Splash"
-            screenOptions={{headerShown: false}}>
-            <Stack.Screen name="Splash" component={SplashScreen} />
-            <Stack.Screen name="Process" component={ProcessScreen} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="AddContact" component={AddContactsScreen} />
-            <Stack.Screen name="Main" component={DrawerNavigator} />
-          </Stack.Navigator>
-        </NavigationContainer>
-        <Toast config={toastConfig} />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
-  </ChatProvider>
-</SocketProvider>
+      <TrustedContactsProvider>
+        <ChatProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <SafeAreaProvider>
+              <StatusBar barStyle="light-content" backgroundColor="#1A1A2E" />
+              <InAppNotificationBanner
+                visible={banner.visible}
+                title={banner.title}
+                body={banner.body}
+                onClose={closeBanner}
+              />
+              <NavigationContainer
+                ref={navigationRef}
+                onReady={() => {
+                  if (pendingNavigationRef.current) {
+                    pendingNavigationRef.current();
+                    pendingNavigationRef.current = null;
+                  }
+                  syncCurrentScreen();
+                }}
+                onStateChange={syncCurrentScreen}
+              >
+                <Stack.Navigator
+                  initialRouteName="Splash"
+                  screenOptions={{ headerShown: false }}
+                >
+                  <Stack.Screen name="Splash" component={SplashScreen} />
+                  <Stack.Screen name="Process" component={ProcessScreen} />
+                  <Stack.Screen name="Login" component={LoginScreen} />
+                  <Stack.Screen
+                    name="AddContact"
+                    component={AddContactsScreen}
+                  />
+                  <Stack.Screen name="Main" component={DrawerNavigator} />
+                </Stack.Navigator>
+              </NavigationContainer>
+              <Toast config={toastConfig} />
+            </SafeAreaProvider>
+          </GestureHandlerRootView>
+        </ChatProvider>
+      </TrustedContactsProvider>
+    </SocketProvider>
   );
 };
 

@@ -157,4 +157,65 @@ export default StyleSheet.create({
   sendBtnDisabled: {
     opacity: 0.7,
   },
+
+  recordingBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 59, 92, 0.08)',
+    borderRadius: SW(20),
+    minHeight: SW(48),
+    paddingHorizontal: SW(12),
+    paddingVertical: SW(6),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 92, 0.25)',
+  },
+
+  recordingPulse: {
+    width: SW(36),
+    height: SW(36),
+    borderRadius: SW(18),
+    backgroundColor: 'rgba(255, 59, 92, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  recordingInfo: {
+    flex: 1,
+    marginLeft: SW(10),
+  },
+
+  recordingLabel: {
+    color: '#FF3B5C',
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(12),
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+
+  recordingTimer: {
+    color: appColors.white,
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(16),
+    marginTop: SH(1),
+  },
+
+  recordingCancelBtn: {
+    width: SW(36),
+    height: SW(36),
+    borderRadius: SW(18),
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SW(8),
+  },
+
+  recordingStopBtn: {
+    width: SW(36),
+    height: SW(36),
+    borderRadius: SW(18),
+    backgroundColor: '#FF3B5C',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
