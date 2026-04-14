@@ -580,3 +580,14 @@ export function getFileNameFromUrl(url) {
 
   return matches ? matches[0] : null;
 }
+
+export function getProfileImage(rawUrl) {
+    const baseUrl = getAppUrl();
+              const mediaUrl = rawUrl.includes('http://localhost:4000')
+                ? rawUrl.replace('http://localhost:4000', baseUrl)
+                : rawUrl;
+
+
+  return mediaUrl;
+
+}

@@ -99,6 +99,12 @@ export default StyleSheet.create({
     fontSize: SF(18),
   },
 
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: SW(24),
+  },
+
   avatarLabel: {
     color: appColors.white,
     fontFamily: appFonts.NunitoBold,

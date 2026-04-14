@@ -145,6 +145,12 @@ const styles = StyleSheet.create({
     fontSize: SF(16),
   },
 
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: SW(21),
+  },
+
   contactInfo: {
     flex: 1,
     marginLeft: SW(12),

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   View,
   Text,
   ScrollView,
@@ -14,45 +15,38 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { Alert } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { TrustedContactService } from '../../services/trustedContact.service';
-import { trustedContactActions } from '../../store/redux/trustedContactList.redux';
-import { trustedContactIncommingRequestActions } from '../../store/redux/trustedContactIncommingRequest.redux';
-import { trustedContactOutgongRequestActions } from '../../store/redux/trustedContactOutgongRequest.redux';
+import { getProfileImage } from '../../config/utility';
+ 
 import { chatSelectedTrustedContactActions } from '../../store/redux/chatSelectedTrustedContact.redux';
 
 import { useChatContacts } from '../../hook/useChatContacts';
 import { useTrustedContacts } from '../../hook/useTrustedContacts';
 import { useIncommingRequests } from '../../hook/useIncommingRequests';
 import { useOutgoingRequests } from '../../hook/useOutgoingRequests';
+import { useContactTab } from '../../hook/useContactTab';
+import { useTrustedContactActions } from '../../context/TrustedProviderContext';
 
-
+import { useUserData } from '../../hook/useUserData';
 
 
 import useToast from '../../hook/useToast';
-const ContactsScreen = ({ route }) => {
+const ContactsScreen = () => {
   console.log('Rendering ContactsScreen');
   const [editModal, setEditModal] = useState(false);
-  const [activeTab, setActiveTab] = useState(route?.params?.tab ?? 'contact');
+  const { currentTab:activeTab, setCurrentTab:setActiveTab } = useContactTab();
   const [refreshing, setRefreshing] = useState(false);
   const [loader, setLoader] = useState(false);
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { showError, showSuccess } = useToast();
-  const { contactList: contacts, fetchTrustedContacts } = useTrustedContacts();
-  const { contactList: incomingRequests, fetchIncommingRequests } = useIncommingRequests();
-  const { contactList: outgoingRequests, fetchOutgoingRequests } = useOutgoingRequests();
+  const { contactList: contacts, fetchTrustedContacts, setData: setTrustedContacts } = useTrustedContacts();
+  const { contactList: incomingRequests, fetchIncommingRequests, setData: setIncomingRequests } = useIncommingRequests();
+  const { contactList: outgoingRequests, fetchOutgoingRequests, setData: setOutgoingRequests } = useOutgoingRequests();
   const {  fetchChatContacts } = useChatContacts();
-  const loadDataRef = useRef(new Set());
-  const requestedTab = route?.params?.tab;
- 
-  const userData = useSelector(state => state.userProviderData);
+  const loadDataRef = useRef(new Set()); 
+ const {userData} = useUserData();
+  const { acceptTrustedContactRequest, deleteTrustedContactRequest } = useTrustedContactActions();
 
-  useEffect(() => {
-    if (requestedTab) {
-      setActiveTab(requestedTab);
-    }
-  }, [requestedTab]);
-  
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -169,22 +163,17 @@ const ContactsScreen = ({ route }) => {
             text: 'Yes',
             onPress: async () => {
               setLoader(true);
-              await new Promise((resolve, reject) => {
-                TrustedContactService.deleteInvitation(item.id, response => {
-                  if (response.success) {
-                    showSuccess('SUCCESS', 'Request has been cancelled.');
-                    fetchOutgoingRequests();
-                    resolve();
-                  } else {
-                    showError(
-                      'ERROR',
-                      response?.error || 'Failed to delete invitation',
-                    );
-                    reject(new Error(response?.error || 'Failed to delete invitation'));
-                  }
-                });
-              }).catch(() => null);
-              setLoader(false);
+              try {
+                const response = await deleteTrustedContactRequest({id: item.id});
+                  showSuccess('SUCCESS', response?.message || 'Trusted contact request deleted successfully');
+                  const removeRequest = outgoingRequests.filter(request => request.id !== item.id);
+                  console.log('Updated outgoing requests after deletion:', removeRequest);
+                  setOutgoingRequests(removeRequest);
+              } catch (error) {
+                  showError('ERROR', error?.message || 'Failed to delete trusted contact request');
+              } finally {
+                  setLoader(false);
+              }
             },
           },
         ],
@@ -203,27 +192,19 @@ const ContactsScreen = ({ route }) => {
           {
             text: 'Yes',
             onPress: async () => {
-              setLoader(true);
-              await new Promise((resolve, reject) => {
-                TrustedContactService.deleteInvitation(item.id, response => {
-                  if (response.success) {
-                    showSuccess(
-                      'SUCCESS',
-                      'Incoming trusted contact request has been rejected.',
-                    );
-                    fetchIncommingRequests();
-                   
-                    resolve();
-                  } else {
-                    showError(
-                      'ERROR',
-                      response?.error || 'Failed to reject invitation',
-                    );
-                    reject(new Error(response?.error || 'Failed to reject invitation'));
-                  }
-                });
-              }).catch(() => null);
-              setLoader(false);
+               setLoader(true);
+              try {
+                const response = await deleteTrustedContactRequest({id: item.id});
+                  showSuccess('SUCCESS', response?.message || 'Trusted contact request deleted successfully');
+                  const removeRequest = incomingRequests.filter(request => request.id !== item.id);
+                  console.log('Updated incoming requests after deletion:', removeRequest);
+                  setIncomingRequests(removeRequest);
+              } catch (error) {
+                  showError('ERROR', error?.message || 'Failed to delete trusted contact request');
+              } finally {
+                  setLoader(false);
+              }
+             
             },
           },
         ],
@@ -243,28 +224,16 @@ const ContactsScreen = ({ route }) => {
             text: 'Yes',
             onPress: async () => {
               setLoader(true);
-              await new Promise((resolve, reject) => {
-                TrustedContactService.acceptInvitation(item.id, response => {
-                  if (response.success) {
-                    showSuccess(
-                      'SUCCESS',
-                      'Incoming trusted contact request has been accepted.',
-                    );
-                    fetchIncommingRequests();
-                    fetchTrustedContacts();
-                    fetchChatContacts();
-                    setActiveTab('contact');
-                    resolve();
-                  } else {
-                    showError(
-                      'ERROR',
-                      response?.error || 'Failed to accept invitation',
-                    );
-                    reject(new Error(response?.error || 'Failed to accept invitation'));
-                  }
-                });
-              }).catch(() => null);
-              setLoader(false);
+               try {
+                const response = await acceptTrustedContactRequest({id: item.id});
+                  showSuccess('SUCCESS', response?.message || 'Trusted contact request accepted successfully');
+                 setActiveTab('contact');  
+              } catch (error) {
+                showError('ERROR', error?.message || 'Failed to accept trusted contact request');
+              } finally {
+                  setLoader(false);
+              }
+             
             },
           },
         ],
@@ -285,26 +254,18 @@ const ContactsScreen = ({ route }) => {
             text: 'Yes',
              onPress: async () => {
               setLoader(true);
-              await new Promise((resolve, reject) => {
-                TrustedContactService.deleteInvitation(item.id, response => {
-                  if (response.success) {
-                    showSuccess(
-                      'SUCCESS',
-                      'Trusted contact has been deleted.',
-                    );
-                    fetchTrustedContacts();
-                    fetchChatContacts();
-                    resolve();
-                  } else {
-                    showError(
-                      'ERROR',
-                      response?.error || 'Failed to delete trusted contact',
-                    );
-                    reject(new Error(response?.error || 'Failed to delete trusted contact'));
-                  }
-                });
-              }).catch(() => null);
-              setLoader(false);
+              try {
+                const response = await deleteTrustedContactRequest({id: item.id});
+                  showSuccess('SUCCESS', response?.message || 'Trusted contact request deleted successfully');
+                  const removeContact = contacts.filter(contact => contact.id !== item.id);
+                  console.log('Updated contact list after deletion:', removeContact);
+                  setTrustedContacts(removeContact);
+                 setActiveTab('contact');  
+              } catch (error) {
+                  showError('ERROR', error?.message || 'Failed to delete trusted contact request');
+              } finally {
+                  setLoader(false);
+              }
             },
           },
         ],
@@ -462,11 +423,28 @@ const ContactsScreen = ({ route }) => {
               displayName = item?.nickname || item?.trusted_contact?.name || item?.relationship || '?';
           }
           displayName = item?.nickname || item?.trusted_contact?.name || item?.relationship || displayName;
+          let profileImage = null;
+          if(activeTab === 'incoming') {
+             profileImage = item?.inviter?.profile_photo ? getProfileImage(item?.inviter?.profile_photo) : null;
+          }else if(activeTab === 'outgoing') {
+              profileImage = item?.trusted_contact?.profile_photo ? getProfileImage(item?.trusted_contact?.profile_photo) : null;
+          }else{
+              profileImage = item?.trusted_contact?.profile_photo ? getProfileImage(item?.trusted_contact?.profile_photo) : null;
+          }
+
           return (<View key={item.id} style={styles.contactRow}>
             <View
               style={[styles.avatar, { backgroundColor: getAvatarColor(item) }]}
             >
-              <Text style={styles.avatarText}>{displayName.charAt(0)}</Text>
+              {profileImage ? (
+                <Image
+                  source={{ uri: profileImage }}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{displayName.charAt(0)}</Text>
+              )}
             </View>
             <View style={styles.contactInfo}>
               <Text style={styles.contactName}>

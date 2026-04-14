@@ -16,6 +16,7 @@ import { TrustedContactsProvider } from './src/context/TrustedProviderContext.js
 import NetInfo from '@react-native-community/netinfo';
 import InAppNotificationBanner from './src/components/inAppNotificationBanner/index.jsx'; 
 import NoInternetScreen from './src/components/noInternetScreen/index.jsx';
+import CompleteProfileScreen from './src/screens/completeProfileScreen/index.jsx';
 import {
   createNotificationChannels,
   requestNotificationPermissions,
@@ -267,6 +268,7 @@ const App = () => {
                   <Stack.Screen name="Splash" component={SplashScreen} />
                   <Stack.Screen name="Process" component={ProcessScreen} />
                   <Stack.Screen name="Login" component={LoginScreen} />
+                  <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
                   <Stack.Screen
                     name="AddContact"
                     component={AddContactsScreen}

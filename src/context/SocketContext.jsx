@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { useSelector } from 'react-redux';
 import { getAuthTokens, setAuthTokens } from '../config/auth';
 import { getAppUrl } from '../config/utility';
+import { useUserData } from '../hook/useUserData';
  
 
 const SocketContext = createContext(null);
@@ -15,7 +16,7 @@ const SOCKET_CONFIG = {
 };
 
 export const SocketProvider = ({children}) => {
-        const userData = useSelector(state => state.userProviderData);
+        const {userData} = useUserData();
         const chatContactList = useSelector(state => state.chatContactList);
         const isAuthenticated = Boolean(userData?.id);
         const socketRef = useRef(null);

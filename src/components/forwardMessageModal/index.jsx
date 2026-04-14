@@ -12,6 +12,7 @@ import { useSelector } from 'react-redux';
 import { useChatContacts } from '../../hook/useChatContacts';
 import { useChatPresence } from '../../context/ChatContext';
 import styles from './style';
+import { useUserData } from '../../hook/useUserData';
 
 const avatarColors = [
   '#2F6BFF',
@@ -39,7 +40,8 @@ const ForwardMessageModal = ({ visible, item, onClose, onSend }) => {
 
   const { contactList, fetchChatContacts } = useChatContacts();
   const onlineUsers = useChatPresence();
-  const currentUserId = useSelector(state => state.userProviderData?.id);
+  const {userData} = useUserData();
+  const currentUserId = userData?.id;
 
   // Same processing logic as ContactAvatarList
   const allContacts = useMemo(() => {

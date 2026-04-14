@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState, useEffect, useRef, use } from 'r
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   FlatList,
   RefreshControl,
@@ -14,7 +15,8 @@ import { chatSelectedTrustedContactActions } from '../../store/redux/chatSelecte
 import { useChatPresence } from '../../context/ChatContext';
 import { useChatContacts } from '../../hook/useChatContacts';
 import appColors from '../../theme/appColors';
- 
+import { useUserData } from '../../hook/useUserData';
+import { getProfileImage } from '../../config/utility'; 
 
 
 const ContactAvatarList = ({
@@ -37,7 +39,7 @@ const ContactAvatarList = ({
      const dispatch = useDispatch();
     const { contactList: chatContactList, fetchChatContacts } = useChatContacts();
      const chatSelectedTrustedContact = useSelector(state => state.chatSelectedTrustedContact);
-     const userData = useSelector(state => state.userProviderData);
+     const {userData} = useUserData();
      const usrId = userData?.id;
 
      const chatContacts = useMemo(() => {
@@ -59,6 +61,7 @@ const ContactAvatarList = ({
             receipent_id: contact.trusted_user_id,
             phone_number: contact.trusted_contact.phone_number,
             roomId: roomid,
+            profile_image: contact?.trusted_contact?.profile_photo ? getProfileImage(contact.trusted_contact.profile_photo) : null,
           });
         } else if (contact.trusted_user_id === usrId) {
           const displayName = contact?.inviter?.name || contact?.inviter?.phone_number || 'Unknown';
@@ -70,6 +73,7 @@ const ContactAvatarList = ({
             isOnline: onlineUsers[contact.user_id] || false,
             receipent_id: contact.user_id,
             roomId: roomid,
+            profile_image: contact?.inviter?.profile_photo ? getProfileImage(contact.inviter.profile_photo) : null,
           });
         }
       }
@@ -116,7 +120,7 @@ const getAvatarColor = item => {
       const isSelected = chatSelectedTrustedContact?.id === item.id;
       const statusColor =  OFFLINE_COLOR;
       const statusBgColor = item.isOnline ? ONLINE_BG : OFFLINE_BG;
-       const avatarColor = getAvatarColor(item);
+      const avatarColor = getAvatarColor(item);
 
       return (
         <TouchableOpacity
@@ -144,9 +148,17 @@ const getAvatarColor = item => {
                 },
               ]}
             >
-              <Text style={[styles.avatarText]}> 
-                {item.initial}
-              </Text>
+              {item.profile_image ? (
+                <Image
+                  source={{ uri: item.profile_image }}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={[styles.avatarText]}> 
+                  {item.initial}
+                </Text>
+              )}
             </View>
 
             {item.isOnline && <View style={styles.onlineDot} />}

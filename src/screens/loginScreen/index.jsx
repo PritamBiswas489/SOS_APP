@@ -105,7 +105,13 @@ const LoginScreen = () => {
         setIsLoading(false);
         return;
       }
-      const fullPhoneNumber = `${selectedCountry.dial_code}${userPhone}`;
+      //remove leading zero if present
+      let requestPhone = userPhone.trim();
+      if (requestPhone.startsWith('0')) {
+        requestPhone = requestPhone.slice(1);
+      }
+
+      const fullPhoneNumber = `${selectedCountry.dial_code}${requestPhone}`;
       const payload = { phoneNumber: fullPhoneNumber };
       const requestOtp = await new Promise((resolve, reject) => {
         LoginService.requestOtp(payload, response => {
@@ -145,8 +151,13 @@ const LoginScreen = () => {
         return;
       }
       // Proceed with OTP verification (e.g., API call)
+      //remove leading zero if present
+      let requestPhone = userPhone.trim();
+      if (requestPhone.startsWith('0')) {
+        requestPhone = requestPhone.slice(1);
+      }
       const verifyPayload = {
-        phoneNumber: `${selectedCountry.dial_code}${userPhone}`,
+        phoneNumber: `${selectedCountry.dial_code}${requestPhone}`,
         otp: enteredOtp,
       };
       const verifyOtp = await new Promise((resolve, reject) => {
@@ -162,7 +173,7 @@ const LoginScreen = () => {
         });
       });
      const processUserLogin = await new Promise((resolve, reject) => {
-        LoginService.processLogin({ phoneNumber: `${selectedCountry.dial_code}${userPhone}` }, response => {
+        LoginService.processLogin({ phoneNumber: `${selectedCountry.dial_code}${requestPhone}` }, response => {
           console.log('Process Login Response:', response);
           if (response.success === true) {
               resolve(response);
@@ -185,7 +196,8 @@ const LoginScreen = () => {
         'SUCCESS',
         'OTP verified successfully and login processed',
       );
-      navigation.replace('Process',{action: 'retrieveDataAfterLogin'});
+      //navigation.replace('CompleteProfile', { userData });
+       navigation.replace('Process',{action: 'retrieveDataAfterLogin'});
     } catch (error) {
       setIsLoading(false);
       console.error('OTP Verify Error:', error);

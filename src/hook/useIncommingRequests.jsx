@@ -46,8 +46,13 @@ export const useIncommingRequests = () => {
 		return inFlightIncommingRequests;
 	}, [dispatch]);
 
+	const setData = useCallback(data => {
+		dispatch(trustedContactIncommingRequestActions.setTrustedContactList(data));
+	}, [dispatch]);
+
 	return {
 		contactList,
+		setData,
 		fetchIncommingRequests,
 	};
 };

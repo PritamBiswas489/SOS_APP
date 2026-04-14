@@ -27,9 +27,11 @@ export const TrustedContactsProvider = ({ children }) => {
     const handleTrustedContactRequestSent = async data => {
       console.log("Trusted contact request sent event received:", data);
       fetchOutgoingRequests();
+      fetchChatContacts();
     };
     const handleTrustedContactRequestReceived = async data => {
       fetchIncommingRequests();
+      fetchChatContacts();
     };
     const handleTrustedContactRequestAcceptedOrDeleted = async data => {
       fetchTrustedContacts();

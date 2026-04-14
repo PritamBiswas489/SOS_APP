@@ -21,6 +21,7 @@ import { useDispatch } from 'react-redux';
 import { trustedContactOutgongRequestActions } from '../../store/redux/trustedContactOutgongRequest.redux';
 import { useOutgoingRequests } from '../../hook/useOutgoingRequests';
 import { useTrustedContactActions } from '../../context/TrustedProviderContext';
+import { useContactTab } from '../../hook/useContactTab';
 
 const getFlagEmoji = countryCode => {
   const codePoints = countryCode
@@ -61,7 +62,8 @@ const AddContactsScreen = () => {
    const [deviceCountryCode, setDeviceCountryCode] = useState(
       getDeviceCountryCode() || 'NG',
     ); // Default to 'NG' if detection fails
-    const { fetchOutgoingRequests } = useOutgoingRequests();
+    const {  setCurrentTab } = useContactTab();
+ 
 
     useEffect(() => {
       if (deviceCountryCode) {
@@ -121,6 +123,7 @@ const AddContactsScreen = () => {
       const sendRequest = await trustedContactActions.sendTrustedContactRequest(contactData);
       console.log('Send request response:', sendRequest);
       showSuccess('SUCCESS', 'Trusted contact request sent successfully');
+      setCurrentTab('outgoing');  
       navigation.goBack();
     } catch (error) {
       showError(error?.message || 'Failed to send trusted contact request');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity ,  Image } from 'react-native';
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
@@ -19,6 +19,8 @@ import { Alert } from 'react-native';
 import { UserService } from '../services/user.service';
 import { useDispatch } from 'react-redux';
 import { resetAllState } from '../store';
+import { useUserData } from '../hook/useUserData'; 
+import { getProfileImage } from '../config/utility';
  
 
 const Drawer = createDrawerNavigator();
@@ -40,6 +42,10 @@ const logoutProcess = async (navigation, dispatch) => {
 
 const CustomDrawerContent = props => {
   const dispatch = useDispatch();
+  console.log('=====================================================');
+
+  const { userData} = useUserData();
+    
   return (
     <DrawerContentScrollView
       {...props}
@@ -48,11 +54,15 @@ const CustomDrawerContent = props => {
       {/* Profile Section */}
       <View style={styles.profileSection}>
         <View style={styles.profileAvatar}>
-          <Icon name="person" size={40} color="#FFFFFF" />
+          {userData?.profile_photo ? (
+            <Image source={{ uri: getProfileImage(userData.profile_photo) }} resizeMode="cover" style={styles.avatarImage} />
+          ) : (
+            <Icon name="person" size={40} color="#FFFFFF" />
+          )}
         </View>
 
-        <Text style={styles.profileName}>Alex Johnson</Text>
-        <Text style={styles.profileEmail}>alex.johnson@email.com</Text>
+        <Text style={styles.profileName}>{userData?.name}</Text>
+        <Text style={styles.profileEmail}>{userData?.email}</Text>
 
         <View style={styles.statusBadge}>
           <View style={styles.statusDot} />
@@ -194,6 +204,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+  },
+
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
 
   profileName: {

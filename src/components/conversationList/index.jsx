@@ -30,7 +30,7 @@ import { useChatActions, useChatMessages } from '../../context/ChatContext';
 import { useSocket } from '../../context/SocketContext';
 import useToast from '../../hook/useToast';
 import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
-
+import { useUserData } from '../../hook/useUserData';
  
  
 const getMessageTimestamp = message => {
@@ -323,6 +323,7 @@ const ConversationList = ({
   const shouldScrollAfterLoadRef = useRef(false);
   const pendingAutoScrollPassesRef = useRef(0);
   const wasConnectedRef = useRef(false);
+  const AUTO_SCROLL_PASSES = 6;
   const [refreshing, setRefreshing] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
@@ -343,7 +344,7 @@ const ConversationList = ({
   const { showSuccess, showError } = useToast();
   const { conversations, pagination, messageStatuses } = useChatMessages();
   const chatSelectedTrustedContact = useSelector(state => state.chatSelectedTrustedContact);
-  const userData = useSelector(state => state.userProviderData);
+  const {userData} = useUserData();
   const selectedContact = chatSelectedTrustedContact;
   const currentUserId = userData?.id;
   const currentRoomId = selectedContact?.roomId;
@@ -568,11 +569,15 @@ const ConversationList = ({
   }, []);
 
   const scrollToBottomImmediate = useCallback(() => {
-    requestAnimationFrame(() => {
+    const runScroll = () => {
       flatListRef.current?.scrollToEnd({ animated: false });
-      requestAnimationFrame(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      });
+    };
+
+    requestAnimationFrame(() => {
+      runScroll();
+      requestAnimationFrame(runScroll);
+      setTimeout(runScroll, 40);
+      setTimeout(runScroll, 120);
     });
   }, []);
 
@@ -617,7 +622,7 @@ const ConversationList = ({
     if (loadedRoomIdsRef.current.has(roomKey)) return; // ✅ use ref
     loadedRoomIdsRef.current.add(roomKey);              // ✅ use ref
     shouldScrollAfterLoadRef.current = true;
-    pendingAutoScrollPassesRef.current = 2;
+    pendingAutoScrollPassesRef.current = AUTO_SCROLL_PASSES;
     didInitialRoomScrollRef.current = false;
 
     loadMessages(currentRoomId, 1, 50).catch(() => {});
@@ -931,10 +936,10 @@ const handleReload = useCallback(() => {
     const roomKey = String(currentRoomId);
     loadedRoomIdsRef.current.delete(roomKey); // ✅ use ref
   shouldScrollAfterLoadRef.current = true;
-    pendingAutoScrollPassesRef.current = 2;
+    pendingAutoScrollPassesRef.current = AUTO_SCROLL_PASSES;
     didInitialRoomScrollRef.current = false;
     loadMessages(currentRoomId, 1, 50).catch(() => {});
-  }, [currentRoomId, loadMessages]);
+  }, [currentRoomId, loadMessages, AUTO_SCROLL_PASSES]);
 
   useEffect(() => {
     const reconnected = !wasConnectedRef.current && isConnected;
@@ -944,13 +949,13 @@ const handleReload = useCallback(() => {
       const roomKey = String(currentRoomId);
       loadedRoomIdsRef.current.delete(roomKey);
       shouldScrollAfterLoadRef.current = true;
-      pendingAutoScrollPassesRef.current = 2;
+      pendingAutoScrollPassesRef.current = AUTO_SCROLL_PASSES;
       didInitialRoomScrollRef.current = false;
       loadMessages(currentRoomId, 1, 50).catch(() => {});
     }
 
     wasConnectedRef.current = isConnected;
-  }, [isConnected, currentRoomId,   loadMessages]);
+  }, [isConnected, currentRoomId, loadMessages, AUTO_SCROLL_PASSES]);
 
   const renderNoConversation = () => {
     if (isInitialConversationLoading) {
@@ -1035,11 +1040,13 @@ const handleReload = useCallback(() => {
             return;
           }
 
-          requestAnimationFrame(() => {
-            flatListRef.current?.scrollToEnd({ animated: false });
-          });
+          scrollToBottomImmediate();
+          setShowScrollToBottom(false);
 
-          pendingAutoScrollPassesRef.current -= 1;
+          pendingAutoScrollPassesRef.current = Math.max(
+            0,
+            pendingAutoScrollPassesRef.current - 1,
+          );
           if (pendingAutoScrollPassesRef.current <= 0) {
             shouldScrollAfterLoadRef.current = false;
             pendingAutoScrollPassesRef.current = 0;

@@ -11,7 +11,7 @@ import { useSelector } from 'react-redux';
 import { useSocket } from './SocketContext';
 import { useChatContacts } from '../hook/useChatContacts';
 import { displayRemoteNotification } from '../services/notification.service';
-
+import { useUserData } from '../hook/useUserData';
 const ChatContext = createContext(null);
 const ChatMessagesContext = createContext(null);
 const ChatTypingContext = createContext(null);
@@ -153,7 +153,7 @@ export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const { on, off, emit, isConnected } = useSocket();
   const typingTimers = useRef({});
-  const userData = useSelector(state => state.userProviderData);
+  const {userData} = useUserData();
   const { contactList } = useChatContacts();
   const currentUserId = userData?.id;
   const currentScreenName = useSelector(state => state.currentScreen?.name);

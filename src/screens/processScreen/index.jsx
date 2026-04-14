@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import { UserService } from '../../services/user.service';
 import { useDispatch } from 'react-redux';
-import { userActions } from '../../store/redux/user.redux';
+import { useUserData } from '../../hook/useUserData';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import { useChatContacts } from '../../hook/useChatContacts';
@@ -18,6 +18,7 @@ const ProcessScreen = payload => {
   console.log('Process Screen Action:', action);
   console.log('=====================================================');
   const navigation = useNavigation();
+  const { fetchUserData } = useUserData();
 
   const saveFcmTokenData = async fcmToken => {
     // TODO: Replace this with actual API integration to store token on backend.
@@ -95,30 +96,9 @@ const ProcessScreen = payload => {
        console.log('=====================================================');
        console.log('Fetching user profile data after login');
        console.log('=====================================================');
-        try {
-          const fetchUserProfile = await new Promise((resolve, reject) => {
-            UserService.fetchUserProfile(response => {
-              if (response.success) {
-                resolve(response.data);
-              } else {
-                reject(
-                  new Error(response?.error || 'Failed to fetch user profile'),
-                );
-              }
-            });
-          });
-          console.log('=====================================================');
-          console.log('User profile data fetched successfully:', fetchUserProfile);
-          console.log('=====================================================');
-          dispatch(userActions.setFullData(fetchUserProfile?.data));
-        } catch (error) {
-          //need to logout user and navigate to login screen
-          navigation.replace('Login');
-          console.log('❌ Data Retrieval Error:', error?.message);
-          return;
-        }
-
-
+        const data =  await fetchUserData();
+        console.log('=====================================================');
+        console.log('User profile data fetched successfullyyyyyy:', data);
         console.log('=====================================================');
         console.log("Trusted Contacts for Join Socket Room need to be fetched here");
         console.log('=====================================================');
@@ -127,6 +107,16 @@ const ProcessScreen = payload => {
         console.log('Data retrieval successful, navigating to Main screen');
         console.log('=====================================================');
 
+        if(!data?.id){
+            console.log('❌ User data is missing id after login. Navigating back to Login screen.');
+            navigation.replace('Login');
+            return;
+        }
+        if(data?.first_time_login){
+            console.log('First time login detected, navigating to CompleteProfile screen');
+            navigation.replace('CompleteProfile');
+            return;
+        }
         navigation.replace('Main');
       }
     };

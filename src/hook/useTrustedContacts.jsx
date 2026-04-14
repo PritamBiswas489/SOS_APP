@@ -41,8 +41,13 @@ export const useTrustedContacts = () => {
 		return inFlightTrustedContactsRequest;
 	}, [dispatch]);
 
+	const setData = useCallback(data => {
+		dispatch(trustedContactActions.setTrustedContactList(data));
+	}, [dispatch]);
+
 	return {
 		contactList,
 		fetchTrustedContacts,
+		setData,
 	};
 };
