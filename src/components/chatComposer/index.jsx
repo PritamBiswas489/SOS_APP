@@ -21,7 +21,7 @@ import AudioRecord from 'react-native-audio-record';
 import ChatActionSheet from '../chatActionSheet';
 import MediaPreviewModal from '../mediaPreviewModal';
 import { useChatActions, useChatTyping } from '../../context/ChatContext';
-import api from '../../config/authApiFormData.config';
+import { uploadMedia } from '../../config/apiClient';
 import { getAppUrl } from '../../config/utility';
 import styles from './style';
 import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
@@ -37,14 +37,13 @@ const getMediaSizeLimit = mediaCategory =>
 
 const formatMegabytes = bytes => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
-// Initialize AudioRecord at module level so it's ready before any interaction.
-AudioRecord.init({
+const AUDIO_RECORD_OPTIONS = {
   sampleRate: 16000,
   channels: 1,
   bitsPerSample: 16,
   audioSource: 6,
   wavFile: 'recording.wav',
-});
+};
 
 const ChatComposer = ({
   onSendComplete,
@@ -271,24 +270,34 @@ const ChatComposer = ({
         setSelectedMediaType(mediaCategory);
         setIsUploadingMedia(true);
         setUploadingLocalUri(uri);
-        try {
-          const uploads = await api.post('/chat/upload-media', {
-            file: { uri, type: mimeType, name: asset?.fileName || 'media' },
-          });
-          const rawUrl = uploads?.data?.data?.url;
-          if (rawUrl) {
-            const baseUrl = getAppUrl();
-            const mediaUrl = rawUrl.includes('http://localhost:4000')
-              ? rawUrl.replace('http://localhost:4000', baseUrl)
-              : rawUrl;
-            setSelectedMedia(mediaUrl);
-            setSelectedMediaType(mediaCategory);
+        let lastError;
+        for (let attempt = 1; attempt <= 4; attempt++) {
+          try {
+            if (attempt === 2) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            const formData = new FormData();
+            formData.append('file', { uri, type: mimeType, name: asset?.fileName || 'media' });
+            const uploads = await uploadMedia('/chat/upload-media', formData);
+            const rawUrl = uploads?.data?.url;
+            if (rawUrl) {
+              const baseUrl = getAppUrl();
+              const mediaUrl = rawUrl.includes('http://localhost:4000')
+                ? rawUrl.replace('http://localhost:4000', baseUrl)
+                : rawUrl;
+              setSelectedMedia(mediaUrl);
+              setSelectedMediaType(mediaCategory);
+            }
+            lastError = null;
+            break;
+          } catch (err) {
+            lastError = err;
           }
-        } catch {
-          Alert.alert('Upload failed', 'Could not upload the media. Please try again.');
-        } finally {
-          setIsUploadingMedia(false);
         }
+        if (lastError) {
+          Alert.alert('Upload failed', 'Could not upload the media. Please try again.');
+        }
+        setIsUploadingMedia(false);
       },
     );
   }, [closeActionMenu]);
@@ -307,24 +316,36 @@ const ChatComposer = ({
       setSelectedMediaType('audio');
       setIsUploadingMedia(true);
       setUploadingLocalUri(uri);
-      try {
-        const uploads = await api.post('/chat/upload-media', {
-          file: { uri, type: mimeType, name },
-        });
-        const rawUrl = uploads?.data?.data?.url;
-        if (rawUrl) {
-          const baseUrl = getAppUrl();
-          const mediaUrl = rawUrl.includes('http://localhost:4000')
-            ? rawUrl.replace('http://localhost:4000', baseUrl)
-            : rawUrl;
-          setSelectedMedia(mediaUrl);
-          setSelectedMediaType('audio');
+      let lastError;
+      for (let attempt = 1; attempt <= 4; attempt++) {
+        try {
+          if (attempt === 2) {
+            // First attempt failed — file may still be flushing; wait before retry.
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          const formData = new FormData();
+          formData.append('file', { uri, type: mimeType, name });
+          const uploads = await uploadMedia('/chat/upload-media', formData);
+          console.log('Upload response:', uploads);
+          const rawUrl = uploads?.data?.url;
+          if (rawUrl) {
+            const baseUrl = getAppUrl();
+            const mediaUrl = rawUrl.includes('http://localhost:4000')
+              ? rawUrl.replace('http://localhost:4000', baseUrl)
+              : rawUrl;
+            setSelectedMedia(mediaUrl);
+            setSelectedMediaType('audio');
+          }
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err;
         }
-      } catch {
-        Alert.alert('Upload failed', 'Could not upload the audio. Please try again.');
-      } finally {
-        setIsUploadingMedia(false);
       }
+      if (lastError) {
+        Alert.alert('Upload failed', 'Could not upload the audio. Please try again.');
+      }
+      setIsUploadingMedia(false);
     },
     [],
   );
@@ -359,6 +380,7 @@ const ChatComposer = ({
           }
         }
 
+        AudioRecord.init(AUDIO_RECORD_OPTIONS);
         AudioRecord.start();
         setIsRecordingAudio(true);
         return;
@@ -371,6 +393,14 @@ const ChatComposer = ({
         Alert.alert('Recording failed', 'Could not resolve recorded file path.');
         return;
       }
+
+      // Wait for the native audio recorder to fully flush the WAV file to disk.
+      // Without this delay, Android may return the path before the file is written,
+      // causing net::ERR_FAILED on the first upload attempt.
+      // Wait for the native audio encoder to finish flushing the WAV file to disk.
+      // AudioRecord.stop() resolves before the file is fully written on Android.
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       const recordedUri =
         recordedPath.startsWith('file://') || recordedPath.startsWith('content://')
           ? recordedPath
@@ -416,24 +446,34 @@ const ChatComposer = ({
       setSelectedMediaType('document');
       setIsUploadingMedia(true);
       setUploadingLocalUri(uri);
-      try {
-        const uploads = await api.post('/chat/upload-media', {
-          file: { uri, type: mimeType, name: file?.name || 'document' },
-        });
-        const rawUrl = uploads?.data?.data?.url;
-        if (rawUrl) {
-          const baseUrl = getAppUrl();
-          const mediaUrl = rawUrl.includes('http://localhost:4000')
-            ? rawUrl.replace('http://localhost:4000', baseUrl)
-            : rawUrl;
-          setSelectedMedia(mediaUrl);
-          setSelectedMediaType('document');
+      let lastError;
+      for (let attempt = 1; attempt <= 4; attempt++) {
+        try {
+          if (attempt === 2) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          const formData = new FormData();
+          formData.append('file', { uri, type: mimeType, name: file?.name || 'document' });
+          const uploads = await uploadMedia('/chat/upload-media', formData);
+          const rawUrl = uploads?.data?.url;
+          if (rawUrl) {
+            const baseUrl = getAppUrl();
+            const mediaUrl = rawUrl.includes('http://localhost:4000')
+              ? rawUrl.replace('http://localhost:4000', baseUrl)
+              : rawUrl;
+            setSelectedMedia(mediaUrl);
+            setSelectedMediaType('document');
+          }
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err;
         }
-      } catch {
-        Alert.alert('Upload failed', 'Could not upload the document. Please try again.');
-      } finally {
-        setIsUploadingMedia(false);
       }
+      if (lastError) {
+        Alert.alert('Upload failed', 'Could not upload the document. Please try again.');
+      }
+      setIsUploadingMedia(false);
     } catch (err) {
       if (!isErrorWithCode(err) || err.code !== errorCodes.OPERATION_CANCELED) {
         Alert.alert('Error', 'Could not open document picker. Please try again.');
@@ -461,24 +501,34 @@ const ChatComposer = ({
         }
         setIsUploadingMedia(true);
         setUploadingLocalUri(uri);
-        try {
-          const uploads = await api.post('/chat/upload-media', {
-            file: { uri, type: mimeType, name: asset?.fileName || 'photo.jpg' },
-          });
-          const rawUrl = uploads?.data?.data?.url;
-          if (rawUrl) {
-            const baseUrl = getAppUrl();
-            const mediaUrl = rawUrl.includes('http://localhost:4000')
-              ? rawUrl.replace('http://localhost:4000', baseUrl)
-              : rawUrl;
-            setSelectedMedia(mediaUrl);
-            setSelectedMediaType('image');
+        let lastError;
+        for (let attempt = 1; attempt <= 4; attempt++) {
+          try {
+            if (attempt === 2) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            const formData = new FormData();
+            formData.append('file', { uri, type: mimeType, name: asset?.fileName || 'photo.jpg' });
+            const uploads = await uploadMedia('/chat/upload-media', formData);
+            const rawUrl = uploads?.data?.url;
+            if (rawUrl) {
+              const baseUrl = getAppUrl();
+              const mediaUrl = rawUrl.includes('http://localhost:4000')
+                ? rawUrl.replace('http://localhost:4000', baseUrl)
+                : rawUrl;
+              setSelectedMedia(mediaUrl);
+              setSelectedMediaType('image');
+            }
+            lastError = null;
+            break;
+          } catch (err) {
+            lastError = err;
           }
-        } catch {
-          Alert.alert('Upload failed', 'Could not upload the image. Please try again.');
-        } finally {
-          setIsUploadingMedia(false);
         }
+        if (lastError) {
+          Alert.alert('Upload failed', 'Could not upload the image. Please try again.');
+        }
+        setIsUploadingMedia(false);
       },
     );
   }, [closeActionMenu]);

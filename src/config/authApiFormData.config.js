@@ -24,23 +24,33 @@ const resetStateData = ()=>{
 }
 
 api.interceptors.request.use(async (config) => {
-    const {accessToken, refreshToken} = await getAuthTokens();
+    const { accessToken, refreshToken } = await getAuthTokens();
     const languageCode = await storeage.getValue('languageCode');
-     
+
+
+    const isFormData = config.data && typeof config.data === 'object' && typeof config.data.append === 'function';
+
     config.headers = {
-    ...config.headers,
-    "Content-Type": "multipart/form-data",
-    Authorization: 'Bearer ' + accessToken,
-    refreshToken: refreshToken,
-    'X-localization': languageCode || 'en',
-  };
-    // console.log(config.headers)
-    const fullRequestUrl = `${config.baseURL}${config.url}`;
-    console.log('Request URL:', fullRequestUrl);
-    
+        ...config.headers,
+        Authorization: 'Bearer ' + accessToken,
+        refreshToken: refreshToken,
+        'X-localization': languageCode || 'en',
+    };
+
+    if (isFormData) {
+        // Let React Native set the Content-Type with boundary for FormData
+        delete config.headers['Content-Type'];
+    } else if (
+        config.data &&
+        typeof config.data === 'object' &&
+        !(config.data instanceof URLSearchParams)
+    ) {
+        config.headers['Content-Type'] = 'application/json';
+    }
+    // Otherwise, leave Content-Type as-is (for urlencoded, etc.)
+
     return config;
 });
-
 api.interceptors.response.use(async (res) => {
     const accesstoken = res?.data?.meta?.accesstoken || '';
     const refreshtoken = res?.data?.meta?.refreshtoken || '';
@@ -58,15 +68,15 @@ api.interceptors.response.use(async (res) => {
     console.error('Response Error:', error);
     if (error.response) {
         // The request was made and the server responded with a status code outside the range of 2xx
-        console.error('Response Data:', error.response.data);
-        console.error('Response Status:', error.response.status);
-        console.error('Response Headers:', error.response.headers);
+        console.log('Response Data:', error.response.data);
+        console.log('Response Status:', error.response.status);
+        console.log('Response Headers:', error.response.headers);
     } else if (error.request) {
         // The request was made but no response was received
-        console.error('Request Data:', error.request);
+        console.log('Request Data:', error.request);
     } else {
         // Something happened in setting up the request that triggered an Error
-        console.error('Error Message:', error.message);
+        console.log('Error Message:', error.message);
     }
      console.log("================================")
     //console.error(error?.response?.data?.error?.message);
