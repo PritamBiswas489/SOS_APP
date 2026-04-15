@@ -4,7 +4,6 @@ import {
   Alert,
   Animated,
   FlatList,
-  Image,
   Linking,
   Modal,
   PanResponder,
@@ -22,6 +21,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import ImagePreviewModal from '../imagePreviewModal';
 import VideoPlayerModal from '../videoPlayerModal';
 import AudioPlayerModal from '../audioPlayerModal';
+import ChatMessageItem from '../chatMessageItem';
+import OlderConversationLoader from '../olderConversationLoader';
 import ForwardMessageModal from '../forwardMessageModal';
 import ReplyMessageModal from '../replyMessageModal';
 import { useSelector, useDispatch } from 'react-redux';
@@ -81,52 +82,6 @@ const formatMessageTime = timestamp => {
     minute: '2-digit',
     hour12: true,
   }).format(date);
-};
-
-const truncateByWordLimit = (value, wordLimit = 12) => {
-  if (!value || typeof value !== 'string') return '';
-  const words = value.trim().split(/\s+/).filter(Boolean);
-  if (words.length <= wordLimit) return words.join(' ');
-  return `${words.slice(0, wordLimit).join(' ')}...`;
-};
-
-const getReplyPreviewContent = replyMessage => {
-  if (!replyMessage) return null;
-
-  if (typeof replyMessage === 'string') {
-    return {
-      title: 'Reply to message',
-      text: truncateByWordLimit(replyMessage),
-    };
-  }
-
-  const replyText = replyMessage?.text || replyMessage?.message;
-  if (replyText) {
-    return {
-      title: 'Reply to message',
-      text: truncateByWordLimit(replyText),
-    };
-  }
-
-  const replyMediaType = replyMessage?.mediaType || replyMessage?.media_type;
-  if (replyMediaType === 'image') {
-    return { title: 'Reply to image', text: 'Image attachment' };
-  }
-  if (replyMediaType === 'video') {
-    return { title: 'Reply to video', text: 'Video attachment' };
-  }
-  if (replyMediaType === 'audio') {
-    return { title: 'Reply to audio', text: 'Audio attachment' };
-  }
-  if (replyMediaType === 'document') {
-    return { title: 'Reply to document', text: 'Document attachment' };
-  }
-
-  if (replyMessage?.locationJson || replyMessage?.location_json) {
-    return { title: 'Reply to location', text: 'Shared location' };
-  }
-
-  return { title: 'Reply to message', text: 'Message' };
 };
 
 const getReplyTargetId = message => {
@@ -196,30 +151,6 @@ const buildConversationItems = (messages, selectedContact, statuses = {}, styles
   });
 
   return items;
-};
-
-const parseMessageLocation = locationJson => {
-  if (!locationJson) return null;
-
-  let parsedLocation = locationJson;
-  if (typeof locationJson === 'string') {
-    try {
-      parsedLocation = JSON.parse(locationJson);
-    } catch {
-      return null;
-    }
-  }
-
-  const latitude = Number(parsedLocation?.latitude ?? parsedLocation?.lat);
-  const longitude = Number(
-    parsedLocation?.longitude ?? parsedLocation?.lng ?? parsedLocation?.lon,
-  );
-
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return null;
-  }
-
-  return { latitude, longitude };
 };
 
 const renderStatusIcon = status => {
@@ -406,7 +337,7 @@ const ConversationList = ({
   }, []);
 
   const handleOpenDocument = useCallback(async documentUrl => {
-    if (!documentUrl) return;
+    if (!documentUrl) return false;
 
     try {
       let finalUrl = documentUrl.trim();
@@ -459,8 +390,10 @@ const ConversationList = ({
       } else {
         showSuccess('Download complete', `${fileName} saved to Downloads.`);
       }
+      return true;
     } catch {
       Alert.alert('Download error', 'Unable to download this document. Please try again.');
+      return false;
     }
   }, [showSuccess]);
 
@@ -697,61 +630,6 @@ useFocusEffect(focusCallback);
     didInitialRoomScrollRef.current = false;
   }, [currentRoomId]);
 
-  const renderMediaContent = item => {
-    if (!item.mediaUrl) return null;
-
-    if (item.mediaType === 'image') {
-      return (
-        <TouchableOpacity activeOpacity={0.9} onPress={() => handleOpenImageModal(item.mediaUrl)}>
-          <Image
-            source={{ uri: item.mediaUrl }}
-            style={styles.mediaBubbleImage}
-            resizeMode="cover"
-          />
-        </TouchableOpacity>
-      );
-    }
-    if (item.mediaType === 'video') {
-      return (
-        <TouchableOpacity
-          style={styles.mediaBubbleVideo}
-          activeOpacity={0.85}
-          onPress={() => handleOpenVideoModal(item.mediaUrl)}
-        >
-          <View style={styles.mediaBubblePlayBtn}>
-            <Icon name="play-arrow" size={28} color="#FFFFFF" />
-          </View>
-          <Text style={styles.mediaBubbleLabel}>Video</Text>
-        </TouchableOpacity>
-      );
-    }
-    if (item.mediaType === 'audio') {
-      return (
-        <TouchableOpacity
-          style={styles.mediaBubbleAudio}
-          activeOpacity={0.85}
-          onPress={() => handleOpenAudioModal(item.mediaUrl)}
-        >
-          <Icon name="headset" size={22} color="#FFFFFF" />
-          <Text style={styles.mediaBubbleLabel}>Audio message</Text>
-        </TouchableOpacity>
-      );
-    }
-    if (item.mediaType === 'document') {
-      return (
-        <TouchableOpacity
-          style={styles.mediaBubbleDocument}
-          activeOpacity={0.85}
-          onPress={() => handleOpenDocument(item.mediaUrl)}
-        >
-          <Icon name="insert-drive-file" size={22} color="#FFFFFF" />
-          <Text style={styles.mediaBubbleLabel}>Document</Text>
-        </TouchableOpacity>
-      );
-    }
-    return null;
-  };
-
   const scrollToRepliedMessage = useCallback((replyTargetId) => {
     if (!replyTargetId) return;
 
@@ -768,168 +646,34 @@ useFocusEffect(focusCallback);
     });
   }, [messageIndexById]);
 
-  const renderReplyPreview = (item, isSelfMessage) => {
-    const replyData = item?.reply_to_message || item?.replyTo;
-    const targetId = item?.replyTargetId;
-    const preview = getReplyPreviewContent(replyData);
-
-    if (!preview) return null;
-
-    const replyPreviewContent = (
-      <View
-        style={[
-          styles.replyPreviewBox,
-          isSelfMessage ? styles.replyPreviewBoxRight : styles.replyPreviewBoxLeft,
-        ]}
-      >
-        <Text style={styles.replyPreviewTitle}>{preview.title}</Text>
-        <Text style={styles.replyPreviewText} numberOfLines={2}>
-          {preview.text}
-        </Text>
-      </View>
-    );
-
-    if (!targetId) {
-      return replyPreviewContent;
-    }
-
+  const renderChatItem = useCallback(({ item }) => {
     return (
-      <TouchableOpacity
-        activeOpacity={0.82}
-        onPress={() => scrollToRepliedMessage(targetId)}
-      >
-        {replyPreviewContent}
-      </TouchableOpacity>
+      <ChatMessageItem
+        item={item}
+        styles={styles}
+        ReplySwipeWrapper={ReplySwipeWrapper}
+        onReplyPress={handleReplyPress}
+        onMenuToggle={handleMenuToggle}
+        onPressReplyTarget={scrollToRepliedMessage}
+        onOpenLocationInMaps={handleOpenLocationInMaps}
+        handleOpenImageModal={handleOpenImageModal}
+        handleOpenVideoModal={handleOpenVideoModal}
+        handleOpenAudioModal={handleOpenAudioModal}
+        handleOpenDocument={handleOpenDocument}
+        renderStatusIcon={renderStatusIcon}
+      />
     );
-  };
-  const renderLocationContent = (item, isSelfMessage) => {
-    const location = parseMessageLocation(item?.locationJson);
-    if (!location) return null;
-
-    return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={[
-          styles.locationMessageCard,
-          isSelfMessage ? styles.locationMessageCardRight : styles.locationMessageCardLeft,
-        ]}
-        onPress={() => handleOpenLocationInMaps(location.latitude, location.longitude)}
-      >
-        <View style={styles.locationMessageHeader}>
-          <View style={styles.locationPinBadge}>
-            <Icon name="location-on" size={16} color="#FFFFFF" />
-          </View>
-          <View style={styles.locationMessageHeaderTextBlock}>
-            <Text style={styles.locationMessageTitle}>Current Location Shared</Text>
-            <Text style={styles.locationMessageSubtitle}>Tap to open in Maps</Text>
-          </View>
-        </View>
-
-        <View style={styles.locationCoordsRow}>
-          <Text style={styles.locationCoordsLabel}>LAT</Text>
-          <Text style={styles.locationCoordsValue}>{location.latitude.toFixed(5)}</Text>
-          <Text style={[styles.locationCoordsLabel, styles.locationCoordsLabelSpacing]}>LNG</Text>
-          <Text style={styles.locationCoordsValue}>{location.longitude.toFixed(5)}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderMessageActions = useCallback((item, isSelfMessage) => {
-    const actionRowStyle = isSelfMessage
-      ? styles.messageActionsRowRight
-      : styles.messageActionsRowLeft;
-
-    return (
-      <View style={[styles.messageActionsRow, actionRowStyle]}>
-        <TouchableOpacity
-          activeOpacity={0.82}
-          onPress={() => handleMenuToggle(item)}
-          style={styles.messageActionButton}
-        >
-          <Icon name="more-vert" size={16} color="#D7E3FF" />
-        </TouchableOpacity>
-      </View>
-    );
-  }, [handleMenuToggle, styles]);
-
-  const renderChatItem = ({ item }) => {
-    if (item.type === 'day') {
-      return <Text style={styles.dayLabel}>{item.text}</Text>;
-    }
-
-    if (item.type === 'sos') {
-      return (
-        <View style={styles.sosContainer}>
-          <View style={styles.sosCard}>
-            <View style={styles.sosBadge}>
-              <Text style={styles.sosBadgeText}>SOS TRIGGERED</Text>
-            </View>
-
-            <Text style={styles.sosMessage}>
-              I need help! Sending my live location now.
-            </Text>
-          </View>
-        </View>
-      );
-    } 
-
-    if (item.type === 'left') {
-      return (
-        <ReplySwipeWrapper item={item} onSwipeReply={handleReplyPress} enabled={item.type === 'left'}>
-          <View style={styles.bubbleLeftWrapper}>
-            <View style={styles.messageRowLeft}>
-              <View style={styles.bubbleLeft}>
-                {renderReplyPreview(item, false)}
-                {renderLocationContent(item, false)}
-                {renderMediaContent(item)}
-                {!!item.text && <Text style={styles.messageText}>{item.text}</Text>}
-              </View>
-
-              {renderMessageActions(item, false)}
-            </View>
-
-            <View style={styles.messageFooterLeft}>
-              <View style={item.avatarStyle}>
-                <Text style={styles.avatarSmallText}>{item.avatarText}</Text>
-              </View>
-              <Text style={styles.timeLeftInline}>{item.time}</Text>
-            </View>
-          </View>
-        </ReplySwipeWrapper>
-      );
-    }
-
-    if (item.type === 'right') {
-      return (
-        <ReplySwipeWrapper item={item} onSwipeReply={handleReplyPress} enabled={item.type === 'right'}>
-          <View>
-            <View style={styles.messageRowRight}>
-              {renderMessageActions(item, true)}
-
-              <View style={styles.bubbleRight}>
-                {renderReplyPreview(item, true)}
-                {renderLocationContent(item, true)}
-                {renderMediaContent(item)}
-                {!!item.text && <Text style={styles.messageText}>{item.text}</Text>}
-              </View>
-
-              <View style={styles.avatarSmallPink}>
-                <Text style={styles.avatarSmallText}>{item.avatarText}</Text>
-              </View>
-            </View>
-
-            <View style={styles.messageStatusRow}>
-              <Text style={styles.timeRight}>{item.time}</Text>
-              {renderStatusIcon(item.status)}
-            </View>
-          </View>
-        </ReplySwipeWrapper>
-      );
-    }
-
-    return null;
-  };
+  }, [
+    styles,
+    handleReplyPress,
+    handleMenuToggle,
+    scrollToRepliedMessage,
+    handleOpenLocationInMaps,
+    handleOpenImageModal,
+    handleOpenVideoModal,
+    handleOpenAudioModal,
+    handleOpenDocument,
+  ]);
 
 const handleReload = useCallback(() => {
     if (!currentRoomId) return;
@@ -991,19 +735,6 @@ const handleReload = useCallback(() => {
     );
   };
 
-  const renderOlderConversationLoader = () => {
-    if (!isLoadingOlderConversations) {
-      return null;
-    }
-
-    return (
-      <View style={styles.historyLoaderInline}>
-        <ActivityIndicator size="small" color="#2ED573" />
-        <Text style={styles.historyLoaderInlineText}>Loading older messages...</Text>
-      </View>
-    );
-  };
-
   return (
     <>
       <FlatList
@@ -1017,7 +748,12 @@ const handleReload = useCallback(() => {
           styles.chatContent,
           chatItems.length === 0 && styles.chatContentEmpty,
         ]}
-        ListHeaderComponent={renderOlderConversationLoader}
+        ListHeaderComponent={
+          <OlderConversationLoader
+            visible={isLoadingOlderConversations}
+            styles={styles}
+          />
+        }
         ListEmptyComponent={renderNoConversation}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}

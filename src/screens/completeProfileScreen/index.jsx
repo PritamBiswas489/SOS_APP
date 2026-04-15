@@ -10,7 +10,6 @@ import {
 	TouchableOpacity,
 	View,
 } from 'react-native';
-import api from '../../config/authApiFormData.config';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';

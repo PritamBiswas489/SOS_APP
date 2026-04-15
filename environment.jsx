@@ -1,5 +1,5 @@
 export const env = {
-  type: 'prod', //prod staging dev
+  type: 'dev', //prod staging dev
   appUrls: {
     dev: {
       apiUrl: 'https://99bpkvn6-4000.inc1.devtunnels.ms',

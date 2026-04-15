@@ -1,5 +1,5 @@
 import api from '../config/authApi.config';
-import apiMultipart from '../config/authApiFormData.config';
+import { uploadMedia } from '../config/apiClient';
 import { deleteAuthTokens } from '../config/auth';
 export class UserService {
   static async fetchUserProfile(callback) {
@@ -29,7 +29,7 @@ export class UserService {
 
   static async updateProfile(formData, callback) {
     try {
-      const response = await apiMultipart.post('/user/profile/update', formData);
+      const response = await uploadMedia('/user/profile/update', formData);
       callback({ success: true, data: response.data });
     } catch (error) {
       callback({ success: false, error: error.message });

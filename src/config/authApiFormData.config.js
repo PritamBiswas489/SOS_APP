@@ -28,25 +28,17 @@ api.interceptors.request.use(async (config) => {
     const languageCode = await storeage.getValue('languageCode');
 
 
-    const isFormData = config.data && typeof config.data === 'object' && typeof config.data.append === 'function';
+     
 
     config.headers = {
         ...config.headers,
         Authorization: 'Bearer ' + accessToken,
         refreshToken: refreshToken,
         'X-localization': languageCode || 'en',
+        "Content-Type": 'multipart/form-data',
     };
 
-    if (isFormData) {
-        // Let React Native set the Content-Type with boundary for FormData
-        delete config.headers['Content-Type'];
-    } else if (
-        config.data &&
-        typeof config.data === 'object' &&
-        !(config.data instanceof URLSearchParams)
-    ) {
-        config.headers['Content-Type'] = 'application/json';
-    }
+     
     // Otherwise, leave Content-Type as-is (for urlencoded, etc.)
 
     return config;
