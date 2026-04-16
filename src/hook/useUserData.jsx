@@ -34,8 +34,11 @@ export const useUserData = () => {
         , [dispatch]);
 
     const setUserData = useCallback(data => {
-        dispatch(userActions.setUserData(data));
-    }, [dispatch]);
+        const updatedData = { ...userData, ...data };
+        dispatch(userActions.setFullData(updatedData));
+    }, [dispatch, userData]);
+
+     
 
     return {
         userData,

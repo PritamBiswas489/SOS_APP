@@ -235,6 +235,7 @@ export const ChatProvider = ({ children }) => {
 
     // Online presence
     const handleOnline = ({ userId }) => {
+      console.log(`User ${userId} is online`);
       dispatch({ type: 'SET_ONLINE', userId, online: true });
     };
 

@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   TouchableOpacity,
 } from 'react-native';
@@ -20,14 +21,25 @@ const ChatScreen = () => {
   const onlineUsers = useChatPresence();
   const onlineCount = Object.values(onlineUsers || {}).filter(status => status).length;
   const { contactList: chatContacts, fetchChatContacts } = useChatContacts();
+  const [keyboardPadding, setKeyboardPadding] = useState(0);
 
   useEffect(() => {
     fetchChatContacts();
   }, [fetchChatContacts]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardPadding(16));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardPadding(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingBottom: keyboardPadding }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       enabled={Platform.OS === 'ios'}
     >

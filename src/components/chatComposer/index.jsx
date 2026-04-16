@@ -3,12 +3,10 @@ import {
   View,
   Text,
   TouchableOpacity,
-  TextInput,
   Platform,
   ActivityIndicator,
   Image,
   Alert,
-  Keyboard,
   PermissionsAndroid,
   Animated,
 } from 'react-native';
@@ -24,14 +22,13 @@ import { useChatActions, useChatTyping } from '../../context/ChatContext';
 import { uploadMedia } from '../../config/apiClient';
 import { getAppUrl } from '../../config/utility';
 import styles from './style';
+import MessageInput from './MessageInput';
 import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
 import { useUserData } from '../../hook/useUserData';
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_SIZE_BYTES = 30 * 1024 * 1024;
 const MAX_AUDIO_SIZE_BYTES = 20 * 1024 * 1024;
 const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024;
-const TYPING_DEBOUNCE_MS = 1000;
-
 const getMediaSizeLimit = mediaCategory =>
   mediaCategory === 'video' ? MAX_VIDEO_SIZE_BYTES : MAX_IMAGE_SIZE_BYTES;
 
@@ -51,18 +48,16 @@ const ChatComposer = ({
   showTypingIndicator = true,
 }) => {
   const [showActionMenu, setShowActionMenu] = useState(false);
-  const [message, setMessage] = useState('');
+  const messageInputRef = useRef(null);
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [selectedMediaType, setSelectedMediaType] = useState(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadingLocalUri, setUploadingLocalUri] = useState(null);
   const [showMediaPreview, setShowMediaPreview] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const typingDebounceRef = useRef(null);
   const recordingTimerRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -83,22 +78,6 @@ const ChatComposer = ({
 
    
 
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, e => {
-      setKeyboardHeight(e?.endCoordinates?.height || 0);
-      setIsKeyboardOpen(true);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-      setIsKeyboardOpen(false);
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (isRecordingAudio) {
@@ -134,34 +113,11 @@ const ChatComposer = ({
       if (isRecordingAudio) {
         AudioRecord.stop();
       }
-      if (typingDebounceRef.current) {
-        clearTimeout(typingDebounceRef.current);
-        typingDebounceRef.current = null;
-      }
     };
   }, [currentRoomId, isRecordingAudio]);
 
   const openActionMenu = useCallback(() => setShowActionMenu(true), []);
   const closeActionMenu = useCallback(() => setShowActionMenu(false), []);
-
-  const handleMessageChange = useCallback(
-    text => {
-      setMessage(text);
-      if (!currentRoomId || !text.trim()) {
-        return;
-      }
-
-      if (typingDebounceRef.current) {
-        clearTimeout(typingDebounceRef.current);
-      }
-
-      typingDebounceRef.current = setTimeout(() => {
-        console.log(`Emitting typing event for room ${currentRoomId}`);
-        chatActions.sendTyping(currentRoomId);
-      }, TYPING_DEBOUNCE_MS);
-    },
-    [currentRoomId, chatActions],
-  );
 
   const handleRemovePreview = useCallback(() => {
     setSelectedMedia(null);
@@ -179,12 +135,12 @@ const ChatComposer = ({
       await chatActions.sendMessage(
         chatSelectedTrustedContact?.roomId,
         chatSelectedTrustedContact?.receipent_id,
-        message.trim(),
+        messageInputRef.current?.getMessage()?.trim() ?? '',
         { url: selectedMedia, mediaType: selectedMediaType || 'image' },
         null,
         selectedReplyMessage?.id || null,
       );
-      setMessage('');
+      messageInputRef.current?.clearMessage();
       setSelectedMedia(null);
       setSelectedMediaType(null);
       setUploadingLocalUri(null);
@@ -198,7 +154,6 @@ const ChatComposer = ({
     isSendingMessage,
     selectedMedia,
     selectedMediaType,
-    message,
     chatActions,
     chatSelectedTrustedContact,
     onSendComplete,
@@ -206,9 +161,8 @@ const ChatComposer = ({
   ]);
 
   const handleSendMessage = useCallback(async () => {
-    
     if (isSendingMessage) return;
-    const trimmedMessage = message.trim();
+    const trimmedMessage = messageInputRef.current?.getMessage()?.trim() ?? '';
     if (!trimmedMessage && !selectedMedia) return;
     try {
       setIsSendingMessage(true);
@@ -220,7 +174,7 @@ const ChatComposer = ({
         null,
         selectedReplyMessage?.id || null,
       );
-      setMessage('');
+      messageInputRef.current?.clearMessage();
       setSelectedMedia(null);
       setSelectedMediaType(null);
       setUploadingLocalUri(null);
@@ -232,7 +186,6 @@ const ChatComposer = ({
     }
   }, [
     isSendingMessage,
-    message,
     selectedMedia,
     selectedMediaType,
     chatActions,
@@ -587,6 +540,8 @@ const ChatComposer = ({
     }
   }, [closeActionMenu, chatActions, chatSelectedTrustedContact]);
 
+  const handleCancelPreview = useCallback(() => setShowMediaPreview(false), []);
+
   return (
     <>
       {showTypingIndicator && typingInfo && (
@@ -609,7 +564,7 @@ const ChatComposer = ({
         uploadedUrl={selectedMedia}
         isUploading={isUploadingMedia}
         onSend={handlePreviewSend}
-        onCancel={() => setShowMediaPreview(false)}
+        onCancel={handleCancelPreview}
       />
 
       {(isUploadingMedia || selectedMedia) && (
@@ -669,12 +624,7 @@ const ChatComposer = ({
         </TouchableOpacity>
       )}
 
-      <View
-        style={[
-          styles.inputContainer,
-          Platform.OS === 'android' && isKeyboardOpen ? { marginBottom: 30 } : null,
-        ]}
-      >
+      <View style={styles.inputContainer}>
         {isRecordingAudio ? (
           <View style={styles.recordingBar}>
             <Animated.View style={[styles.recordingPulse, { opacity: pulseAnim }]}>
@@ -700,15 +650,9 @@ const ChatComposer = ({
               <Icon name="add" size={22} color="#6B7C99" />
             </TouchableOpacity>
 
-            <TextInput
-              style={styles.input}
+            <MessageInput
+              ref={messageInputRef}
               placeholder={placeholder}
-              placeholderTextColor="#6B7C99"
-              value={message}
-              onChangeText={handleMessageChange}
-              multiline
-              textAlignVertical="top"
-              scrollEnabled
             />
 
             <TouchableOpacity

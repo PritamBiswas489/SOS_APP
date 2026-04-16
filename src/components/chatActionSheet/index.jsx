@@ -20,8 +20,10 @@ const ChatActionSheet = ({
         transparent
         animationType="fade"
         onRequestClose={onClose}
+        statusBarTranslucent
+        hardwareAccelerated
     >
-        <Pressable style={styles.actionSheetOverlay} onPress={onClose}>
+        <Pressable style={styles.actionSheetOverlay} onPress={onClose} android_disableSound>
             <View style={styles.actionSheetContainer}>
                 <TouchableOpacity style={styles.actionItem} onPress={() => onPickFromGallery('image')}>
                     <Icon name="image" size={20} color="#FFFFFF" />

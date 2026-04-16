@@ -1,6 +1,19 @@
 import { Platform } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
+import { getApp } from '@react-native-firebase/app';
+import {
+  getMessaging,
+  requestPermission,
+  onMessage,
+  onNotificationOpenedApp,
+  getInitialNotification,
+  setBackgroundMessageHandler as setFCMBackgroundHandler,
+  AuthorizationStatus,
+  getToken,
+} from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
+
+// Modular API: get the messaging instance once
+const getMsg = () => getMessaging(getApp());
 
 export const NOTIFICATION_CHANNELS = {
   CHAT: 'chat_channel',
@@ -47,7 +60,34 @@ export const createNotificationChannels = async () => {
 
 export const requestNotificationPermissions = async () => {
   await notifee.requestPermission();
-  await messaging().requestPermission();
+  await requestPermission(getMsg());
+};
+
+export const requestUserPermission = async () => {
+  try {
+    const authStatus = await requestPermission(getMsg());
+    const enabled =
+      authStatus === AuthorizationStatus.AUTHORIZED ||
+      authStatus === AuthorizationStatus.PROVISIONAL;
+    return enabled;
+  } catch (error) {
+    console.log('❌ Error requesting notification permission:', error);
+    return false;
+  }
+};
+
+export const getFCMToken = async () => {
+  try {
+    const fcmToken = await getToken(getMsg());
+    if (fcmToken) {
+      return fcmToken;
+    }
+    console.log('Failed to get FCM token');
+    return null;
+  } catch (error) {
+    console.log('❌ Error getting FCM token:', error);
+    return null;
+  }
 };
 
 export const displayRemoteNotification = async remoteMessage => {
@@ -70,7 +110,7 @@ export const displayRemoteNotification = async remoteMessage => {
 };
 
 export const subscribeForegroundNotifications = onForegroundMessage => {
-  return messaging().onMessage(async remoteMessage => {
+  return onMessage(getMsg(), async remoteMessage => {
     if (typeof onForegroundMessage === 'function') {
       onForegroundMessage({
         source: 'messaging.foreground',
@@ -84,7 +124,7 @@ export const subscribeForegroundNotifications = onForegroundMessage => {
 };
 
 export const setBackgroundMessageHandler = () => {
-  messaging().setBackgroundMessageHandler(async remoteMessage => {
+  setFCMBackgroundHandler(getMsg(), async remoteMessage => {
     await createNotificationChannels();
     await displayRemoteNotification(remoteMessage);
   });
@@ -110,7 +150,7 @@ export const subscribeNotificationPress = handler => {
     }
   });
 
-  const messagingUnsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
+  const messagingUnsubscribe = onNotificationOpenedApp(getMsg(), remoteMessage => {
     triggerPressCallback({
       source: 'messaging.opened',
       remoteMessage,
@@ -118,17 +158,15 @@ export const subscribeNotificationPress = handler => {
     });
   });
 
-  messaging()
-    .getInitialNotification()
-    .then(remoteMessage => {
-      if (remoteMessage) {
-        triggerPressCallback({
-          source: 'messaging.initial',
-          remoteMessage,
-          data: remoteMessage?.data,
-        });
-      }
-    });
+  getInitialNotification(getMsg()).then(remoteMessage => {
+    if (remoteMessage) {
+      triggerPressCallback({
+        source: 'messaging.initial',
+        remoteMessage,
+        data: remoteMessage?.data,
+      });
+    }
+  });
 
   notifee
     .getInitialNotification()

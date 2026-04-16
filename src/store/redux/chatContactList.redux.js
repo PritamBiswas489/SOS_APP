@@ -9,6 +9,7 @@ const chatContactSlice = createSlice({
     setChatContactList(state, action) {
       state.contact_list = action.payload;
     },
+    
     resetState(state) {
       return initialState;
     },

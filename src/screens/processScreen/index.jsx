@@ -6,9 +6,10 @@ import Spinner from 'react-native-loading-spinner-overlay';
 import { UserService } from '../../services/user.service';
 import { useDispatch } from 'react-redux';
 import { useUserData } from '../../hook/useUserData';
-import messaging from '@react-native-firebase/messaging';
+import { requestUserPermission, getFCMToken } from '../../services/notification.service';
 import { Platform } from 'react-native';
 import { useChatContacts } from '../../hook/useChatContacts';
+
 
 const ProcessScreen = payload => {
   const { action } = payload.route.params;
@@ -19,6 +20,7 @@ const ProcessScreen = payload => {
   console.log('=====================================================');
   const navigation = useNavigation();
   const { fetchUserData } = useUserData();
+  
 
   const saveFcmTokenData = async fcmToken => {
     // TODO: Replace this with actual API integration to store token on backend.
@@ -57,40 +59,15 @@ const ProcessScreen = payload => {
         console.log('Device token need to be sent to server here');
         console.log('=====================================================');
 
-        const requestUserPermission = async () => {
-          try {
-            const authStatus = await messaging().requestPermission();
-            const enabled =
-              authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-              authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-            if (enabled) {
-              console.log('Authorization status:', authStatus);
-            }
-            return enabled;
-          } catch (error) {
-            console.log('❌ Error requesting notification permission:', error);
-            return false;
-          }
-        };
-
-        const getFCMToken = async () => {
-          try {
-            const fcmToken = await messaging().getToken();
-            if (fcmToken) {
-              saveFcmTokenData(fcmToken);
-            } else {
-              console.log('Failed to get FCM token');
-            }
-          } catch (error) {
-            console.log('❌ Error getting FCM token:', error);
-          }
-        };
-
         const isPermissionGranted = await requestUserPermission();
         if (isPermissionGranted) {
-          await getFCMToken();
+          const fcmToken = await getFCMToken();
+          console.log("fcmToken in process screen:", fcmToken);
+          if (fcmToken) {
+            saveFcmTokenData(fcmToken);
+          }
         }
+         
 
 
        console.log('=====================================================');

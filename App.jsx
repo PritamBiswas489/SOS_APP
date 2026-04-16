@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {Alert, StatusBar, DeviceEventEmitter} from 'react-native';
+import {Alert, StatusBar, DeviceEventEmitter, Platform, AppState} from 'react-native';
 import {NavigationContainer, createNavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -12,10 +12,13 @@ import AddContactsScreen from './src/screens/addContactsScreen/index.jsx';
 import ProcessScreen from './src/screens/processScreen/index.jsx';
 import { SocketProvider } from './src/context/SocketContext';
 import { ChatProvider } from './src/context/ChatContext';
+import { LocationProvider } from './src/context/LocationContext.jsx';
 import { TrustedContactsProvider } from './src/context/TrustedProviderContext.jsx';
 import NetInfo from '@react-native-community/netinfo';
 import InAppNotificationBanner from './src/components/inAppNotificationBanner/index.jsx'; 
 import NoInternetScreen from './src/components/noInternetScreen/index.jsx';
+import NoPermissionsScreen from './src/components/noPermissionsScreen/index.jsx';
+import { checkRequiredPermissions, requestLocationPermissions } from './src/services/permissions.service';
 import CompleteProfileScreen from './src/screens/completeProfileScreen/index.jsx';
 import {
   createNotificationChannels,
@@ -30,7 +33,7 @@ import { useChatContacts } from './src/hook/useChatContacts.jsx';
 import { useTrustedContacts } from './src/hook/useTrustedContacts.jsx';
 import { useIncommingRequests } from './src/hook/useIncommingRequests.jsx';
 import { useOutgoingRequests } from './src/hook/useOutgoingRequests.jsx';
-
+ 
 const navigationRef = createNavigationContainerRef();
 const toastConfig = {
   success: (props) => (
@@ -65,7 +68,10 @@ const Stack = createNativeStackNavigator();
 
 const App = () => {
   const dispatch = useDispatch();
+  
   const [isConnected, setIsConnected] = useState(true);
+  const [missingPermissions, setMissingPermissions] = useState(null); // null = checking
+  const appStateRef = useRef(AppState.currentState);
   const pendingNavigationRef = useRef(null);
   const routeNameRef = useRef(null);
   const [banner, setBanner] = useState({ visible: false, title: '', body: '' });
@@ -73,6 +79,33 @@ const App = () => {
   const { fetchTrustedContacts } = useTrustedContacts();
   const { fetchIncommingRequests } = useIncommingRequests();
   const { fetchOutgoingRequests } = useOutgoingRequests();
+
+  const handleCheckPermissions = useCallback(async () => {
+    // First, prompt the user to grant permissions, then check what is still missing
+    await requestLocationPermissions();
+    await requestNotificationPermissions();
+    const missing = await checkRequiredPermissions();
+    setMissingPermissions(missing);
+  }, []);
+
+  // Check permissions on mount
+  useEffect(() => {
+    handleCheckPermissions();
+  }, [handleCheckPermissions]);
+
+  // Re-check permissions when app comes back to foreground (user returns from Settings)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextState === 'active'
+      ) {
+        handleCheckPermissions();
+      }
+      appStateRef.current = nextState;
+    });
+    return () => subscription.remove();
+  }, [handleCheckPermissions]);
 
   const syncCurrentScreen = useCallback(() => {
     
@@ -128,7 +161,7 @@ const App = () => {
       const internetAvailable = Boolean(
         state?.isConnected && state?.isInternetReachable !== false,
       );
-      setIsConnected(internetAvailable);
+      setIsConnected(prev => (prev !== internetAvailable ? internetAvailable : prev));
     };
 
     NetInfo.fetch().then(syncConnectionState);
@@ -142,8 +175,9 @@ const App = () => {
   useEffect(() => {
     const setupNotifications = async () => {
       await createNotificationChannels();
-      await requestNotificationPermissions();
+      
     };
+    
 
     const bannerSubscription = DeviceEventEmitter.addListener(
       'chat:new-message-banner',
@@ -226,59 +260,84 @@ const App = () => {
     });
   };
 
-  if (!isConnected) {
-    return (
-      <GestureHandlerRootView style={{flex: 1}}>
-        <SafeAreaProvider>
+  const renderContent = () => {
+    if (!isConnected) {
+      return (
+        <>
           <StatusBar barStyle="light-content" backgroundColor="#020B1B" />
           <NoInternetScreen onRetry={handleRetryConnection} />
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
+        </>
+      );
+    }
+
+    // Still checking permissions on first load
+    if (missingPermissions === null) {
+      return null;
+    }
+
+    if (missingPermissions.length > 0) {
+      return (
+        <>
+          <StatusBar barStyle="light-content" backgroundColor="#020B1B" />
+          <NoPermissionsScreen
+            missingPermissions={missingPermissions}
+            onRetry={handleCheckPermissions}
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <StatusBar barStyle="light-content" backgroundColor="#1A1A2E" />
+        <InAppNotificationBanner
+          visible={banner.visible}
+          title={banner.title}
+          body={banner.body}
+          onClose={closeBanner}
+        />
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            if (pendingNavigationRef.current) {
+              pendingNavigationRef.current();
+              pendingNavigationRef.current = null;
+            }
+            syncCurrentScreen();
+          }}
+          onStateChange={syncCurrentScreen}
+        >
+          <Stack.Navigator
+            initialRouteName="Splash"
+            screenOptions={{ headerShown: false }}
+          >
+            <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen name="Process" component={ProcessScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+            <Stack.Screen
+              name="AddContact"
+              component={AddContactsScreen}
+            />
+            <Stack.Screen name="Main" component={DrawerNavigator} />
+          </Stack.Navigator>
+        </NavigationContainer>
+        <Toast config={toastConfig} />
+      </>
     );
-  }
+  };
 
   return (
     <SocketProvider>
       <TrustedContactsProvider>
         <ChatProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>
-              <StatusBar barStyle="light-content" backgroundColor="#1A1A2E" />
-              <InAppNotificationBanner
-                visible={banner.visible}
-                title={banner.title}
-                body={banner.body}
-                onClose={closeBanner}
-              />
-              <NavigationContainer
-                ref={navigationRef}
-                onReady={() => {
-                  if (pendingNavigationRef.current) {
-                    pendingNavigationRef.current();
-                    pendingNavigationRef.current = null;
-                  }
-                  syncCurrentScreen();
-                }}
-                onStateChange={syncCurrentScreen}
-              >
-                <Stack.Navigator
-                  initialRouteName="Splash"
-                  screenOptions={{ headerShown: false }}
-                >
-                  <Stack.Screen name="Splash" component={SplashScreen} />
-                  <Stack.Screen name="Process" component={ProcessScreen} />
-                  <Stack.Screen name="Login" component={LoginScreen} />
-                  <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
-                  <Stack.Screen
-                    name="AddContact"
-                    component={AddContactsScreen}
-                  />
-                  <Stack.Screen name="Main" component={DrawerNavigator} />
-                </Stack.Navigator>
-              </NavigationContainer>
-              <Toast config={toastConfig} />
-            </SafeAreaProvider>
-          </GestureHandlerRootView>
+          <LocationProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <SafeAreaProvider>
+                {renderContent()}
+              </SafeAreaProvider>
+            </GestureHandlerRootView>
+          </LocationProvider>
         </ChatProvider>
       </TrustedContactsProvider>
     </SocketProvider>

@@ -756,7 +756,7 @@ const handleReload = useCallback(() => {
         }
         ListEmptyComponent={renderNoConversation}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
         onScroll={event => {
           if (menuItem !== null) handleMenuClose();
           handleScroll(event);

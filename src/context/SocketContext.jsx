@@ -23,6 +23,9 @@ export const SocketProvider = ({children}) => {
         const appState = useRef(AppState.currentState);
         const [token, setToken] = useState(null);
         const [refreshToken, setRefreshToken] = useState(null);
+        // Refs hold latest tokens so token:refreshed never triggers socket reconnect
+        const tokenRef = useRef(null);
+        const refreshTokenRef = useRef(null);
         const [isConnected, setIsConnected] = useState(false);
         const [connectionError, setConnectionError] = useState(null);
          
@@ -51,6 +54,8 @@ export const SocketProvider = ({children}) => {
                 try {
                     const {accessToken, refreshToken: rt} = await getAuthTokens();
                     if (!isMounted) return;
+                    tokenRef.current = accessToken || null;
+                    refreshTokenRef.current = rt || null;
                     setToken(accessToken || null);
                     setRefreshToken(rt || null);
                 } catch (error) {
@@ -84,7 +89,7 @@ export const SocketProvider = ({children}) => {
             }
 
             const socket = io(SOCKET_CONFIG.SOCKET_URL, {
-                auth: {token, refreshToken},
+                auth: {token: tokenRef.current, refreshToken: refreshTokenRef.current},
                 transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionAttempts: SOCKET_CONFIG.RECONNECT_ATTEMPTS,
@@ -121,8 +126,9 @@ export const SocketProvider = ({children}) => {
                     }
                     console.log('[Socket] Token refreshed by server');
                     await setAuthTokens(accessToken, newRefreshToken);
-                    setToken(accessToken);
-                    setRefreshToken(newRefreshToken);
+                    // Update refs only — avoids triggering socket reconnect via useEffect
+                    tokenRef.current = accessToken;
+                    refreshTokenRef.current = newRefreshToken;
                     socket.auth = {token: accessToken, refreshToken: newRefreshToken};
                 } catch (error) {
                     console.log('[Socket] Failed to process token:refreshed', error?.message || error);
@@ -184,6 +190,14 @@ export const SocketProvider = ({children}) => {
         });
     }, []);
 
+    // Fire-and-forget emit — no ack callback, no pending promise.
+    // Use this for high-frequency events (e.g. location:update) where the server never acks.
+    const emitNoAck = useCallback((event, data) => {
+        if (socketRef.current?.connected) {
+            socketRef.current.emit(event, data);
+        }
+    }, []);
+
     const on = useCallback((event, handler) => {
         socketRef.current?.on(event, handler);
         return () => socketRef.current?.off(event, handler);
@@ -198,6 +212,7 @@ export const SocketProvider = ({children}) => {
             isConnected,
             connectionError,
             emit,
+            emitNoAck,
             on,
             off,
         };

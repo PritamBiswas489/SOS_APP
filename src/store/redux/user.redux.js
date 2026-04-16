@@ -23,6 +23,8 @@ const initialState = {
   phone_number: null,
   profile_photo: null,
   role: 'USER',
+  latitude: null,
+  longitude: null,
 };
 const userSlice = createSlice({
   name: 'userProfileField',

@@ -138,7 +138,7 @@ const getAvatarColor = item => {
                   backgroundColor: avatarColor,
                 },
                 isSelected && {
-                  borderWidth: 2.5,
+                  borderWidth: 6,
                   borderColor: appColors.primary,
                   shadowColor: appColors.primary,
                   shadowOffset: { width: 0, height: 0 },
@@ -155,7 +155,7 @@ const getAvatarColor = item => {
                   resizeMode="cover"
                 />
               ) : (
-                <Text style={[styles.avatarText]}> 
+                <Text style={[styles.avatarText, isSelected && { fontWeight: 'bold' }]}> 
                   {item.initial}
                 </Text>
               )}
@@ -164,11 +164,11 @@ const getAvatarColor = item => {
             {item.isOnline && <View style={styles.onlineDot} />}
           </View>
 
-          <Text style={[styles.avatarLabel,  isSelected && { color: appColors.primary }]}>
+          <Text style={[styles.avatarLabel,  isSelected && { color: appColors.primary, fontWeight: 'bold' }]}>
             {item.name}
           </Text>
           {item.phone_number && (
-            <Text style={[styles.avatarPhoneNumber,    isSelected && { color: appColors.primary }]}>
+            <Text style={[styles.avatarPhoneNumber,    isSelected && { color: appColors.primary, fontWeight: 'bold' }]}>
               {item.phone_number}
             </Text>
           )}
