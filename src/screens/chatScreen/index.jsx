@@ -40,7 +40,7 @@ const ChatScreen = () => {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingBottom: keyboardPadding }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       enabled={Platform.OS === 'ios'}
     >
       {/* FIXED HEADER */}

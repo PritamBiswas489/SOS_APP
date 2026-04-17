@@ -33,7 +33,7 @@ import useToast from '../../hook/useToast';
 import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
 import { useUserData } from '../../hook/useUserData';
  
- 
+const NUMBER_OF_MESSAGES_TO_LOAD = 50; 
 const getMessageTimestamp = message => {
   return (
     message?.timestamp ||
@@ -268,6 +268,7 @@ const ConversationList = ({
 
   const [forwardingItem, setForwardingItem] = useState(null);
   const [menuItem, setMenuItem] = useState(null);
+  const menuItemRef = useRef(null);
    
 
   const { loadMessages, markAsRead, sendMessage:sendMessageToRecipent } = useChatActions();
@@ -456,18 +457,48 @@ const ConversationList = ({
     dispatch(selectedReplyMessageActions.resetState());
   }, [dispatch]);
 
-  const handleMenuToggle = useCallback(item => {
-    setMenuItem(item);
-  }, []);
-
   const handleMenuClose = useCallback(() => {
+    menuItemRef.current = null;
     setMenuItem(null);
   }, []);
 
-  const chatItems = useMemo(
-    () => buildConversationItems(currentRoomConversations, selectedContact, messageStatuses, styles),
-    [currentRoomConversations, selectedContact, messageStatuses, styles],
-  );
+  const handleMenuToggle = useCallback(item => {
+    menuItemRef.current = item;
+    setMenuItem(item);
+  }, []);
+
+  const stableItemCacheRef = useRef({});
+  const chatItems = useMemo(() => {
+    const rawItems = buildConversationItems(
+      currentRoomConversations,
+      selectedContact,
+      messageStatuses,
+      styles,
+    );
+    const newCache = {};
+    const result = rawItems.map(item => {
+      const prev = stableItemCacheRef.current[item.id];
+      if (
+        prev &&
+        prev.type === item.type &&
+        prev.text === item.text &&
+        prev.status === item.status &&
+        prev.mediaUrl === item.mediaUrl &&
+        prev.mediaType === item.mediaType &&
+        prev.time === item.time &&
+        prev.locationJson === item.locationJson &&
+        prev.replyTargetId === item.replyTargetId &&
+        prev.avatarText === item.avatarText
+      ) {
+        newCache[item.id] = prev;
+        return prev;
+      }
+      newCache[item.id] = item;
+      return item;
+    });
+    stableItemCacheRef.current = newCache;
+    return result;
+  }, [currentRoomConversations, selectedContact, messageStatuses, styles]);
 
   const messageIndexById = useMemo(() => {
     const idToIndex = new Map();
@@ -558,7 +589,7 @@ const ConversationList = ({
     pendingAutoScrollPassesRef.current = AUTO_SCROLL_PASSES;
     didInitialRoomScrollRef.current = false;
 
-    loadMessages(currentRoomId, 1, 50).catch(() => {});
+    loadMessages(currentRoomId, 1, NUMBER_OF_MESSAGES_TO_LOAD).catch(() => {});
   }, [currentRoomId, loadMessages]);
 
   useEffect(() => {
@@ -608,7 +639,7 @@ useFocusEffect(focusCallback);
     setRefreshing(true);
     try {
       const nextPage = (currentRoomPagination.page || 1) + 1;
-      await loadMessages(currentRoomId, nextPage, currentRoomPagination.limit || 50);
+      await loadMessages(currentRoomId, nextPage, currentRoomPagination.limit || NUMBER_OF_MESSAGES_TO_LOAD);
     } finally {
       setRefreshing(false);
     }
@@ -682,7 +713,7 @@ const handleReload = useCallback(() => {
   shouldScrollAfterLoadRef.current = true;
     pendingAutoScrollPassesRef.current = AUTO_SCROLL_PASSES;
     didInitialRoomScrollRef.current = false;
-    loadMessages(currentRoomId, 1, 50).catch(() => {});
+    loadMessages(currentRoomId, 1, NUMBER_OF_MESSAGES_TO_LOAD).catch(() => {});
   }, [currentRoomId, loadMessages, AUTO_SCROLL_PASSES]);
 
   useEffect(() => {
@@ -695,13 +726,65 @@ const handleReload = useCallback(() => {
       shouldScrollAfterLoadRef.current = true;
       pendingAutoScrollPassesRef.current = AUTO_SCROLL_PASSES;
       didInitialRoomScrollRef.current = false;
-      loadMessages(currentRoomId, 1, 50).catch(() => {});
+      loadMessages(currentRoomId, 1, NUMBER_OF_MESSAGES_TO_LOAD).catch(() => {});
     }
 
     wasConnectedRef.current = isConnected;
   }, [isConnected, currentRoomId, loadMessages, AUTO_SCROLL_PASSES]);
 
-  const renderNoConversation = () => {
+  const keyExtractor = useCallback(item => String(item.id), []);
+
+  const renderListHeader = useCallback(
+    () => <OlderConversationLoader visible={isLoadingOlderConversations} styles={styles} />,
+    [isLoadingOlderConversations, styles],
+  );
+
+  const contentContainerStyle = useMemo(
+    () => [
+      styles.chatContent,
+      chatItems.length === 0 && styles.chatContentEmpty,
+    ],
+    [styles.chatContent, styles.chatContentEmpty, chatItems.length],
+  );
+
+  const handleFlatListScroll = useCallback(
+    event => {
+      if (menuItemRef.current !== null) handleMenuClose();
+      handleScroll(event);
+    },
+    [handleMenuClose, handleScroll],
+  );
+
+  const handleScrollToIndexFailed = useCallback(info => {
+    flatListRef.current?.scrollToOffset({
+      offset: Math.max(0, info.averageItemLength * info.index),
+      animated: true,
+    });
+  }, []);
+
+  const handleContentSizeChange = useCallback(() => {
+    if (
+      !shouldScrollAfterLoadRef.current ||
+      chatItems.length === 0 ||
+      isHistoryLoading
+    ) {
+      return;
+    }
+
+    scrollToBottomImmediate();
+    setShowScrollToBottom(false);
+
+    pendingAutoScrollPassesRef.current = Math.max(
+      0,
+      pendingAutoScrollPassesRef.current - 1,
+    );
+    if (pendingAutoScrollPassesRef.current <= 0) {
+      shouldScrollAfterLoadRef.current = false;
+      pendingAutoScrollPassesRef.current = 0;
+    }
+  }, [chatItems.length, isHistoryLoading, scrollToBottomImmediate]);
+
+  const renderNoConversation = useCallback(() => {
     if (isInitialConversationLoading) {
       return (
         <View style={styles.historyLoaderScreen}>
@@ -733,62 +816,31 @@ const handleReload = useCallback(() => {
         </TouchableOpacity>
       </View>
     );
-  };
+  }, [isInitialConversationLoading, styles, selectedContact?.name, handleReload]);
 
   return (
     <>
       <FlatList
         ref={flatListRef}
         data={chatItems}
-        keyExtractor={item => String(item.id)}
+        keyExtractor={keyExtractor}
         renderItem={renderChatItem}
         showsVerticalScrollIndicator={false}
         style={styles.chatScroll}
-        contentContainerStyle={[
-          styles.chatContent,
-          chatItems.length === 0 && styles.chatContentEmpty,
-        ]}
-        ListHeaderComponent={
-          <OlderConversationLoader
-            visible={isLoadingOlderConversations}
-            styles={styles}
-          />
-        }
+        contentContainerStyle={contentContainerStyle}
+        windowSize={10}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={15}
+        removeClippedSubviews={Platform.OS === 'android'}
+        ListHeaderComponent={renderListHeader}
         ListEmptyComponent={renderNoConversation}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
-        onScroll={event => {
-          if (menuItem !== null) handleMenuClose();
-          handleScroll(event);
-        }}
-        onScrollToIndexFailed={info => {
-          flatListRef.current?.scrollToOffset({
-            offset: Math.max(0, info.averageItemLength * info.index),
-            animated: true,
-          });
-        }}
-        onContentSizeChange={() => {
-          if (
-            !shouldScrollAfterLoadRef.current ||
-            chatItems.length === 0 ||
-            isHistoryLoading
-          ) {
-            return;
-          }
-
-          scrollToBottomImmediate();
-          setShowScrollToBottom(false);
-
-          pendingAutoScrollPassesRef.current = Math.max(
-            0,
-            pendingAutoScrollPassesRef.current - 1,
-          );
-          if (pendingAutoScrollPassesRef.current <= 0) {
-            shouldScrollAfterLoadRef.current = false;
-            pendingAutoScrollPassesRef.current = 0;
-          }
-        }}
-        scrollEventThrottle={16}
+        onScroll={handleFlatListScroll}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
+        onContentSizeChange={handleContentSizeChange}
+        scrollEventThrottle={100}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

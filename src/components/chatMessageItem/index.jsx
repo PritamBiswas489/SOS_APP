@@ -148,4 +148,27 @@ const ChatMessageItem = ({
   return null;
 };
 
-export default React.memo(ChatMessageItem);
+// Custom comparison for React.memo to avoid unnecessary re-renders
+function areEqual(prevProps, nextProps) {
+  const pi = prevProps.item;
+  const ni = nextProps.item;
+  return (
+    pi.id === ni.id &&
+    pi.text === ni.text &&
+    pi.status === ni.status &&
+    pi.mediaUrl === ni.mediaUrl &&
+    pi.mediaType === ni.mediaType &&
+    pi.time === ni.time &&
+    pi.locationJson === ni.locationJson &&
+    pi.replyTargetId === ni.replyTargetId &&
+    pi.avatarText === ni.avatarText &&
+    // Compare reply_to_message by content, not reference (buildConversationItems creates new objects each run)
+    pi.reply_to_message?.text === ni.reply_to_message?.text &&
+    pi.reply_to_message?.mediaType === ni.reply_to_message?.mediaType &&
+    pi.reply_to_message?.locationJson === ni.reply_to_message?.locationJson &&
+    prevProps.styles === nextProps.styles &&
+    prevProps.ReplySwipeWrapper === nextProps.ReplySwipeWrapper
+  );
+}
+
+export default React.memo(ChatMessageItem, areEqual);

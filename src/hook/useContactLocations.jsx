@@ -5,7 +5,7 @@ const { setContactLocations } = contactLocationsActions;
 
 export const useContactLocations = () => {
     const dispatch = useDispatch();
-    const contactLocations = useSelector(state => state.contactLocations?.contact_locations || []);
+    const contactLocations = useSelector(state => state.contactLocations?.contact_locations || {});
     const updateContactLocations = useCallback((locations) => {
         console.log('Updating contact locations:', locations);
         dispatch(setContactLocations(locations));

@@ -47,7 +47,7 @@ const NoPermissionsScreen = ({ missingPermissions = [], onRetry }) => {
         <Text style={styles.title}>Permissions Required</Text>
         <Text style={styles.subtitle}>
           SOS App needs the following permissions to keep you and your contacts
-          safe. Without them, core features won't work.
+          safe. Without them, core features won't work. 
         </Text>
 
         {/* Permission items */}
@@ -55,7 +55,7 @@ const NoPermissionsScreen = ({ missingPermissions = [], onRetry }) => {
           <PermissionItem
             icon="location-on"
             label="Location (Foreground & Background)"
-            description="Required to share your real-time position with trusted contacts."
+            description="Required to share your real-time position with trusted contacts. Choose this option ''Allow all the time'' when granting permission."
             granted={!locationMissing}
           />
           <View style={styles.divider} />

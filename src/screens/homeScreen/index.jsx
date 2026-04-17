@@ -19,10 +19,10 @@ const HomeScreen = ({ navigation }) => {
   const pulseAnim = useRef(new Animated.Value(0)).current;
  const {userData} = useUserData();
  const {contactLocations} = useContactLocations();
-  console.log('=====================================================');
-  console.log('User Data in Home Screen:', userData);
-  console.log('Contact Locations in Home Screen:', contactLocations);
-  console.log('=====================================================');
+  // console.log('=====================================================');
+  // console.log('User Data in Home Screen:', userData);
+  // console.log('Contact Locations in Home Screen:', contactLocations);
+  // console.log('=====================================================');
 
 
   useEffect(() => {

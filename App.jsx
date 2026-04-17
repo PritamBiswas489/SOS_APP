@@ -67,6 +67,7 @@ const toastConfig = {
 const Stack = createNativeStackNavigator();
 
 const App = () => {
+  console.log('App rendered');
   const dispatch = useDispatch();
   
   const [isConnected, setIsConnected] = useState(true);
@@ -95,17 +96,24 @@ const App = () => {
 
   // Re-check permissions when app comes back to foreground (user returns from Settings)
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextState => {
+    const subscription = AppState.addEventListener('change', async nextState => {
       if (
         appStateRef.current.match(/inactive|background/) &&
         nextState === 'active'
       ) {
-        handleCheckPermissions();
+        // Only update state if missingPermissions actually changes
+        const missing = await checkRequiredPermissions();
+        setMissingPermissions(prev => {
+          if (Array.isArray(prev) && Array.isArray(missing) && prev.length === missing.length && prev.every((v, i) => v === missing[i])) {
+            return prev;
+          }
+          return missing;
+        });
       }
       appStateRef.current = nextState;
     });
     return () => subscription.remove();
-  }, [handleCheckPermissions]);
+  }, []);
 
   const syncCurrentScreen = useCallback(() => {
     

@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -229,6 +230,41 @@ export const LocationProvider = ({ children }) => {
     });
   }, []);
 
+  const updateCurrentLocation = useCallback(async (location) => {
+     console.log('Updating current location in context:', location);
+     if(location?.latitude && location?.longitude) {
+      const updatedLocation = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        altitude: location.altitude || 0,
+        accuracy: location.accuracy || 0,
+        heading: location.heading || 0,
+        speed: location.speed || 0.5,
+        isBackground: isBackgroundRef.current,
+      };
+      emitNoAck('location:update', JSON.stringify({ loc: updatedLocation }));
+    }
+  },[emit]);
+
+
+  const updateMyGprsLocation = useCallback(async () => {
+    console.log('Updating current location from GPRS...');
+    const location = await getCurrentPosition();
+    if(location?.latitude && location?.longitude) {
+      const updatedLocation = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        altitude: location.altitude || 0,
+        accuracy: location.accuracy || 0,
+        heading: location.heading || 0,
+        speed: location.speed || 0.5,
+        isBackground: isBackgroundRef.current,
+      };
+      emitNoAck('location:update', JSON.stringify({ loc: updatedLocation }));
+    }
+
+  },[emit]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -321,7 +357,11 @@ export const LocationProvider = ({ children }) => {
 
    
 
-
+  // Fetch contacts' last locations on mount
+  useEffect(() => {
+    if(!isConnected) return;
+    getContactsLastLocations();
+  }, [isConnected, getContactsLastLocations]);
   
 
    
@@ -336,7 +376,9 @@ export const LocationProvider = ({ children }) => {
         stopTracking,
         getCurrentPosition,
         requestPermissions,
-        getContactsLastLocations
+        getContactsLastLocations,
+        updateCurrentLocation,
+        updateMyGprsLocation
         
   };
   return (

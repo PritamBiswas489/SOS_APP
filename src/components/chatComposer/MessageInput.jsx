@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState, forwardRef,  } from 'react';
 import { TextInput } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useChatActions } from '../../context/ChatContext';
@@ -6,7 +6,7 @@ import styles from './style';
 
 const TYPING_DEBOUNCE_MS = 5000;
 
-const MessageInput = forwardRef(({ placeholder }, ref) => {
+const MessageInput = forwardRef(({}, ref) => {
   const [value, setValue] = useState('');
   const valueRef = useRef('');
   const typingDebounceRef = useRef(null);
@@ -42,9 +42,11 @@ const MessageInput = forwardRef(({ placeholder }, ref) => {
   }, []);
 
   return (
+    
+
     <TextInput
       style={styles.input}
-      placeholder={placeholder}
+      placeholder={"Type a message ..."}
       placeholderTextColor="#6B7C99"
       value={value}
       onChangeText={handleChangeText}

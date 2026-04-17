@@ -9,6 +9,7 @@ import {
   Alert,
   PermissionsAndroid,
   Animated,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSelector, useDispatch } from 'react-redux';
@@ -44,7 +45,6 @@ const AUDIO_RECORD_OPTIONS = {
 
 const ChatComposer = ({
   onSendComplete,
-  placeholder = 'Type a message...',
   showTypingIndicator = true,
 }) => {
   const [showActionMenu, setShowActionMenu] = useState(false);
@@ -557,7 +557,7 @@ const ChatComposer = ({
         </View>
       )}
 
-      <MediaPreviewModal
+      {/* <MediaPreviewModal
         visible={showMediaPreview}
         mediaType={selectedMediaType}
         localUri={uploadingLocalUri}
@@ -565,7 +565,7 @@ const ChatComposer = ({
         isUploading={isUploadingMedia}
         onSend={handlePreviewSend}
         onCancel={handleCancelPreview}
-      />
+      /> */}
 
       {(isUploadingMedia || selectedMedia) && (
         <TouchableOpacity
@@ -652,8 +652,8 @@ const ChatComposer = ({
 
             <MessageInput
               ref={messageInputRef}
-              placeholder={placeholder}
             />
+              
 
             <TouchableOpacity
               onPress={handleSendMessage}

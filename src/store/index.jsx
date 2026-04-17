@@ -9,6 +9,7 @@ import chatContactSlice from './redux/chatContactList.redux';
 import currentScreenSlice from './redux/currentScreen.redux';
 import contactScreentabSlice from './redux/contactScreenTab.redux';
 import contactLocationsSlice from './redux/contactLocations.redux';
+import mapSelectedContactSlice from './redux/mapSelectedContact.redux';
 
 export const resetAllState = createAction('store/resetAll');
 
@@ -23,6 +24,7 @@ const appReducer = combineReducers({
   currentScreen: currentScreenSlice.reducer,
   contactScreentab: contactScreentabSlice.reducer,
   contactLocations: contactLocationsSlice.reducer,
+  mapSelectedContact: mapSelectedContactSlice.reducer,
 });
 
 const rootReducer = (state, action) => {
