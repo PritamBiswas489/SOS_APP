@@ -557,7 +557,7 @@ const ChatComposer = ({
         </View>
       )}
 
-      {/* <MediaPreviewModal
+      <MediaPreviewModal
         visible={showMediaPreview}
         mediaType={selectedMediaType}
         localUri={uploadingLocalUri}
@@ -565,7 +565,7 @@ const ChatComposer = ({
         isUploading={isUploadingMedia}
         onSend={handlePreviewSend}
         onCancel={handleCancelPreview}
-      /> */}
+      />
 
       {(isUploadingMedia || selectedMedia) && (
         <TouchableOpacity

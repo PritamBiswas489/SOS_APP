@@ -14,11 +14,12 @@ import { SocketProvider } from './src/context/SocketContext';
 import { ChatProvider } from './src/context/ChatContext';
 import { LocationProvider } from './src/context/LocationContext.jsx';
 import { TrustedContactsProvider } from './src/context/TrustedProviderContext.jsx';
+
 import NetInfo from '@react-native-community/netinfo';
 import InAppNotificationBanner from './src/components/inAppNotificationBanner/index.jsx'; 
 import NoInternetScreen from './src/components/noInternetScreen/index.jsx';
 import NoPermissionsScreen from './src/components/noPermissionsScreen/index.jsx';
-import { checkRequiredPermissions, requestLocationPermissions } from './src/services/permissions.service';
+import { checkRequiredPermissions, requestLocationPermissions, requestMicrophonePermission } from './src/services/permissions.service';
 import CompleteProfileScreen from './src/screens/completeProfileScreen/index.jsx';
 import {
   createNotificationChannels,
@@ -33,7 +34,7 @@ import { useChatContacts } from './src/hook/useChatContacts.jsx';
 import { useTrustedContacts } from './src/hook/useTrustedContacts.jsx';
 import { useIncommingRequests } from './src/hook/useIncommingRequests.jsx';
 import { useOutgoingRequests } from './src/hook/useOutgoingRequests.jsx';
- 
+import { MediaSoupProvider } from './src/context/MediaSoupContext.jsx'; 
 const navigationRef = createNavigationContainerRef();
 const toastConfig = {
   success: (props) => (
@@ -76,15 +77,13 @@ const App = () => {
   const pendingNavigationRef = useRef(null);
   const routeNameRef = useRef(null);
   const [banner, setBanner] = useState({ visible: false, title: '', body: '' });
-  const {  fetchChatContacts } = useChatContacts();
-  const { fetchTrustedContacts } = useTrustedContacts();
-  const { fetchIncommingRequests } = useIncommingRequests();
-  const { fetchOutgoingRequests } = useOutgoingRequests();
+ 
 
   const handleCheckPermissions = useCallback(async () => {
     // First, prompt the user to grant permissions, then check what is still missing
     await requestLocationPermissions();
     await requestNotificationPermissions();
+    await requestMicrophonePermission();
     const missing = await checkRequiredPermissions();
     setMissingPermissions(missing);
   }, []);
@@ -206,10 +205,6 @@ const App = () => {
       ];
 
       if (refreshMessageTypes.includes(messageType)) {
-        //  fetchChatContacts();
-        //  fetchTrustedContacts();
-        //  fetchIncommingRequests();
-        //  fetchOutgoingRequests();
          if (source === 'mobilenotification') {
           navigateToContacts();
          }
@@ -252,10 +247,7 @@ const App = () => {
       bannerSubscription.remove();
     };
   }, [
-    fetchChatContacts,
-    fetchTrustedContacts,
-    fetchIncommingRequests,
-    fetchOutgoingRequests,
+   
     navigateToContacts,
   ]);
 
@@ -337,6 +329,7 @@ const App = () => {
 
   return (
     <SocketProvider>
+      <MediaSoupProvider>
       <TrustedContactsProvider>
         <ChatProvider>
           <LocationProvider>
@@ -348,6 +341,7 @@ const App = () => {
           </LocationProvider>
         </ChatProvider>
       </TrustedContactsProvider>
+       </MediaSoupProvider>
     </SocketProvider>
   );
 };

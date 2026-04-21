@@ -29,6 +29,7 @@ const PermissionItem = ({ icon, label, description, granted }) => (
 const NoPermissionsScreen = ({ missingPermissions = [], onRetry }) => {
   const locationMissing = missingPermissions.includes('location');
   const notificationMissing = missingPermissions.includes('notification');
+  const microphoneMissing = missingPermissions.includes('microphone');
 
   const openSettings = () => {
     Linking.openSettings();
@@ -65,6 +66,13 @@ const NoPermissionsScreen = ({ missingPermissions = [], onRetry }) => {
             description="Required to receive SOS alerts and emergency messages."
             granted={!notificationMissing}
           />
+          <View style={styles.divider} />
+          <PermissionItem
+            icon="mic"
+            label="Microphone"
+            description="Required to stream live audio during an SOS emergency."
+            granted={!microphoneMissing}
+          />
         </View>
 
         {/* Action buttons */}
@@ -85,6 +93,16 @@ const NoPermissionsScreen = ({ missingPermissions = [], onRetry }) => {
             style={[styles.actionBtn, styles.notifBtn]}>
             <Icon name="notifications" size={18} color="#fff" style={styles.btnIcon} />
             <Text style={styles.actionBtnText}>Enable Notifications in Settings</Text>
+          </TouchableOpacity>
+        )}
+
+        {microphoneMissing && (
+          <TouchableOpacity
+            onPress={openSettings}
+            activeOpacity={0.85}
+            style={[styles.actionBtn, styles.micBtn]}>
+            <Icon name="mic" size={18} color="#fff" style={styles.btnIcon} />
+            <Text style={styles.actionBtnText}>Enable Microphone in Settings</Text>
           </TouchableOpacity>
         )}
 
@@ -231,6 +249,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A1B3D',
     borderWidth: 1,
     borderColor: 'rgba(160,100,255,0.35)',
+  },
+  micBtn: {
+    backgroundColor: '#1B3030',
+    borderWidth: 1,
+    borderColor: 'rgba(0,196,140,0.35)',
   },
   btnIcon: {
     marginRight: 8,

@@ -53,8 +53,25 @@ export const requestLocationPermissions = async () => {
 };
 
 /**
+ * Request microphone (RECORD_AUDIO) permission on Android.
+ */
+export const requestMicrophonePermission = async () => {
+  if (Platform.OS !== 'android') return 'granted';
+  const result = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    {
+      title: 'Microphone Permission',
+      message: 'This app needs microphone access to stream live audio during an SOS.',
+      buttonPositive: 'Allow',
+      buttonNegative: 'Deny',
+    },
+  );
+  return result === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'denied';
+};
+
+/**
  * Check (without prompting) whether all required permissions are granted.
- * Returns an array of missing permission keys: 'location' | 'notification'
+ * Returns an array of missing permission keys: 'location' | 'notification' | 'microphone'
  * An empty array means all permissions are granted.
  */
 export const checkRequiredPermissions = async () => {
@@ -78,6 +95,11 @@ export const checkRequiredPermissions = async () => {
       );
       if (!notif) missing.push('notification');
     }
+
+    const mic = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    );
+    if (!mic) missing.push('microphone');
   }
   // iOS: permissions are handled by system dialogs; treated as granted here.
   return missing;

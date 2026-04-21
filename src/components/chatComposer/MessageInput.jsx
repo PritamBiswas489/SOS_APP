@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { useChatActions } from '../../context/ChatContext';
 import styles from './style';
 
-const TYPING_DEBOUNCE_MS = 5000;
+const TYPING_DEBOUNCE_MS = 1000;
 
 const MessageInput = forwardRef(({}, ref) => {
   const [value, setValue] = useState('');

@@ -362,11 +362,11 @@ const MapScreen = () => {
             Math.pow(to.lat - from.lat, 2) + Math.pow(to.lng - from.lng, 2),
           );
           if (dist < 0.0001) { stopMoving(); return prev; }
-          const newPos = moveByDistance(from, to, 2);
+          const newPos = moveByDistance(from, to, 5);
           return { latitude: newPos.lat, longitude: newPos.lng };
         });
       }
-    }, 5000); // Move every 5 seconds
+    }, 800); // Move every 0.8 seconds
   }, [isMoving, selectedContactLocation, routeCoords, moveByDistance, stopMoving, updateCurrentLocation]);
 
   // Stop moving if contact changes or unmounts
@@ -404,7 +404,7 @@ const MapScreen = () => {
               <View style={styles.userPulseOuter}>
                 <View style={styles.userPulseMid}>
                   <View style={styles.userDotOuter}>
-                    <Icon name="navigation" size={11} color="#ffffff" />
+                    <View style={styles.userDot} />
                   </View>
                 </View>
               </View>

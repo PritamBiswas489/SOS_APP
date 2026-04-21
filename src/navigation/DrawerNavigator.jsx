@@ -14,6 +14,8 @@ import SettingsScreen from '../screens/settingsScreen';
 import AddContactsScreen from '../screens/addContactsScreen';
 import ContactsScreen from '../screens/contactsScreen';
 import analysisScreen from '../screens/analysis';
+import CreatorScreen from '../screens/soupCreatorScreen/index.jsx';
+import ListenerScreen from '../screens/soupListenerScreen/index.jsx';
 import { Alert } from 'react-native';
  
 import { UserService } from '../services/user.service';
@@ -116,6 +118,9 @@ const CustomDrawerContent = props => {
 };
 
 const DrawerNavigator = () => {
+  const { userData } = useUserData();
+  const isDevUser = userData?.phone_number?.includes('+9198309900');
+
   return (
     <Drawer.Navigator
       initialRouteName="MainTabs"
@@ -146,7 +151,6 @@ const DrawerNavigator = () => {
           ),
         }}
       />
-
       <Drawer.Screen
         name="Contacts"
         component={ContactsScreen}
@@ -157,7 +161,6 @@ const DrawerNavigator = () => {
           ),
         }}
       />
-
       <Drawer.Screen
         name="Settings"
         component={SettingsScreen}
@@ -168,7 +171,6 @@ const DrawerNavigator = () => {
           ),
         }}
       />
-
       <Drawer.Screen
         name="Analysis"
         component={analysisScreen}
@@ -179,6 +181,30 @@ const DrawerNavigator = () => {
           ),
         }}
       />
+      {isDevUser && (
+        <Drawer.Screen
+          name="CreatorSoup"
+          component={CreatorScreen}
+          options={{
+            drawerLabel: 'Creator soup',
+            drawerIcon: ({ color, size }) => (
+              <Icon name="settings" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+      {isDevUser && (
+        <Drawer.Screen
+          name="ListenerSoup"
+          component={ListenerScreen}
+          options={{
+            drawerLabel: 'Listener soup',
+            drawerIcon: ({ color, size }) => (
+              <Icon name="settings" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
     </Drawer.Navigator>
   );
 };

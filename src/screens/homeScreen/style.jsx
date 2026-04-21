@@ -59,11 +59,12 @@ const styles = StyleSheet.create({
   },
 
   sosSubText: {
-    fontSize: SF(12),
+    fontSize: SF(10),
     color: appColors.whiteAA,
     fontFamily: appFonts.NunitoSemiBold,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     marginTop: 5,
+    textAlign: 'center',
   },
 
   glowRing: {
