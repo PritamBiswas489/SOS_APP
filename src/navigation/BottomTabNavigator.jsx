@@ -3,6 +3,7 @@ import { TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useListenerMediaSoup } from '../context/ListenerMediaSoupContext';
 
 import HomeScreen from '../screens/homeScreen';
 import MapScreen from '../screens/mapScreen';
@@ -22,6 +23,8 @@ const tabConfig = {
 
 const BottomTabNavigator = () => {
   const navigation = useNavigation();
+  const { currentStreamingRoomIds } = useListenerMediaSoup();
+  const streamingCount = Object.values(currentStreamingRoomIds).filter(Boolean).length;
 
   return (
     <Tab.Navigator
@@ -74,7 +77,15 @@ const BottomTabNavigator = () => {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Health" component={HealthScreen} />
-      <Tab.Screen name="AudioStream" component={AudioStreamScreen} />
+      <Tab.Screen
+        name="AudioStream"
+        component={AudioStreamScreen}
+        options={{
+          title: 'Audio Stream',
+          tabBarBadge: streamingCount > 0 ? streamingCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#FFD700', fontSize: 10, color: '#000' },
+        }}
+      />
       <Tab.Screen name="Chat" component={ChatScreen} />
     </Tab.Navigator>
   );

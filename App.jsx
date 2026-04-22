@@ -34,7 +34,8 @@ import { useChatContacts } from './src/hook/useChatContacts.jsx';
 import { useTrustedContacts } from './src/hook/useTrustedContacts.jsx';
 import { useIncommingRequests } from './src/hook/useIncommingRequests.jsx';
 import { useOutgoingRequests } from './src/hook/useOutgoingRequests.jsx';
-import { MediaSoupProvider } from './src/context/MediaSoupContext.jsx'; 
+import { CreatorMediaSoupProvider } from './src/context/CreatorMediaSoupContext.jsx';
+import { ListenerMediaSoupProvider } from './src/context/ListenerMediaSoupContext.jsx';
 const navigationRef = createNavigationContainerRef();
 const toastConfig = {
   success: (props) => (
@@ -329,7 +330,8 @@ const App = () => {
 
   return (
     <SocketProvider>
-      <MediaSoupProvider>
+      <CreatorMediaSoupProvider>
+      <ListenerMediaSoupProvider>
       <TrustedContactsProvider>
         <ChatProvider>
           <LocationProvider>
@@ -341,7 +343,8 @@ const App = () => {
           </LocationProvider>
         </ChatProvider>
       </TrustedContactsProvider>
-       </MediaSoupProvider>
+      </ListenerMediaSoupProvider>
+      </CreatorMediaSoupProvider>
     </SocketProvider>
   );
 };

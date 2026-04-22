@@ -24,18 +24,19 @@ import { ReactNative106 } from 'mediasoup-client/lib/handlers/ReactNative106';
 import { mediaDevices, MediaStream } from 'react-native-webrtc';
 import InCallManager from 'react-native-incall-manager';
 import { useSocket } from './SocketContext'; // adjust path as needed
+import { TURN_SERVER_DOMAIN , TURN_SERVER_USER, TURN_SERVER_PASS} from '../../environment'; // adjust path as needed
 
 // ─── ICE servers ──────────────────────────────────────────────────────────────
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   {
     urls: [
-      'turn:turnsos.pritamaqua.aqualeafitsol.com:3478',
-      'turn:turnsos.pritamaqua.aqualeafitsol.com:3478?transport=tcp',
-      'turns:turnsos.pritamaqua.aqualeafitsol.com:5349',
+      `turn:${TURN_SERVER_DOMAIN}:3478`,
+      `turn:${TURN_SERVER_DOMAIN}:3478?transport=tcp`,
+      `turns:${TURN_SERVER_DOMAIN}:5349`,
     ],
-    username: 'aqualeaf',
-    credential: 'aqualeaf',
+    username: TURN_SERVER_USER,
+    credential: TURN_SERVER_PASS,
   },
 ];
 
@@ -191,7 +192,7 @@ export const MediaSoupProvider = ({ children }) => {
     } catch (err) {
       log(`startProducing error: ${err.message}`, 'error');
       setStatus('error');
-      setStatusText(`Error: ${err.message}`);
+      setStatusText(`${err.message}`);
     }
   }, [emitAsync, log, watchTransport]);
 
@@ -251,7 +252,7 @@ export const MediaSoupProvider = ({ children }) => {
     } catch (err) {
       log(`startConsuming error: ${err.message}`, 'error');
       setStatus('error');
-      setStatusText(`Error: ${err.message}`);
+      setStatusText(`${err.message}`);
     }
   }, [emitAsync, log, watchTransport]);
 
@@ -275,7 +276,7 @@ export const MediaSoupProvider = ({ children }) => {
       if (joinRes?.error) {
         log(`join-room error: ${joinRes.error}`, 'error');
         setStatus('error');
-        setStatusText(`Error: ${joinRes.error}`);
+        setStatusText(`${joinRes.error}`);
         return;
       }
 
@@ -304,7 +305,7 @@ export const MediaSoupProvider = ({ children }) => {
     } catch (err) {
       log(`joinRoom error: ${err.message}`, 'error');
       setStatus('error');
-      setStatusText(`Error: ${err.message}`);
+      setStatusText(`${err.message}`);
     }
   }, [isConnected, socket, emitAsync, log, startProducing, startConsuming]);
 
@@ -362,6 +363,7 @@ export const MediaSoupProvider = ({ children }) => {
       if (consumerRef.current) { consumerRef.current.close(); consumerRef.current = null; }
       if (recvTransportRef.current) { recvTransportRef.current.close(); recvTransportRef.current = null; }
       setRemoteStream(null);
+      leaveRoom();
     };
 
     const onProducerClosed = () => {

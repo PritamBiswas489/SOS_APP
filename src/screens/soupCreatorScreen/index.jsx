@@ -18,7 +18,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useSocket } from '../../context/SocketContext';
-import { useMediaSoup } from '../../context/MediaSoupContext';
+import { useCreatorMediaSoup } from '../../context/CreatorMediaSoupContext';
 import AudioVisualizer from '../../components/audioVisualizer';
 
 // ─── Colour tokens (matches original HTML palette) ────────────────────────────
@@ -66,7 +66,7 @@ export default function CreatorScreen() {
     leaveRoom,
     toggleMute,
     clearLogs,
-  } = useMediaSoup();
+  } = useCreatorMediaSoup();
 
   const [roomInput, setRoomInput] = useState('test-room');
 
@@ -77,7 +77,7 @@ export default function CreatorScreen() {
   // ─── Handlers ────────────────────────────────────────────────────────────────
   const handleJoin = useCallback(() => {
     const id = roomInput.trim() || 'test-room';
-    joinRoom(id, 'creator');
+    joinRoom(id);
   }, [roomInput, joinRoom]);
 
   const handleLeave = useCallback(() => {

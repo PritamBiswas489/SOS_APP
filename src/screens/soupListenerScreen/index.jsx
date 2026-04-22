@@ -23,7 +23,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSocket } from '../../context/SocketContext';
-import { useMediaSoup } from '../../context/MediaSoupContext';
+import { useListenerMediaSoup } from '../../context/ListenerMediaSoupContext';
 import AudioVisualizer from '../../components/audioVisualizer';
 
 // ─── Optional: react-native-webrtc RTCView for audio track attachment ─────────
@@ -78,7 +78,7 @@ export default function ListenerScreen() {
     joinRoom,
     leaveRoom,
     clearLogs,
-  } = useMediaSoup();
+  } = useListenerMediaSoup();
 
   const [roomInput, setRoomInput]   = useState('test-room');
   const [volume, setVolume]         = useState(1.0);
@@ -90,7 +90,7 @@ export default function ListenerScreen() {
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleJoin = useCallback(() => {
     const id = roomInput.trim() || 'test-room';
-    joinRoom(id, 'listener');
+    joinRoom(id);
   }, [roomInput, joinRoom]);
 
   const handleLeave = useCallback(() => {

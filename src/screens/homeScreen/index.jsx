@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useUserData } from '../../hook/useUserData';
-import { useMediaSoup } from '../../context/MediaSoupContext';
+import { useCreatorMediaSoup } from '../../context/CreatorMediaSoupContext';
 import AudioVisualizer from '../../components/audioVisualizer';
 import styles from './style';
 import { getProfileImage } from '../../config/utility';
@@ -43,9 +43,10 @@ const HomeScreen = ({ navigation }) => {
     leaveRoom,
     toggleMute,
     connectedListeners
-  } = useMediaSoup();
+  } = useCreatorMediaSoup();
 
   const isInRoom    = status !== 'idle' && status !== 'error';
+  const showPanel   = status !== 'idle';
   const isStreaming = status === 'streaming';
   const cfg         = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
 
@@ -60,6 +61,12 @@ const HomeScreen = ({ navigation }) => {
     loop.start();
     return () => loop.stop();
   }, []);
+
+  useEffect(() => {
+    console.log('Status changed:', status, statusText);
+
+
+  },[status,statusText]);
 
 
   // ── Connecting spin animation ──────────────────────────────────────────────
@@ -79,11 +86,11 @@ const HomeScreen = ({ navigation }) => {
   // ── Streaming panel slide-in ───────────────────────────────────────────────
   useEffect(() => {
     Animated.timing(panelAnim, {
-      toValue: isInRoom ? 1 : 0,
+      toValue: showPanel ? 1 : 0,
       duration: 350,
       useNativeDriver: false,
     }).start();
-  }, [isInRoom]);
+  }, [showPanel]);
 
   // ── Hold-to-stream handlers ────────────────────────────────────────────────
   const handlePressIn = useCallback(() => {
@@ -115,7 +122,7 @@ const HomeScreen = ({ navigation }) => {
       console.log('❌ Failed to create SOS. Cannot join room.');
       return;
     }
-    joinRoom(`sos-live-${userData?.id}`, `creator`,sosId);
+    joinRoom(`sos-live-${userData?.id}`, sosId);
   }, [isInRoom, joinRoom, userData?.id]);
 
   const handleStop = useCallback(() => leaveRoom(), [leaveRoom]);
@@ -198,6 +205,7 @@ const HomeScreen = ({ navigation }) => {
       <Animated.View style={[localStyles.streamPanel, { opacity: panelOpacity, maxHeight: panelMaxH }]}>
 
         {/* Status row */}
+        
         <View style={localStyles.statusRow}>
           <View style={[localStyles.statusDot, { backgroundColor: cfg.dotColor }]} />
           <Text style={localStyles.statusLabel} numberOfLines={1}>{statusText}</Text>
