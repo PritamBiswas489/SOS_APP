@@ -38,8 +38,14 @@ export const createNotificationChannels = async () => {
     return;
   }
 
-  // Add matching files to android/app/src/main/res/raw:
+  // Sound files must exist at android/app/src/main/res/raw/
   // chat_tone.mp3 and sos_alert.mp3
+  //
+  // Android caches channel settings on first creation — sound cannot be
+  // updated on an existing channel. Delete and recreate to apply changes.
+
+  await notifee.deleteChannel(NOTIFICATION_CHANNELS.CHAT);
+  await notifee.deleteChannel(NOTIFICATION_CHANNELS.SOS);
 
   await notifee.createChannel({
     id: NOTIFICATION_CHANNELS.CHAT,
@@ -92,6 +98,10 @@ export const getFCMToken = async () => {
 
 export const displayRemoteNotification = async remoteMessage => {
   const channelId = getChannelByMessage(remoteMessage);
+  console.log('📩 Displaying notification for message:', {
+    channelId,
+    remoteMessage,
+  });
   const title = remoteMessage?.notification?.title || remoteMessage?.data?.title || 'SOS App';
   const body = remoteMessage?.notification?.body || remoteMessage?.data?.body || '';
 

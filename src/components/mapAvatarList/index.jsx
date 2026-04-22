@@ -21,6 +21,7 @@ import { getProfileImage } from '../../config/utility';
 
 const MapAvatarList = ({
   navigation,
+  selectedMapRecipentId
   
 }) => {
     const ONLINE_COLOR = '#2ED573';
@@ -35,6 +36,7 @@ const MapAvatarList = ({
       const endReachedFiredRef = useRef(false);
       const listWidthRef = useRef(0);
       const contentWidthRef = useRef(0);
+      const hasAutoSelectedFromParamRef = useRef(false);
 
      const dispatch = useDispatch();
     const { contactList: chatContactList, fetchChatContacts } = useChatContacts();
@@ -128,6 +130,7 @@ const getAvatarColor = item => {
           onPress={() => selectContact(item)}
         >
           <View style={styles.avatarCircleWrap}>
+            {isSelected && <View style={styles.selectedTopLine} />}
             <View
               style={[
                 styles.avatarCircle,
@@ -201,14 +204,41 @@ const getAvatarColor = item => {
 
 
     useEffect(() => {
+      if (chatContacts.length === 0) return;
+
+      // Auto-select from navigation param — runs only once when contacts load
+      if (selectedMapRecipentId && !hasAutoSelectedFromParamRef.current) {
+        hasAutoSelectedFromParamRef.current = true;
+        const contactToSelect = chatContacts.find(
+          c => c.receipent_id === selectedMapRecipentId,
+        );
+        dispatch(
+          mapSelectedContactActions.setMapSelectedContact(
+            contactToSelect ?? chatContacts[0],
+          ),
+        );
+        return;
+      }
+
+      // If the currently selected contact was removed from the list, fall back to first
       const stillExists = mapSelectedContact?.id
         ? chatContacts.some(c => c.id === mapSelectedContact.id)
         : false;
 
-      if (!stillExists && chatContacts.length > 0) {
-        dispatch(mapSelectedContactActions.setMapSelectedContact(chatContacts[0]));
+      if (!stillExists) {
+        dispatch(
+          mapSelectedContactActions.setMapSelectedContact(chatContacts[0]),
+        );
       }
-    }, [chatContacts, mapSelectedContact, dispatch]);
+    // mapSelectedContact intentionally excluded — including it causes an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chatContacts, selectedMapRecipentId, dispatch]);
+
+    // Reset auto-select flag whenever the navigation param changes so a new
+    // selectedMapRecipentId always triggers a fresh auto-selection.
+    useEffect(() => {
+      hasAutoSelectedFromParamRef.current = false;
+    }, [selectedMapRecipentId]);
 
   return (
     <View style={styles.avatarRowContainer}>

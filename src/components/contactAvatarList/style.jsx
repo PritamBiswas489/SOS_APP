@@ -51,6 +51,21 @@ export default StyleSheet.create({
   },
   avatarCircleWrap: {
     position: 'relative',
+    paddingTop: SW(8),
+  },
+  selectedTopLine: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center',
+    width: SW(24),
+    height: SW(3),
+    borderRadius: SW(2),
+    backgroundColor: '#4DA3FF',
+    shadowColor: '#4DA3FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.75,
+    shadowRadius: 5,
+    elevation: 5,
   },
   avatarCircle: {
     width: SW(48),

@@ -16,12 +16,13 @@ import ConversationList from '../../components/conversationList';
 import { useChatPresence } from '../../context/ChatContext';
 import { useChatContacts } from '../../hook/useChatContacts';
 
-const ChatScreen = () => {
+const ChatScreen = ({ route }) => {
   const navigation = useNavigation();
   const onlineUsers = useChatPresence();
   const onlineCount = Object.values(onlineUsers || {}).filter(status => status).length;
   const { contactList: chatContacts, fetchChatContacts } = useChatContacts();
   const [keyboardPadding, setKeyboardPadding] = useState(0);
+  const selectedReceipentId = route?.params?.selectedReceipentId;
 
   useEffect(() => {
     fetchChatContacts();
@@ -53,7 +54,7 @@ const ChatScreen = () => {
       {/* FIXED AVATAR ROW */}
       <ContactAvatarList
         navigation={navigation}
-        
+        selectedReceipentId={selectedReceipentId}
       />
       {/* MESSAGE LIST */}
       <View style={{ flex: 1 }}>

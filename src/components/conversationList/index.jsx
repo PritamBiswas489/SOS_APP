@@ -26,7 +26,7 @@ import OlderConversationLoader from '../olderConversationLoader';
 import ForwardMessageModal from '../forwardMessageModal';
 import ReplyMessageModal from '../replyMessageModal';
 import { useSelector, useDispatch } from 'react-redux';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useChatActions, useChatMessages } from '../../context/ChatContext';
 import { useSocket } from '../../context/SocketContext';
 import useToast from '../../hook/useToast';
@@ -249,6 +249,7 @@ const ReplySwipeWrapper = React.memo(({
 const ConversationList = ({
   styles,
 }) => {
+  const navigation = useNavigation();
   const flatListRef = useRef(null);
   const loadedRoomIdsRef = useRef(new Set());
   const shouldScrollAfterLoadRef = useRef(false);
@@ -452,6 +453,28 @@ const ConversationList = ({
   const handleForwardClose = useCallback(() => {
     setForwardingItem(null);
   }, []);
+
+  const handleOpenMap = useCallback(() => {
+    if (!selectedContact?.receipent_id) return;
+    navigation.navigate('Main', {
+      screen: 'MainTabs',
+      params: {
+        screen: 'Map',
+        params: { selectedMapRecipentId: selectedContact.receipent_id },
+      },
+    });
+  }, [navigation, selectedContact?.receipent_id]);
+
+  const handleOpenChat = useCallback(() => {
+    if (!selectedContact?.receipent_id) return;
+    navigation.navigate('Main', {
+      screen: 'MainTabs',
+      params: {
+        screen: 'Chat',
+        params: { selectedReceipentId: selectedContact.receipent_id },
+      },
+    });
+  }, [navigation, selectedContact?.receipent_id]);
 
   const handleReplyClose = useCallback(() => {
     dispatch(selectedReplyMessageActions.resetState());
@@ -875,6 +898,53 @@ const handleReload = useCallback(() => {
         </TouchableOpacity>
       )}
 
+      {selectedContact?.receipent_id && (
+        <View
+          style={{
+            position: 'absolute',
+            left: 12,
+            bottom: 96,
+            zIndex: 10,
+            alignItems: 'center',
+          }}
+        >
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={handleOpenMap}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: '#14312A',
+              borderWidth: 1,
+              borderColor: 'rgba(52, 211, 153, 0.45)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 10,
+            }}
+          >
+            <Icon name="map" size={20} color="#34D399" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.86}
+            onPress={handleOpenChat}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: '#132844',
+              borderWidth: 1,
+              borderColor: 'rgba(96, 166, 255, 0.45)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Icon name="chat" size={20} color="#60A6FF" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ForwardMessageModal
         visible={forwardingItem !== null}
         item={forwardingItem}
@@ -931,6 +1001,9 @@ const handleReload = useCallback(() => {
                   <Text style={styles.messageActionModalText}>Forward</Text>
                 </TouchableOpacity>
 
+                <View style={styles.messageActionModalDivider} />
+
+            
                 <TouchableOpacity
                   activeOpacity={0.82}
                   style={[styles.messageActionModalItem, styles.messageActionModalCancelItem]}

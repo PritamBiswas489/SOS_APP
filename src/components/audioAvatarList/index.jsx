@@ -20,7 +20,7 @@ import { getProfileImage } from '../../config/utility';
 import { useListenerMediaSoup } from '../../context/ListenerMediaSoupContext';
 
 
-const AudioAvatarList = () => {
+const AudioAvatarList = ({ navigation, selectedReceipentId }) => {
     const ONLINE_COLOR = '#2ED573';
     const ONLINE_BG = '#0B2F2A';
     const OFFLINE_COLOR = '#7A8499';
@@ -40,6 +40,7 @@ const AudioAvatarList = () => {
      const {userData} = useUserData();
      const usrId = userData?.id;
      const { currentStreamingRoomIds } = useListenerMediaSoup();
+      const hasAutoSelectedFromParamRef = useRef(false);
 
      const chatContacts = useMemo(() => {
       //console.log("currentStreamingRoomIds", currentStreamingRoomIds);
@@ -130,6 +131,7 @@ const getAvatarColor = item => {
           onPress={() => selectContact(item)}
         >
           <View style={styles.avatarCircleWrap}>
+            {isSelected && <View style={styles.selectedTopLine} />}
             <View
               style={[
                 styles.avatarCircle,
@@ -207,15 +209,44 @@ const getAvatarColor = item => {
     }, [handleRefresh]);
 
 
-    useEffect(() => {
-      const stillExists = audioSelectedContact?.id
-        ? chatContacts.some(c => c.id === audioSelectedContact.id)
-        : false;
+   
 
-      if (!stillExists && chatContacts.length > 0) {
-        dispatch(audioSelectedContactActions.setAudioSelectedContact(chatContacts[0]));
-      }
-    }, [chatContacts, audioSelectedContact, dispatch]);
+      useEffect(() => {
+          if (chatContacts.length === 0) return;
+    
+          // Auto-select from navigation param — runs only once when contacts load
+          if (selectedReceipentId && !hasAutoSelectedFromParamRef.current) {
+            hasAutoSelectedFromParamRef.current = true;
+            const contactToSelect = chatContacts.find(
+              c => c.receipent_id === selectedReceipentId,
+            );
+            dispatch(
+              audioSelectedContactActions.setAudioSelectedContact(
+                contactToSelect ?? chatContacts[0],
+              ),
+            );
+            return;
+          }
+    
+          // If the currently selected contact was removed from the list, fall back to first
+          const stillExists = audioSelectedContact?.id
+            ? chatContacts.some(c => c.id === audioSelectedContact.id)
+            : false;
+    
+          if (!stillExists) {
+            dispatch(
+              audioSelectedContactActions.setAudioSelectedContact(chatContacts[0]),
+            );
+          }
+        // audioSelectedContact intentionally excluded — including it causes an infinite loop
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [chatContacts, selectedReceipentId, dispatch]);
+
+         useEffect(() => {
+              hasAutoSelectedFromParamRef.current = false;
+            }, [selectedReceipentId]);
+        
+    
 
   return (
     <View style={styles.avatarRowContainer}>

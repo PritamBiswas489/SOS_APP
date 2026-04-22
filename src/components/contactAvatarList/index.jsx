@@ -21,7 +21,7 @@ import { getProfileImage } from '../../config/utility';
 
 const ContactAvatarList = ({
   navigation,
-  
+  selectedReceipentId,
 }) => {
     const ONLINE_COLOR = '#2ED573';
     const ONLINE_BG = '#0B2F2A';
@@ -35,6 +35,7 @@ const ContactAvatarList = ({
       const endReachedFiredRef = useRef(false);
       const listWidthRef = useRef(0);
       const contentWidthRef = useRef(0);
+      const hasAutoSelectedFromParamRef = useRef(false);
 
      const dispatch = useDispatch();
     const { contactList: chatContactList, fetchChatContacts } = useChatContacts();
@@ -130,6 +131,7 @@ const getAvatarColor = item => {
           onPress={() => selectContact(item)}
         >
           <View style={styles.avatarCircleWrap}>
+            {isSelected && <View style={styles.selectedTopLine} />}
             <View
               style={[
                 styles.avatarCircle,
@@ -150,7 +152,7 @@ const getAvatarColor = item => {
             >
               {item.profile_image ? (
                 <Image
-                  source={{ uri: item.profile_image }}
+                  source={{ uri: item.profile_image }} 
                   style={styles.avatarImage}
                   resizeMode="cover"
                 />
@@ -203,14 +205,39 @@ const getAvatarColor = item => {
 
 
     useEffect(() => {
-      const stillExists = chatSelectedTrustedContact
+      if (chatContacts.length === 0) return;
+
+      // Auto-select from navigation param — runs only once when contacts load
+      if (selectedReceipentId && !hasAutoSelectedFromParamRef.current) {
+        hasAutoSelectedFromParamRef.current = true;
+        const contactToSelect = chatContacts.find(
+          c => c.receipent_id === selectedReceipentId,
+        );
+        dispatch(
+          chatSelectedTrustedContactActions.setSelectedTrustedContact(
+            contactToSelect ?? chatContacts[0],
+          ),
+        );
+        return;
+      }
+
+      // If the currently selected contact was removed from the list, fall back to first
+      const stillExists = chatSelectedTrustedContact?.id
         ? chatContacts.some(c => c.id === chatSelectedTrustedContact.id)
         : false;
 
-      if (!stillExists && chatContacts.length > 0) {
-        dispatch(chatSelectedTrustedContactActions.setSelectedTrustedContact(chatContacts[0]));
+      if (!stillExists) {
+        dispatch(
+          chatSelectedTrustedContactActions.setSelectedTrustedContact(chatContacts[0]),
+        );
       }
-    }, [chatContacts, chatSelectedTrustedContact, dispatch]);
+    // chatSelectedTrustedContact intentionally excluded — including it causes an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chatContacts, selectedReceipentId, dispatch]);
+
+     useEffect(() => {
+                  hasAutoSelectedFromParamRef.current = false;
+                }, [selectedReceipentId]);
 
   return (
     <View style={styles.avatarRowContainer}>

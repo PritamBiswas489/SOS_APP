@@ -20,6 +20,7 @@ import { useSocket } from '../../context/SocketContext';
 import { useListenerMediaSoup } from '../../context/ListenerMediaSoupContext';
 import AudioVisualizer from '../../components/audioVisualizer';
 import AudioAvatarList from '../../components/audioAvatarList';
+import { useNavigation } from '@react-navigation/native';
 
 // ─── Colour tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -60,6 +61,7 @@ try { RTCView = require('react-native-webrtc').RTCView; } catch (_) { RTCView = 
 const AudioStreamScreen = () => {
   const { isConnected }      = useSocket();
   const selectedContact      = useSelector(state => state.audioSelectedContact);
+  const navigation           = useNavigation();
   const {
     status, statusText,
     remoteStream, joinRoom, leaveRoom,
@@ -151,6 +153,28 @@ const AudioStreamScreen = () => {
   const panelMaxH  = panelAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 500] });
   const panelOpacity = panelAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
+  const navigateToChat = useCallback(() => {
+    if (!selectedContact) return;
+    navigation.navigate('Main', {
+      screen: 'MainTabs',
+      params: {
+        screen: 'Chat',
+        params: { selectedReceipentId: selectedContact.receipent_id },
+      },
+    });
+  }, [navigation, selectedContact]);
+
+  const navigateToMap = useCallback(() => {
+    if (!selectedContact) return;
+    navigation.navigate('Main', {
+      screen: 'MainTabs',
+      params: {
+        screen: 'Map',
+        params: { selectedMapRecipentId: selectedContact.receipent_id },
+      },
+    });
+  }, [navigation, selectedContact]);
+
   return (
     <SafeAreaView style={ls.safe}>
       <ScrollView
@@ -193,6 +217,26 @@ const AudioStreamScreen = () => {
                       {selectedContact.isOnline ? 'Online' : 'Offline'}
                     </Text>
                   </View>
+                </View>
+
+                {/* ── Quick actions ── */}
+                <View style={ls.heroActions}>
+                  <TouchableOpacity
+                    style={[ls.heroActionBtn, ls.heroActionBtnChat]}
+                    activeOpacity={0.75}
+                    onPress={navigateToChat}
+                    accessibilityLabel="Open chat"
+                  >
+                    <Icon name="chat" size={17} color={C.accent} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[ls.heroActionBtn, ls.heroActionBtnMap]}
+                    activeOpacity={0.75}
+                    onPress={() => navigateToMap(selectedContact)}
+                    accessibilityLabel="View on map"
+                  >
+                    <Icon name="map" size={17} color={C.green} />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -331,6 +375,10 @@ const ls = StyleSheet.create({
   heroStatusRow:{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
   heroDot:      { width: 7, height: 7, borderRadius: 4 },
   heroOnlineText:{ fontSize: 11, fontWeight: '600' },
+  heroActions:    { gap: 8 },
+  heroActionBtn:  { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  heroActionBtnChat: { backgroundColor: 'rgba(124,111,247,0.12)', borderColor: 'rgba(124,111,247,0.3)' },
+  heroActionBtnMap:  { backgroundColor: 'rgba(34,197,94,0.10)',  borderColor: 'rgba(34,197,94,0.28)' },
 
   // Status card
   statusCard:   { backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },

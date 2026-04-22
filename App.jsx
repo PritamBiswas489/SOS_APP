@@ -36,6 +36,8 @@ import { useIncommingRequests } from './src/hook/useIncommingRequests.jsx';
 import { useOutgoingRequests } from './src/hook/useOutgoingRequests.jsx';
 import { CreatorMediaSoupProvider } from './src/context/CreatorMediaSoupContext.jsx';
 import { ListenerMediaSoupProvider } from './src/context/ListenerMediaSoupContext.jsx';
+import SOSAlertModal, { DUMMY_INCOMING_SOS, DUMMY_OUTGOING_SOS } from './src/components/sosAlertModal/index.jsx';
+import SosFab from './src/components/sosFab/index.jsx';
 const navigationRef = createNavigationContainerRef();
 const toastConfig = {
   success: (props) => (
@@ -76,8 +78,13 @@ const App = () => {
   const [missingPermissions, setMissingPermissions] = useState(null); // null = checking
   const appStateRef = useRef(AppState.currentState);
   const pendingNavigationRef = useRef(null);
+  const pendingSosRef = useRef(false);
   const routeNameRef = useRef(null);
+  const [activeScreen, setActiveScreen] = useState(null);
   const [banner, setBanner] = useState({ visible: false, title: '', body: '' });
+  const [sosModalVisible, setSosModalVisible] = useState(false);
+  const [incomingVictims, setIncomingVictims] = useState(DUMMY_INCOMING_SOS);
+  const [outgoingVictims, setOutgoingVictims] = useState(DUMMY_OUTGOING_SOS);
  
 
   const handleCheckPermissions = useCallback(async () => {
@@ -101,6 +108,12 @@ const App = () => {
         appStateRef.current.match(/inactive|background/) &&
         nextState === 'active'
       ) {
+        // Flush any SOS modal that was triggered from a background notification tap
+        if (pendingSosRef.current) {
+          pendingSosRef.current = false;
+          setSosModalVisible(true);
+        }
+
         // Only update state if missingPermissions actually changes
         const missing = await checkRequiredPermissions();
         setMissingPermissions(prev => {
@@ -124,6 +137,7 @@ const App = () => {
      
     console.log('Current screen changed:', routeName); 
     routeNameRef.current = routeName;
+    setActiveScreen(routeName);
     dispatch(currentScreenActions.setCurrentScreen(routeName));
   }, [dispatch]);
 
@@ -138,23 +152,49 @@ const App = () => {
     };
   }, []);
 
-  const navigateToChat =useCallback(() => {
+  const navigateToChat = useCallback(() => {
     if (navigationRef.isReady()) {
-      
-        navigationRef.navigate('Main', {
+      navigationRef.navigate('Main', {
         screen: 'MainTabs',
         params: { screen: 'Chat' },
-        });
+      });
       return;
     }
 
     pendingNavigationRef.current = () => {
-       navigationRef.navigate('Main', {
+      navigationRef.navigate('Main', {
         screen: 'MainTabs',
         params: { screen: 'Chat' },
-        });
+      });
     };
   }, []);
+
+  const notificationAction = useCallback((payload) => {
+    const messageType = payload?.data?.messageType;
+    const refreshMessageTypes = [
+      'ACCEPTED_TRUSTED_CONTACT',
+      'DELETED_TRUSTED_CONTACT',
+      'REMOVED_BY_TRUSTED_CONTACT',
+      'NEW_TRUSTED_CONTACT_INVITATION',
+    ];
+
+    if (refreshMessageTypes.includes(messageType)) {
+      navigateToContacts();
+    }
+
+    if (messageType === 'SOS' || messageType === 'EMERGENCY') {
+      if (appStateRef.current === 'active') {
+        setSosModalVisible(true);
+      } else {
+        // App is transitioning from background — buffer and show once active
+        pendingSosRef.current = true;
+      }
+    }
+
+    if (messageType === 'CHAT_MESSAGE') {
+      navigateToChat();
+    }
+  }, [navigateToContacts, navigateToChat]);
 
   const showBanner = (title, body) => {
     setBanner({ visible: true, title, body });
@@ -196,32 +236,9 @@ const App = () => {
       },
     );
 
-    const notificationAction = (payload, source) => {
-      const messageType = payload?.data?.messageType;
-      const refreshMessageTypes = [
-        'ACCEPTED_TRUSTED_CONTACT',
-        'DELETED_TRUSTED_CONTACT',
-        'REMOVED_BY_TRUSTED_CONTACT',
-        'NEW_TRUSTED_CONTACT_INVITATION'
-      ];
-
-      if (refreshMessageTypes.includes(messageType)) {
-         if (source === 'mobilenotification') {
-          navigateToContacts();
-         }
-      }
-      if(messageType === 'CHAT_MESSAGE') {
-       // Alert.alert('New Message', 'You have received a new message.');
-        if (source === 'mobilenotification') { 
-           navigateToChat();
-        }
-
-      }
-    };
-
     const handleNotificationPress = payload => {
       console.log('Notification clicked:', payload);
-      notificationAction(payload, 'mobilenotification');
+      notificationAction(payload);
     };
 
     const handleForegroundNotification = payload => {
@@ -235,7 +252,7 @@ const App = () => {
         payload?.data?.body ||
         '';
       showBanner(title, body);
-      notificationAction(payload, 'foreground');
+      notificationAction(payload);
     };
 
     setupNotifications();
@@ -247,10 +264,7 @@ const App = () => {
       unsubscribePress();
       bannerSubscription.remove();
     };
-  }, [
-   
-    navigateToContacts,
-  ]);
+  }, [navigateToContacts, notificationAction]);
 
   const handleRetryConnection = () => {
     NetInfo.fetch().then(state => {
@@ -339,6 +353,28 @@ const App = () => {
               <SafeAreaProvider>
                 {renderContent()}
               </SafeAreaProvider>
+              {/* Floating SOS alert button — visible when app is fully active */}
+              <SosFab
+                visible={
+                  isConnected &&
+                  Array.isArray(missingPermissions) &&
+                  missingPermissions.length === 0 &&
+                  activeScreen !== null &&
+                  !['Splash', 'Process', 'Login', 'CompleteProfile'].includes(activeScreen)
+                }
+                onPress={() => setSosModalVisible(true)}
+              />
+              {/* Rendered outside renderContent so it's always mounted and responds to state updates */}
+              <SOSAlertModal
+                visible={sosModalVisible}
+                incomingVictims={incomingVictims}
+                outgoingVictims={outgoingVictims}
+                onClose={() => setSosModalVisible(false)}
+                onChat={victim => console.log('Chat with', victim.name)}
+                onAudio={victim => console.log('Audio stream for', victim.name)}
+                onMap={victim => console.log('Map for', victim.name)}
+                onCancelSOS={victim => console.log('Cancel SOS for', victim.name)}
+              />
             </GestureHandlerRootView>
           </LocationProvider>
         </ChatProvider>

@@ -12,7 +12,7 @@ import axios from 'axios';
 import { GOOGLE_MAPS_API_KEY } from '../../../environment';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { useLocation } from '../../context/LocationContext';
-import { chatSelectedTrustedContactActions } from '../../store/redux/chatSelectedTrustedContact.redux';
+ 
 import { useDispatch } from 'react-redux';
 const darkMapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#0a1628' }] },
@@ -122,12 +122,14 @@ const decodePolyline = encoded => {
   return points;
 };
 
-const MapScreen = () => {
+const MapScreen = ({route}) => {
+  //console.log('MapScreen route params:', route?.params);
   const mapRef = useRef(null);
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const {userData} = useUserData();
   const { updateCurrentLocation, updateMyGprsLocation } = useLocation();
+  const selectedMapRecipentId = route?.params?.selectedMapRecipentId;
 
   const [CONTACT_MARKER, setContactMarkers] = useState(null);
   const [routeCoords, setRouteCoords] = useState([]);
@@ -275,12 +277,28 @@ const MapScreen = () => {
 
   }
   const navigateToChatRoom = () => {
-      console.log("Navigate to chat room for contact");
-      dispatch(chatSelectedTrustedContactActions.setSelectedTrustedContact(mapSelectedContact));
+      if (!mapSelectedContact) return;
+     
        navigation.navigate('Main', {
         screen: 'MainTabs',
-        params: { screen: 'Chat' },
+        params: { 
+          screen: 'Chat',
+          params: { selectedReceipentId: mapSelectedContact?.receipent_id },
+        },
         });
+  }
+  const navigateAudioRoom = () => {
+     if (!mapSelectedContact) return;
+     navigation.navigate('Main', {
+      screen: 'MainTabs',
+      params: {
+        screen: 'AudioStream',
+        params: { selectedMapRecipentId: mapSelectedContact.receipent_id },
+      },
+    });
+
+      
+
   }
 
   const [isMoving, setIsMoving] = useState(false);
@@ -532,6 +550,12 @@ const MapScreen = () => {
                   </View>
                   <Text style={styles.fabActionLabel}>Chat</Text>
                 </TouchableOpacity>
+                <TouchableOpacity onPress={navigateAudioRoom} style={styles.fabAction} activeOpacity={0.8}>
+                  <View style={styles.fabActionBtn}>
+                    <Icon name="mic" size={20} color="#ffffff" />
+                  </View>
+                  <Text style={styles.fabActionLabel}>Audio</Text>
+                </TouchableOpacity>
                 <TouchableOpacity  onPress={startMoving} style={styles.fabAction} activeOpacity={0.8}>
                   <View style={[styles.fabActionBtn, isMoving && styles.fabActionBtnActive]}>
                     <Icon name={isMoving ? 'stop' : 'open-with'} size={20} color="#ffffff" />
@@ -600,7 +624,7 @@ const MapScreen = () => {
           {/* LOCATION CARD */}
           <View style={styles.locationCard}>
             <View style={styles.cardHandle} />
-            <MapAvatarList navigation={navigation} />
+            <MapAvatarList navigation={navigation} selectedMapRecipentId={selectedMapRecipentId} />
           </View>
         </>
       
