@@ -1,15 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   Modal,
   View,
   Text,
+  ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Animated,
-  Image,
+  PanResponder,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import IncomingSOSList from './IncomingSOSList';
+import OutgoingSOSList from './OutgoingSOSList';
 
 // ---------------------------------------------------------------------------
 // Dummy data
@@ -74,179 +76,9 @@ export const DUMMY_OUTGOING_SOS = [
 export const DUMMY_SOS_VICTIMS = DUMMY_INCOMING_SOS;
 
 // ---------------------------------------------------------------------------
-// Pulsing dot
-// ---------------------------------------------------------------------------
-const PulseDot = ({ color = '#FF3B5C' }) => {
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(scale, { toValue: 1.7, duration: 800, useNativeDriver: true }),
-          Animated.timing(scale, { toValue: 1, duration: 800, useNativeDriver: true }),
-        ]),
-        Animated.sequence([
-          Animated.timing(opacity, { toValue: 0.2, duration: 800, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
-        ]),
-      ]),
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [opacity, scale]);
-
-  return (
-    <View style={styles.pulseWrapper}>
-      <Animated.View style={[styles.pulseRing, { backgroundColor: color, transform: [{ scale }], opacity }]} />
-      <View style={[styles.pulseDot, { backgroundColor: color }]} />
-    </View>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Avatar
-// ---------------------------------------------------------------------------
-const Avatar = ({ item, borderColor }) => {
-  const avatarColors = ['#FF3B5C', '#4A9EFF', '#00FF9C', '#FFA502', '#A855F7'];
-  const color = avatarColors[item.id.charCodeAt(0) % avatarColors.length];
-  const bc = borderColor || color;
-
-  if (item.avatar) {
-    return <Image source={{ uri: item.avatar }} style={[styles.avatar, { borderColor: bc }]} />;
-  }
-  return (
-    <View style={[styles.avatarFallback, { backgroundColor: color + '22', borderColor: bc }]}>
-      <Text style={[styles.avatarInitials, { color }]}>{item.initials}</Text>
-    </View>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Incoming SOS card — responder sees victim, can chat / stream / map
-// ---------------------------------------------------------------------------
-const IncomingCard = ({ item, onChat, onAudio, onMap }) => {
-  const isActive = item.status === 'Active';
-
-  return (
-    <View style={[styles.card, isActive && styles.cardIncomingActive]}>
-      {/* Badge row */}
-      <View style={styles.cardBadgeRow}>
-        <PulseDot color="#FF3B5C" />
-        <Text style={styles.badgeTextRed}>INCOMING SOS</Text>
-        <View style={[styles.statusPill, { backgroundColor: isActive ? 'rgba(255,59,92,0.15)' : 'rgba(255,165,2,0.12)' }]}>
-          <Text style={[styles.statusPillText, { color: isActive ? '#FF3B5C' : '#FFA502' }]}>{item.status}</Text>
-        </View>
-      </View>
-
-      {/* Profile */}
-      <View style={styles.profileRow}>
-        <Avatar item={item} borderColor="#FF3B5C" />
-        <View style={styles.profileInfo}>
-          <Text style={styles.victimName}>{item.name}</Text>
-          <View style={styles.infoRow}>
-            <Icon name="phone" size={12} color="#6B7C99" />
-            <Text style={styles.infoText}>{item.phone}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Icon name="map-marker-outline" size={12} color="#6B7C99" />
-            <Text style={styles.infoText} numberOfLines={1}>{item.location}</Text>
-          </View>
-          <Text style={styles.timeText}>{item.time}</Text>
-        </View>
-      </View>
-
-      <View style={styles.cardDivider} />
-
-      {/* Actions */}
-      <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => onChat?.(item)} activeOpacity={0.7}>
-          <View style={[styles.actionIconWrap, styles.actionIconChat]}>
-            <Icon name="chat-outline" size={20} color="#4A9EFF" />
-          </View>
-          <Text style={[styles.actionLabel, { color: '#4A9EFF' }]}>Chat</Text>
-        </TouchableOpacity>
-        <View style={styles.actionSep} />
-        <TouchableOpacity style={styles.actionBtn} onPress={() => onAudio?.(item)} activeOpacity={0.7}>
-          <View style={[styles.actionIconWrap, styles.actionIconAudio]}>
-            <Icon name="waveform" size={20} color="#00FF9C" />
-          </View>
-          <Text style={[styles.actionLabel, { color: '#00FF9C' }]}>Stream</Text>
-        </TouchableOpacity>
-        <View style={styles.actionSep} />
-        <TouchableOpacity style={styles.actionBtn} onPress={() => onMap?.(item)} activeOpacity={0.7}>
-          <View style={[styles.actionIconWrap, styles.actionIconMap]}>
-            <Icon name="map-outline" size={20} color="#FFA502" />
-          </View>
-          <Text style={[styles.actionLabel, { color: '#FFA502' }]}>Map</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Outgoing SOS card — sender sees who they alerted and how many responded
-// ---------------------------------------------------------------------------
-const OutgoingCard = ({ item, onCancel }) => {
-  const hasResponders = item.respondedBy > 0;
-
-  return (
-    <View style={[styles.card, styles.cardOutgoing]}>
-      {/* Badge row */}
-      <View style={styles.cardBadgeRow}>
-        <PulseDot color="#4A9EFF" />
-        <Text style={styles.badgeTextBlue}>OUTGOING SOS</Text>
-        <View style={[styles.statusPill, { backgroundColor: hasResponders ? 'rgba(0,255,156,0.1)' : 'rgba(255,165,2,0.1)' }]}>
-          <Text style={[styles.statusPillText, { color: hasResponders ? '#00FF9C' : '#FFA502' }]}>
-            {hasResponders ? `${item.respondedBy} Responded` : 'Awaiting'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Profile */}
-      <View style={styles.profileRow}>
-        <Avatar item={item} borderColor="#4A9EFF" />
-        <View style={styles.profileInfo}>
-          <Text style={styles.victimName}>{item.name}</Text>
-          <View style={styles.infoRow}>
-            <Icon name="phone" size={12} color="#6B7C99" />
-            <Text style={styles.infoText}>{item.phone}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Icon name="map-marker-outline" size={12} color="#6B7C99" />
-            <Text style={styles.infoText} numberOfLines={1}>{item.location}</Text>
-          </View>
-          <Text style={[styles.timeText, { color: 'rgba(74,158,255,0.7)' }]}>{item.time}</Text>
-        </View>
-      </View>
-
-      {/* Responder info */}
-      {hasResponders && (
-        <View style={styles.responderInfo}>
-          <Icon name="account-check-outline" size={14} color="#00FF9C" />
-          <Text style={styles.responderText}>
-            {item.respondedBy} contact{item.respondedBy > 1 ? 's are' : ' is'} on the way
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.cardDivider} />
-
-      {/* Cancel */}
-      <TouchableOpacity style={styles.cancelBtn} onPress={() => onCancel?.(item)} activeOpacity={0.7}>
-        <Icon name="close-circle-outline" size={18} color="#FF3B5C" />
-        <Text style={styles.cancelBtnText}>Cancel SOS Alert</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
-// ---------------------------------------------------------------------------
 // Animated tab bar
 // ---------------------------------------------------------------------------
-const TabBar = ({ activeTab, incomingCount, outgoingCount, onSelect }) => {
+const TabBar = ({ activeTab, onSelect }) => {
   const indicatorAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -271,22 +103,14 @@ const TabBar = ({ activeTab, incomingCount, outgoingCount, onSelect }) => {
           <Text style={[styles.tabLabel, activeTab === 'incoming' && styles.tabLabelActive]}>
             Incoming SOS
           </Text>
-          {incomingCount > 0 && (
-            <View style={[styles.tabBadge, { backgroundColor: '#FF3B5C' }]}>
-              <Text style={styles.tabBadgeText}>{incomingCount}</Text>
-            </View>
-          )}
+         
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabBtn} onPress={() => onSelect('outgoing')} activeOpacity={0.8}>
           <Icon name="arrow-up-circle-outline" size={15} color={activeTab === 'outgoing' ? '#4A9EFF' : '#6B7C99'} />
           <Text style={[styles.tabLabel, activeTab === 'outgoing' && styles.tabLabelOutgoingActive]}>
             Outgoing SOS
           </Text>
-          {outgoingCount > 0 && (
-            <View style={[styles.tabBadge, { backgroundColor: '#4A9EFF' }]}>
-              <Text style={styles.tabBadgeText}>{outgoingCount}</Text>
-            </View>
-          )}
+          
         </TouchableOpacity>
       </View>
     </View>
@@ -298,37 +122,78 @@ const TabBar = ({ activeTab, incomingCount, outgoingCount, onSelect }) => {
 // ---------------------------------------------------------------------------
 const SOSAlertModal = ({
   visible = false,
-  incomingVictims = DUMMY_INCOMING_SOS,
-  outgoingVictims = DUMMY_OUTGOING_SOS,
-  victims, // legacy prop — maps to incomingVictims
   onClose,
-  onChat,
-  onAudio,
-  onMap,
-  onCancelSOS,
+  navigationRef,
+  onAcceptSOS,
+  onDeclineSOS,
+  onOpened,
 }) => {
-  const incoming = victims || incomingVictims;
+  
 
   const [activeTab, setActiveTab] = useState('incoming');
+  const [listReady, setListReady] = useState(false);
   const slideAnim = useRef(new Animated.Value(60)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const dragY = useRef(new Animated.Value(0)).current;
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gs) => gs.dy > 2,
+      onPanResponderGrant: () => {
+        dragY.setOffset(0);
+        dragY.setValue(0);
+      },
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) dragY.setValue(gs.dy);
+      },
+      onPanResponderRelease: (_, gs) => {
+        dragY.flattenOffset();
+        if (gs.dy > 80) {
+          Animated.timing(dragY, { toValue: 600, duration: 220, useNativeDriver: true }).start(() => onCloseRef.current?.());
+        } else {
+          Animated.spring(dragY, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        dragY.flattenOffset();
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: true }).start();
+      },
+    }),
+  ).current;
+
+  const combinedTranslateY = useMemo(
+    () => Animated.add(slideAnim, dragY),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   useEffect(() => {
     if (visible) {
+      dragY.setValue(0);
       setActiveTab('incoming');
       Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
-      ]).start();
+        Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start(() => { setListReady(true); onOpened?.(); });
     } else {
-      slideAnim.setValue(60);
-      opacityAnim.setValue(0);
+      setListReady(false);
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 60, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start(() => { dragY.setValue(0); slideAnim.setValue(60); });
     }
-  }, [visible, slideAnim, opacityAnim]);
+  }, [visible, slideAnim, opacityAnim, dragY]);
 
   const isIncoming = activeTab === 'incoming';
-  const activeList = isIncoming ? incoming : outgoingVictims;
-  const totalCount = incoming.length + outgoingVictims.length;
+
+  // Keep modal mounted after first open — avoids Android re-mount cost on every open
+  const hasMountedRef = useRef(false);
+  if (visible) hasMountedRef.current = true;
+  if (!hasMountedRef.current) return null;
+   
 
   return (
     <Modal
@@ -337,12 +202,19 @@ const SOSAlertModal = ({
       animationType="none"
       statusBarTranslucent
       onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <Animated.View
+        style={[styles.overlay, { opacity: opacityAnim }]}
+        pointerEvents={visible ? 'auto' : 'none'}>
         <Animated.View
           style={[
             styles.sheet,
-            { transform: [{ translateY: slideAnim }], opacity: opacityAnim },
+            { transform: [{ translateY: combinedTranslateY }], opacity: opacityAnim },
           ]}>
+
+          {/* Drag handle */}
+          <View style={styles.dragHandleWrap} {...panResponder.panHandlers}>
+            <View style={styles.dragHandle} />
+          </View>
 
           {/* Header */}
           <View style={styles.header}>
@@ -351,9 +223,7 @@ const SOSAlertModal = ({
                 <Icon name="alert-circle" size={18} color="#FF3B5C" />
                 <Text style={styles.sosBadgeText}>SOS ALERT</Text>
               </View>
-              <Text style={styles.headerSubtitle}>
-                {totalCount} active alert{totalCount !== 1 ? 's' : ''}
-              </Text>
+              
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
               <Icon name="close" size={20} color="#6B7C99" />
@@ -363,8 +233,7 @@ const SOSAlertModal = ({
           {/* Tabs */}
           <TabBar
             activeTab={activeTab}
-            incomingCount={incoming.length}
-            outgoingCount={outgoingVictims.length}
+            
             onSelect={setActiveTab}
           />
 
@@ -382,48 +251,28 @@ const SOSAlertModal = ({
             </Text>
           </View>
 
-          {/* Scrollable list */}
-          <ScrollView
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}>
-            {activeList.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Icon
-                  name={isIncoming ? 'shield-check-outline' : 'bell-off-outline'}
-                  size={48}
-                  color="rgba(107,124,153,0.3)"
-                />
-                <Text style={styles.emptyText}>
-                  {isIncoming ? 'No incoming SOS alerts' : 'No outgoing SOS alerts'}
-                </Text>
+          {/* List */}
+          <View style={{ flex: 1 }}>
+            {!listReady ? (
+              <View style={styles.listLoader}>
+                <ActivityIndicator size="large" color="#FF3B5C" />
               </View>
+            ) : isIncoming ? (
+              <IncomingSOSList
+                navigationRef={navigationRef}
+                onAccept={onAcceptSOS}
+                onDecline={onDeclineSOS}
+                onClose={onClose}
+              />
             ) : (
-              activeList.map(item =>
-                isIncoming ? (
-                  <IncomingCard
-                    key={item.id}
-                    item={item}
-                    onChat={onChat}
-                    onAudio={onAudio}
-                    onMap={onMap}
-                  />
-                ) : (
-                  <OutgoingCard
-                    key={item.id}
-                    item={item}
-                    onCancel={onCancelSOS}
-                  />
-                ),
-              )
+              <OutgoingSOSList />
             )}
-          </ScrollView>
+          </View>
 
-          {/* Footer */}
-          <TouchableOpacity style={styles.dismissBtn} onPress={onClose} activeOpacity={0.8}>
-            <Text style={styles.dismissText}>Dismiss All Alerts</Text>
-          </TouchableOpacity>
+        
+         
         </Animated.View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 };
@@ -438,6 +287,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
+    flex: 1,
     backgroundColor: '#0E1A33',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -445,6 +295,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,59,92,0.2)',
     overflow: 'hidden',
+  },
+
+  // Drag handle
+  dragHandleWrap: {
+    alignItems: 'center',
+    paddingTop: 14,
+    paddingBottom: 10,
+    paddingHorizontal: 40,
+  },
+  dragHandle: {
+    width: 48,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
   },
 
   // Header
@@ -563,212 +427,11 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 
-  // List
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 12,
-  },
-
-  // Empty state
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: 12,
-  },
-  emptyText: {
-    color: 'rgba(107,124,153,0.5)',
-    fontSize: 14,
-  },
-
-  // Card base
-  card: {
-    backgroundColor: '#071022',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-    padding: 16,
-  },
-  cardIncomingActive: {
-    borderColor: 'rgba(255,59,92,0.18)',
-  },
-  cardOutgoing: {
-    borderColor: 'rgba(74,158,255,0.18)',
-  },
-
-  // Card badge row
-  cardBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  badgeTextRed: {
-    color: '#FF3B5C',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
+  // List loader
+  listLoader: {
     flex: 1,
-  },
-  badgeTextBlue: {
-    color: '#4A9EFF',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    flex: 1,
-  },
-  statusPill: {
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  statusPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-
-  // Profile
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-  },
-  avatarFallback: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarInitials: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  profileInfo: {
-    flex: 1,
-    gap: 3,
-  },
-  victimName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  infoText: {
-    color: '#6B7C99',
-    fontSize: 12,
-    flex: 1,
-  },
-  timeText: {
-    color: 'rgba(255,59,92,0.7)',
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-
-  // Responder info (outgoing)
-  responderInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0,255,156,0.07)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginTop: 12,
-  },
-  responderText: {
-    color: '#00FF9C',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  // Card divider
-  cardDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    marginVertical: 14,
-  },
-
-  // Actions (incoming)
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  actionBtn: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionSep: {
-    width: 1,
-    height: 36,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  actionIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionIconChat: { backgroundColor: 'rgba(74,158,255,0.12)' },
-  actionIconAudio: { backgroundColor: 'rgba(0,255,156,0.1)' },
-  actionIconMap: { backgroundColor: 'rgba(255,165,2,0.1)' },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  // Cancel button (outgoing)
-  cancelBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,59,92,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,59,92,0.2)',
-  },
-  cancelBtnText: {
-    color: '#FF3B5C',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  // Pulse
-  pulseWrapper: {
-    width: 12,
-    height: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pulseRing: {
-    position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    opacity: 0.4,
-  },
-  pulseDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
   },
 
   // Footer

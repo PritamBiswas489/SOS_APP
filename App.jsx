@@ -38,6 +38,35 @@ import { CreatorMediaSoupProvider } from './src/context/CreatorMediaSoupContext.
 import { ListenerMediaSoupProvider } from './src/context/ListenerMediaSoupContext.jsx';
 import SOSAlertModal, { DUMMY_INCOMING_SOS, DUMMY_OUTGOING_SOS } from './src/components/sosAlertModal/index.jsx';
 import SosFab from './src/components/sosFab/index.jsx';
+
+// Isolated so that opening the modal only re-renders this component, not App
+const SOSController = React.memo(({ fabVisible, navigationRef }) => {
+  const [sosModalVisible, setSosModalVisible] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
+
+  const handleFabPress = () => {
+    setIsOpening(true);
+    setSosModalVisible(true);
+  };
+
+  const handleOpened = () => setIsOpening(false);
+
+  return (
+    <>
+      <SosFab
+        visible={fabVisible}
+        onPress={handleFabPress}
+        loading={isOpening}
+      />
+      <SOSAlertModal
+        visible={sosModalVisible}
+        navigationRef={navigationRef}
+        onClose={() => setSosModalVisible(false)}
+        onOpened={handleOpened}
+      />
+    </>
+  );
+});
 const navigationRef = createNavigationContainerRef();
 const toastConfig = {
   success: (props) => (
@@ -82,7 +111,6 @@ const App = () => {
   const routeNameRef = useRef(null);
   const [activeScreen, setActiveScreen] = useState(null);
   const [banner, setBanner] = useState({ visible: false, title: '', body: '' });
-  const [sosModalVisible, setSosModalVisible] = useState(false);
   const [incomingVictims, setIncomingVictims] = useState(DUMMY_INCOMING_SOS);
   const [outgoingVictims, setOutgoingVictims] = useState(DUMMY_OUTGOING_SOS);
  
@@ -353,27 +381,16 @@ const App = () => {
               <SafeAreaProvider>
                 {renderContent()}
               </SafeAreaProvider>
-              {/* Floating SOS alert button — visible when app is fully active */}
-              <SosFab
-                visible={
+              {/* Floating SOS alert button + modal — isolated component so open/close never re-renders App */}
+              <SOSController
+                fabVisible={
                   isConnected &&
                   Array.isArray(missingPermissions) &&
                   missingPermissions.length === 0 &&
                   activeScreen !== null &&
                   !['Splash', 'Process', 'Login', 'CompleteProfile'].includes(activeScreen)
                 }
-                onPress={() => setSosModalVisible(true)}
-              />
-              {/* Rendered outside renderContent so it's always mounted and responds to state updates */}
-              <SOSAlertModal
-                visible={sosModalVisible}
-                incomingVictims={incomingVictims}
-                outgoingVictims={outgoingVictims}
-                onClose={() => setSosModalVisible(false)}
-                onChat={victim => console.log('Chat with', victim.name)}
-                onAudio={victim => console.log('Audio stream for', victim.name)}
-                onMap={victim => console.log('Map for', victim.name)}
-                onCancelSOS={victim => console.log('Cancel SOS for', victim.name)}
+                navigationRef={navigationRef}
               />
             </GestureHandlerRootView>
           </LocationProvider>

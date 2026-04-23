@@ -12,4 +12,30 @@ export class SOSService {
       callback({ success: false, error: error.message });
     }
   }
+  static async fetchIncomingSosNotifications({ limit, page, status }, callback) {
+    try {
+      const response = await api.post('/sos/incomming-sos-notification', {
+        limit,
+        page,
+        status,
+      });
+      callback({ success: true, data: response.data });
+    } catch (error) {
+      console.log('❌ Error fetching incoming SOS notifications:', error?.message);
+      callback({ success: false, error: error.message });
+    }
+  }
+  static async fetchMySosSessions({ limit, page, status }, callback) {
+    try {
+      const response = await api.post('/sos/my-sos-sessions', {
+        limit,
+        page,
+        status,
+      });
+      callback({ success: true, data: response.data });
+    } catch (error) {
+      console.log('❌ Error fetching my SOS sessions:', error?.message);
+      callback({ success: false, error: error.message });
+    }
+    }
 }

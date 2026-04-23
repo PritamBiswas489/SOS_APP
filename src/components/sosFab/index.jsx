@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
+  ActivityIndicator,
   Dimensions,
   PanResponder,
   StyleSheet,
@@ -12,21 +13,21 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 const FAB_SIZE = 60;
 const PADDING = 16; // min distance from screen edges
 
-const SosFab = ({ onPress, visible = true }) => {
+const SosFab = ({ onPress, visible = true, loading = false }) => {
   const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-  // Position — start bottom-right
+  // Position — start top-right (near header)
   const position = useRef(
     new Animated.ValueXY({
       x: SCREEN_W - FAB_SIZE - PADDING,
-      y: SCREEN_H - FAB_SIZE - 80,
+      y: 60,
     }),
   ).current;
 
   // Track raw coords for clamping
   const posRef = useRef({
     x: SCREEN_W - FAB_SIZE - PADDING,
-    y: SCREEN_H - FAB_SIZE - 80,
+    y: 60,
   });
 
   // Entrance scale
@@ -42,7 +43,7 @@ const SosFab = ({ onPress, visible = true }) => {
   // Snapshot of position at the moment a drag starts (before extractOffset resets values to 0)
   const startPosRef = useRef({
     x: SCREEN_W - FAB_SIZE - PADDING,
-    y: SCREEN_H - FAB_SIZE - 80,
+    y: 60,
   });
 
   const pulseLoop = useRef(null);
@@ -188,10 +189,13 @@ const SosFab = ({ onPress, visible = true }) => {
           style={styles.fab}
           onPress={onPress}
           activeOpacity={0.85}
+          disabled={loading}
           accessibilityLabel="Open SOS Alerts"
           accessibilityRole="button">
           <View style={styles.innerGlow} />
-         <Icon name="shield-alert" size={26} color="#FFFFFF" />
+          {loading
+            ? <ActivityIndicator size="small" color="#FFFFFF" />
+            : <Icon name="shield-alert" size={26} color="#FFFFFF" />}
           <View style={styles.liveDot} />
         </TouchableOpacity>
 

@@ -12,6 +12,7 @@ import { useSocket } from './SocketContext';
 import { useChatContacts } from '../hook/useChatContacts';
 import { displayRemoteNotification } from '../services/notification.service';
 import { useUserData } from '../hook/useUserData';
+import api from '../config/authApi.config'
 const ChatContext = createContext(null);
 const ChatMessagesContext = createContext(null);
 const ChatTypingContext = createContext(null);
@@ -348,12 +349,10 @@ export const ChatProvider = ({ children }) => {
 
       try {
         const payload = { roomId, page, limit };
-        const response = await emit('message:history', JSON.stringify(payload));
+        const response = await api.get('/chat/chat-history', { params: payload });
 
         const messages =
-          response?.messages ||
-          response?.data?.messages ||
-          response?.data ||
+          response?.data?.data ||
           [];
 
         const normalizedMessages = Array.isArray(messages) ? messages : [];
