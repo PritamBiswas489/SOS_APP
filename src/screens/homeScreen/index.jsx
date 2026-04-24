@@ -16,6 +16,7 @@ import AudioVisualizer from '../../components/audioVisualizer';
 import styles from './style';
 import { getProfileImage } from '../../config/utility';
 import { SOSService } from '../../services/sos.service';
+import { useMySosSessions } from '../../hook/useMySosSessions';
  
 
 // ─── Status badge config ──────────────────────────────────────────────────────
@@ -27,12 +28,13 @@ const STATUS_CONFIG = {
   error:      { label: 'ERROR',      dotColor: '#ef4444', badgeColor: '#ef4444', badgeBg: 'rgba(239,68,68,0.15)' },
 };
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = () => {
   const pulseAnim      = useRef(new Animated.Value(0)).current;
   const holdAnim       = useRef(new Animated.Value(0)).current;
   const panelAnim      = useRef(new Animated.Value(0)).current;
   const spinAnim       = useRef(new Animated.Value(0)).current;
   const holdTimerRef   = useRef(null);
+  const { fetchMySosSessions } = useMySosSessions();
 
   const { userData } = useUserData();
   const {
@@ -123,7 +125,8 @@ const HomeScreen = ({ navigation }) => {
       return;
     }
     joinRoom(`sos-live-${userData?.id}`, sosId);
-  }, [isInRoom, joinRoom, userData?.id]);
+    fetchMySosSessions();
+  }, [isInRoom, joinRoom, userData?.id, fetchMySosSessions]);
 
   const handleStop = useCallback(() => leaveRoom(), [leaveRoom]);
 

@@ -1,4 +1,5 @@
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp } from '@react-native-firebase/app';
 import {
   getMessaging,
@@ -18,19 +19,28 @@ const getMsg = () => getMessaging(getApp());
 export const NOTIFICATION_CHANNELS = {
   CHAT: 'chat_channel',
   SOS: 'sos_channel',
+  VICTIM: 'victim_channel',
+  DEFAULT: 'default_channel',
 };
 
 let onNotificationPress = null;
+const PENDING_NOTIFICATION_PRESS_KEY = '@pending_notification_press_payload';
 
 const getChannelByMessage = remoteMessage => {
-  const type = remoteMessage?.data?.type || remoteMessage?.data?.category || '';
-  const normalizedType = String(type).toLowerCase();
+  const type = remoteMessage?.data?.messageType  || '';
+  const normalizedType = String(type).toUpperCase();
 
-  if (normalizedType === 'sos' || normalizedType === 'emergency' || normalizedType === 'danger') {
+  if (normalizedType === 'SOS') {
     return NOTIFICATION_CHANNELS.SOS;
+  } else if (normalizedType === 'VICTIM') {
+    //Alert.alert('SOS Alert', 'A new SOS alert has been received. Please check the app for details.');
+    return NOTIFICATION_CHANNELS.VICTIM;
+  }else if (normalizedType === 'CHAT') {
+    return NOTIFICATION_CHANNELS.CHAT;
+  }else{
+    return NOTIFICATION_CHANNELS.DEFAULT;
   }
-
-  return NOTIFICATION_CHANNELS.CHAT;
+  
 };
 
 export const createNotificationChannels = async () => {
@@ -38,15 +48,13 @@ export const createNotificationChannels = async () => {
     return;
   }
 
-  // Sound files must exist at android/app/src/main/res/raw/
-  // chat_tone.mp3 and sos_alert.mp3
-  //
-  // Android caches channel settings on first creation — sound cannot be
-  // updated on an existing channel. Delete and recreate to apply changes.
 
   await notifee.deleteChannel(NOTIFICATION_CHANNELS.CHAT);
   await notifee.deleteChannel(NOTIFICATION_CHANNELS.SOS);
+  await notifee.deleteChannel(NOTIFICATION_CHANNELS.VICTIM);
+  await notifee.deleteChannel(NOTIFICATION_CHANNELS.DEFAULT);
 
+  // Create channels with appropriate settings
   await notifee.createChannel({
     id: NOTIFICATION_CHANNELS.CHAT,
     name: 'Chat Notifications',
@@ -55,11 +63,29 @@ export const createNotificationChannels = async () => {
     vibration: true,
   });
 
+  // Create SOS channel with custom sound and high importance
   await notifee.createChannel({
     id: NOTIFICATION_CHANNELS.SOS,
     name: 'SOS Notifications',
     importance: AndroidImportance.HIGH,
     sound: 'sos_alert',
+    vibration: true,
+  });
+
+  // Create Victim channel with custom sound and high importance
+  await notifee.createChannel({
+    id: NOTIFICATION_CHANNELS.VICTIM,
+    name: 'Victim Notifications',
+    importance: AndroidImportance.HIGH,
+    sound: 'victim_tone',
+    vibration: true,
+  });
+   
+   await notifee.createChannel({
+    id: NOTIFICATION_CHANNELS.DEFAULT,
+    name: 'Default Notifications',
+    importance: AndroidImportance.HIGH,
+    sound: 'default_tone',
     vibration: true,
   });
 };
@@ -191,9 +217,47 @@ export const subscribeNotificationPress = handler => {
       }
     });
 
+  AsyncStorage.getItem(PENDING_NOTIFICATION_PRESS_KEY)
+    .then(storedPayload => {
+      if (!storedPayload) {
+        return;
+      }
+
+      let parsedPayload = null;
+      try {
+        parsedPayload = JSON.parse(storedPayload);
+      } catch (error) {
+        console.log('Failed to parse pending background notification payload:', error);
+      }
+
+      if (parsedPayload) {
+        triggerPressCallback(parsedPayload);
+      }
+
+      return AsyncStorage.removeItem(PENDING_NOTIFICATION_PRESS_KEY);
+    })
+    .catch(error => {
+      console.log('Failed to read pending background notification payload:', error);
+    });
+
   return () => {
     notifeeUnsubscribe();
     messagingUnsubscribe();
     onNotificationPress = null;
   };
+};
+
+export const consumePendingNotificationPress = async () => {
+  try {
+    const storedPayload = await AsyncStorage.getItem(PENDING_NOTIFICATION_PRESS_KEY);
+    if (!storedPayload) {
+      return null;
+    }
+
+    await AsyncStorage.removeItem(PENDING_NOTIFICATION_PRESS_KEY);
+    return JSON.parse(storedPayload);
+  } catch (error) {
+    console.log('Failed to consume pending background notification payload:', error);
+    return null;
+  }
 };

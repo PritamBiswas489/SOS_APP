@@ -1,4 +1,3 @@
-import { set } from '@react-native-firebase/app/dist/module/internal/web/firebaseDatabase';
 import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   sos_notification_list: [],

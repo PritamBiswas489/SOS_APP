@@ -26,29 +26,42 @@ const OutgoingSOSList = ({ onCancel, onResolve }) => {
   const { page, limit, isLoading, status, sos_notification_list, fetchMySosSessions, setPage, setStatus, hasMore, resetSessions } = useMySosSessions();
   // Tracks whether the status effect is firing for the first time on this mount
   const isFirstStatusRender = useRef(true);
+  const hasUserScrolledRef = useRef(false);
+  const initialPageLoadedRef = useRef(false);
 
   // Fetch when the page advances; skipped if this page was already fetched
   useEffect(() => {
     if (outgoingFetchedPage === page) return;
     outgoingFetchedPage = page;
-    fetchMySosSessions(page > 1); // append=true for pages beyond the first
-  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+    Promise.resolve(fetchMySosSessions(page > 1)).finally(() => {
+      if (page === 1) {
+        initialPageLoadedRef.current = true;
+      }
+    }); // append=true for pages beyond the first
+  }, [page, fetchMySosSessions]);
 
   const handleRefresh = useCallback(() => {
     outgoingFetchedPage = 0;
+    initialPageLoadedRef.current = false;
+    hasUserScrolledRef.current = false;
     resetSessions();
     if (page === 1) {
       fetchMySosSessions(false);
+      initialPageLoadedRef.current = true;
+      return;
     }
-    // else: page resetting to 1 triggers the useEffect above
-  }, [page, resetSessions, fetchMySosSessions]);
+    setPage(1);
+  }, [page, resetSessions, setPage, fetchMySosSessions]);
 
   const handleStatusChange = useCallback((newStatus) => {
     if (newStatus === status || isLoading) return;
     outgoingFetchedPage = 0;
+    initialPageLoadedRef.current = false;
+    hasUserScrolledRef.current = false;
     resetSessions();
+    setPage(1);
     setStatus(newStatus);
-  }, [status, isLoading, resetSessions, setStatus]);
+  }, [status, isLoading, resetSessions, setPage, setStatus]);
 
   // Re-fetch when status changes — intentionally skipped on initial mount
   useEffect(() => {
@@ -57,11 +70,16 @@ const OutgoingSOSList = ({ onCancel, onResolve }) => {
       return;
     }
     outgoingFetchedPage = 0;
+    initialPageLoadedRef.current = false;
+    hasUserScrolledRef.current = false;
+    setPage(1);
     fetchMySosSessions(false);
-  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [status, fetchMySosSessions, setPage]);
 
   const handleLoadMore = useCallback(() => {
     if (isLoading || !hasMore) return;
+    if (!initialPageLoadedRef.current) return;
+    if (!hasUserScrolledRef.current) return;
     setPage(page + 1);
   }, [isLoading, hasMore, page, setPage]);
 
@@ -134,6 +152,9 @@ const OutgoingSOSList = ({ onCancel, onResolve }) => {
         showsVerticalScrollIndicator={false}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
+        onScrollBeginDrag={() => {
+          hasUserScrolledRef.current = true;
+        }}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
       />

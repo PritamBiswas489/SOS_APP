@@ -26,6 +26,7 @@ import {
   requestNotificationPermissions,
   subscribeForegroundNotifications,
   subscribeNotificationPress,
+  consumePendingNotificationPress,
 } from './src/services/notification.service';
 import { useDispatch } from 'react-redux';
 import { currentScreenActions } from './src/store/redux/currentScreen.redux';
@@ -38,10 +39,10 @@ import { CreatorMediaSoupProvider } from './src/context/CreatorMediaSoupContext.
 import { ListenerMediaSoupProvider } from './src/context/ListenerMediaSoupContext.jsx';
 import SOSAlertModal, { DUMMY_INCOMING_SOS, DUMMY_OUTGOING_SOS } from './src/components/sosAlertModal/index.jsx';
 import SosFab from './src/components/sosFab/index.jsx';
-
-// Isolated so that opening the modal only re-renders this component, not App
-const SOSController = React.memo(({ fabVisible, navigationRef }) => {
-  const [sosModalVisible, setSosModalVisible] = useState(false);
+import { useIncomingSosNotifications } from './src/hook/useIncomingSosNotifications.jsx';
+import { useMySosSessions } from './src/hook/useMySosSessions.jsx';
+// Isolated so that opening from FAB only re-renders this component logic
+const SOSController = React.memo(({ fabVisible, navigationRef, sosModalVisible, setSosModalVisible }) => {
   const [isOpening, setIsOpening] = useState(false);
 
   const handleFabPress = () => {
@@ -104,6 +105,7 @@ const App = () => {
   const dispatch = useDispatch();
   
   const [isConnected, setIsConnected] = useState(true);
+  const [sosModalVisible, setSosModalVisible] = useState(false);
   const [missingPermissions, setMissingPermissions] = useState(null); // null = checking
   const appStateRef = useRef(AppState.currentState);
   const pendingNavigationRef = useRef(null);
@@ -113,7 +115,25 @@ const App = () => {
   const [banner, setBanner] = useState({ visible: false, title: '', body: '' });
   const [incomingVictims, setIncomingVictims] = useState(DUMMY_INCOMING_SOS);
   const [outgoingVictims, setOutgoingVictims] = useState(DUMMY_OUTGOING_SOS);
- 
+  const { fetchSosNotifications } = useIncomingSosNotifications();
+  const { fetchMySosSessions } = useMySosSessions();
+
+  const openSosModalFromNotification = useCallback(() => {
+    if (AppState.currentState === 'active') {
+      pendingSosRef.current = false;
+      setSosModalVisible(true);
+      return;
+    }
+
+    pendingSosRef.current = true;
+    // Handles resume race: notification press can arrive before appStateRef is updated.
+    setTimeout(() => {
+      if (pendingSosRef.current && AppState.currentState === 'active') {
+        pendingSosRef.current = false;
+        setSosModalVisible(true);
+      }
+    }, 450);
+  }, []);
 
   const handleCheckPermissions = useCallback(async () => {
     // First, prompt the user to grant permissions, then check what is still missing
@@ -198,7 +218,13 @@ const App = () => {
   }, []);
 
   const notificationAction = useCallback((payload) => {
-    const messageType = payload?.data?.messageType;
+     
+    const payloadData =
+      payload?.data ||
+      payload?.remoteMessage?.data ||
+      payload?.notification?.data ||
+      {};
+    const messageType = String(payloadData?.messageType || payloadData?.type || '').toUpperCase();
     const refreshMessageTypes = [
       'ACCEPTED_TRUSTED_CONTACT',
       'DELETED_TRUSTED_CONTACT',
@@ -209,20 +235,41 @@ const App = () => {
     if (refreshMessageTypes.includes(messageType)) {
       navigateToContacts();
     }
-
-    if (messageType === 'SOS' || messageType === 'EMERGENCY') {
-      if (appStateRef.current === 'active') {
-        setSosModalVisible(true);
-      } else {
-        // App is transitioning from background — buffer and show once active
-        pendingSosRef.current = true;
+    if (payloadData?.fetchSOS) {
+        fetchSosNotifications();
       }
+
+    if (messageType === 'SOS') {
+      
+      openSosModalFromNotification();
+    }
+    if (payloadData?.fetchVictimSOS) {
+        fetchMySosSessions();
+    }
+    if (messageType === 'VICTIM') {
+     
     }
 
     if (messageType === 'CHAT_MESSAGE') {
       navigateToChat();
     }
-  }, [navigateToContacts, navigateToChat]);
+  }, [fetchMySosSessions, fetchSosNotifications, navigateToContacts, navigateToChat, openSosModalFromNotification]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async nextState => {
+      if (nextState !== 'active') {
+        return;
+      }
+
+      const pendingPressPayload = await consumePendingNotificationPress();
+      if (pendingPressPayload) {
+        console.log('Consumed pending background notification press:', pendingPressPayload);
+        notificationAction(pendingPressPayload);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [notificationAction]);
 
   const showBanner = (title, body) => {
     setBanner({ visible: true, title, body });
@@ -391,6 +438,8 @@ const App = () => {
                   !['Splash', 'Process', 'Login', 'CompleteProfile'].includes(activeScreen)
                 }
                 navigationRef={navigationRef}
+                sosModalVisible={sosModalVisible}
+                setSosModalVisible={setSosModalVisible}
               />
             </GestureHandlerRootView>
           </LocationProvider>

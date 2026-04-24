@@ -37,29 +37,45 @@ const IncomingSOSList = ({ navigationRef, onAccept, onDecline, onClose }) => {
   } = useIncomingSosNotifications();
 
   const isFirstStatusRender = useRef(true);
+  const hasUserScrolledRef = useRef(false);
+  const initialPageLoadedRef = useRef(false);
 
   useEffect(() => {
     if (incomingFetchedPage === page) return;
     incomingFetchedPage = page;
-    fetchSosNotifications(page > 1);
-  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+    Promise.resolve(fetchSosNotifications(page > 1)).finally(() => {
+      if (page === 1) {
+        initialPageLoadedRef.current = true;
+      }
+    });
+  }, [page, fetchSosNotifications]);
+
+
 
   const handleRefresh = useCallback(() => {
     incomingFetchedPage = 0;
+    initialPageLoadedRef.current = false;
+    hasUserScrolledRef.current = false;
     resetNotifications();
     if (page === 1) {
       fetchSosNotifications(false);
+      initialPageLoadedRef.current = true;
+      return;
     }
-  }, [page, resetNotifications, fetchSosNotifications]);
+    setPage(1);
+  }, [page, resetNotifications, fetchSosNotifications, setPage]);
 
   const handleStatusChange = useCallback(
     newStatus => {
       if (newStatus === status || isLoading) return;
       incomingFetchedPage = 0;
+      initialPageLoadedRef.current = false;
+      hasUserScrolledRef.current = false;
       resetNotifications();
+      setPage(1);
       setStatus(newStatus);
     },
-    [status, isLoading, resetNotifications, setStatus],
+    [status, isLoading, resetNotifications, setPage, setStatus],
   );
 
   // Re-fetch when status changes — intentionally skipped on initial mount
@@ -69,11 +85,16 @@ const IncomingSOSList = ({ navigationRef, onAccept, onDecline, onClose }) => {
       return;
     }
     incomingFetchedPage = 0;
+    initialPageLoadedRef.current = false;
+    hasUserScrolledRef.current = false;
+    setPage(1);
     fetchSosNotifications(false);
-  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [status, fetchSosNotifications, setPage]);
 
   const handleLoadMore = useCallback(() => {
     if (isLoading || !hasMore) return;
+    if (!initialPageLoadedRef.current) return;
+    if (!hasUserScrolledRef.current) return;
     setPage(page + 1);
   }, [isLoading, hasMore, page, setPage]);
 
@@ -150,6 +171,9 @@ const IncomingSOSList = ({ navigationRef, onAccept, onDecline, onClose }) => {
         showsVerticalScrollIndicator={false}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
+        onScrollBeginDrag={() => {
+          hasUserScrolledRef.current = true;
+        }}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
       />

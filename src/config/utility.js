@@ -591,3 +591,11 @@ export function getProfileImage(rawUrl) {
   return mediaUrl;
 
 }
+export function getMediaUrlFromRawUrl(rawUrl){
+  const baseUrl = getAppUrl();
+  const mediaUrl = rawUrl.includes('http://localhost:4000')
+    ? rawUrl.replace('http://localhost:4000', baseUrl)
+    : rawUrl;
+
+  return mediaUrl;
+}

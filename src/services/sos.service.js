@@ -2,17 +2,17 @@ import api from '../config/authApi.config';
 export class SOSService {
   static async createNewSOS(callback) {
     try {
-      const response = await api.post(
-        '/sos/register-sos',
-        {},
-      );
+      const response = await api.post('/sos/register-sos', {});
       callback({ success: true, data: response.data });
     } catch (error) {
       console.log('❌ Error creating SOS:', error?.message);
       callback({ success: false, error: error.message });
     }
   }
-  static async fetchIncomingSosNotifications({ limit, page, status }, callback) {
+  static async fetchIncomingSosNotifications(
+    { limit, page, status },
+    callback,
+  ) {
     try {
       const response = await api.post('/sos/incomming-sos-notification', {
         limit,
@@ -21,7 +21,10 @@ export class SOSService {
       });
       callback({ success: true, data: response.data });
     } catch (error) {
-      console.log('❌ Error fetching incoming SOS notifications:', error?.message);
+      console.log(
+        '❌ Error fetching incoming SOS notifications:',
+        error?.message,
+      );
       callback({ success: false, error: error.message });
     }
   }
@@ -37,5 +40,30 @@ export class SOSService {
       console.log('❌ Error fetching my SOS sessions:', error?.message);
       callback({ success: false, error: error.message });
     }
+  }
+
+  static async reponseSosNotification({ notification_id, status }, callback) {
+    try {
+      const response = await api.post('/sos/response-sos-notification', {
+        notification_id,
+        status,
+      });
+      callback({ success: true, data: response.data });
+    } catch (error) {
+      console.log('❌ Error responding to SOS notification:', error?.message);
+      callback({ success: false, error: error.message });
     }
+  }
+  static async changeMySosSessionStatus({ session_id, status }, callback) {
+    try {
+      const response = await api.post('/sos/change-my-sos-session-status', {
+        session_id,
+        status,
+      });
+      callback({ success: true, data: response.data });
+    } catch (error) {
+      console.log('❌ Error changing my SOS session status:', error?.message);
+      callback({ success: false, error: error.message });
+    }
+  }
 }

@@ -1,8 +1,15 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet , Alert} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { PulseDot } from './shared';
 import { getProfileImage } from '../../config/utility';
+import { useState } from 'react';
+import Spinner from 'react-native-loading-spinner-overlay';
+import { SOSService } from '../../services/sos.service';
+import useToast from '../../hook/useToast';
+import AudioPlayerModal from '../audioPlayerModal';
+import { getMediaUrlFromRawUrl } from '../../config/utility';
+
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -14,12 +21,30 @@ const STATUS_CONFIG = {
   resolved:  { color: '#818CF8', icon: 'check-circle-outline',  label: 'RESOLVED' },
 };
 
+const RESPONSE_STATUS_CONFIG = {
+  pending:    { color: '#FACC15', icon: 'clock-outline',        label: 'Pending'    },
+  accepted:   { color: '#4ADE80', icon: 'check-circle-outline', label: 'Accepted'   },
+  on_the_way: { color: '#4A9EFF', icon: 'car-arrow-right',      label: 'On the way' },
+  declined:   { color: '#F87171', icon: 'close-circle-outline', label: 'Declined'   },
+  failed:     { color: '#EF4444', icon: 'alert-circle-outline',  label: 'Failed to reach'     },
+  reached :    { color: '#22C55E', icon: 'check-circle-outline', label: 'Reached'    },
+};
+
+const STAT_ITEMS = [
+  { key: 'pending', label: 'Pending', color: '#FACC15', icon: 'clock-outline' },
+  { key: 'responded', label: 'Responded', color: '#4A9EFF', icon: 'reply-outline' },
+  { key: 'onTheWay', label: 'On the way', color: '#38BDF8', icon: 'car-arrow-right' },
+  { key: 'reached', label: 'Reached', color: '#22C55E', icon: 'map-marker-check-outline' },
+  { key: 'failed', label: 'Failed', color: '#EF4444', icon: 'alert-circle-outline' },
+  { key: 'declined', label: 'Declined', color: '#F87171', icon: 'close-circle-outline' },
+];
+
 const AVATAR_COLORS = ['#FF3B5C', '#4A9EFF', '#00FF9C', '#FFA502', '#A855F7'];
 
 const formatTime = iso => {
   if (!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 };
 
 const ContactAvatar = ({ user, size = 34 }) => {
@@ -43,19 +68,84 @@ const ContactAvatar = ({ user, size = 34 }) => {
 // ---------------------------------------------------------------------------
 // Outgoing SOS card — my SOS session
 // ---------------------------------------------------------------------------
-const OutgoingCard = ({ item, onCancel, onResolve }) => {
+const OutgoingCard = ({ item:outgoingItem, onCancel, onResolve }) => {
+  const [item, setItem] = useState(outgoingItem);
+  const [activeAudioUrl, setActiveAudioUrl] = useState('');
+  const [isAudioModalVisible, setIsAudioModalVisible] = useState(false);
   const status = item.status ?? 'active';
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.active;
   const isActive = status === 'active';
+  const [isLoading, setLoading] = useState(false);
+  const { showError, showSuccess } = useToast();
 
   const notifications = item.notifications ?? [];
   const respondedCount = item.numberofResponded ?? 0;
   const onWayCount = item.numberOnTheWay ?? 0;
-  const pendingCount = notifications.filter(n => n.response_status === 'pending').length;
+  const reachedCount = item.numberReached ?? 0;
+  const failedCount = item.numberFailed ?? 0;
+  const declinedCount = item.numberDeclined ?? 0;
+  const pendingCount = item.numberPending ?? 0;
+  const audioRecords = item.audio_records ?? [];
+   
+  const stats = {
+    pending: pendingCount,
+    responded: respondedCount,
+    onTheWay: onWayCount,
+    reached: reachedCount,
+    failed: failedCount,
+    declined: declinedCount,
+  };
+
+  const changeStatus = newStatus => {
+      Alert.alert(
+        'Confirm Status Update',
+        'Are you sure you want to change your SOS session status?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Confirm',
+            onPress: () => {
+              setLoading(true);
+              SOSService.changeMySosSessionStatus(
+                { session_id: item.id, status: newStatus },
+                result => {
+                  setLoading(false);
+                  if (result.success === false) {
+                    console.error('Error updating SOS session status:', result);
+                    showError(result?.error ?? 'Failed to update SOS session status');
+                  } else {
+                    setItem(prev => ({ ...prev, status: newStatus }));
+                    showSuccess('SOS session status updated successfully');
+                  }
+                },
+              );
+            },
+          },
+        ],
+        { cancelable: true },
+      );
+    };
+
+  const handleOpenAudio = audioUrl => {
+    if (!audioUrl) {
+      showError('Audio file is not available');
+      return;
+    }
+    setActiveAudioUrl(audioUrl);
+    setIsAudioModalVisible(true);
+  };
+
+  const handleCloseAudio = () => {
+    setIsAudioModalVisible(false);
+    setActiveAudioUrl('');
+  };
 
   return (
     <View style={[styles.card, { borderColor: cfg.color + '30' }]}>
-
+      <Spinner visible={isLoading} />
       {/* ── Top row: badge + status pill ── */}
       <View style={styles.topRow}>
         <View style={styles.badgeRow}>
@@ -84,18 +174,21 @@ const OutgoingCard = ({ item, onCancel, onResolve }) => {
       <View style={styles.divider} />
 
       {/* ── Response stats ── */}
-      <View style={styles.statsRow}>
-        <View style={styles.statBox}>
-          <Text style={[styles.statValue, { color: '#FACC15' }]}>{pendingCount}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statValue, { color: '#4A9EFF' }]}>{respondedCount}</Text>
-          <Text style={styles.statLabel}>Responded</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statValue, { color: '#4ADE80' }]}>{onWayCount}</Text>
-          <Text style={styles.statLabel}>On the way</Text>
+      <View style={styles.statsSection}>
+        <Text style={styles.statsHeading}>Response summary</Text>
+        <View style={styles.statsGrid}>
+          {STAT_ITEMS.map(stat => (
+            <View
+              key={stat.key}
+              style={[styles.statCard, { borderColor: `${stat.color}33`, backgroundColor: `${stat.color}14` }]}
+            >
+              <View style={styles.statCardTop}>
+                <Icon name={stat.icon} size={14} color={stat.color} />
+                <Text style={[styles.statCardValue, { color: stat.color }]}>{stats[stat.key]}</Text>
+              </View>
+              <Text style={styles.statCardLabel}>{stat.label}</Text>
+            </View>
+          ))}
         </View>
       </View>
 
@@ -105,10 +198,7 @@ const OutgoingCard = ({ item, onCancel, onResolve }) => {
           <View style={styles.divider} />
           <Text style={styles.contactsLabel}>Alerted contacts</Text>
           {notifications.map(n => {
-            const rCfg =
-              n.response_status === 'accepted'  ? { color: '#4ADE80', icon: 'check-circle' } :
-              n.response_status === 'on_the_way' ? { color: '#4A9EFF', icon: 'navigation' } :
-                                                   { color: '#FACC15', icon: 'clock-outline' };
+            const rCfg = RESPONSE_STATUS_CONFIG[n.response_status] || RESPONSE_STATUS_CONFIG.pending;
             return (
               <View key={n.id} style={styles.contactRow}>
                 <ContactAvatar user={n.to_user} size={34} />
@@ -119,7 +209,7 @@ const OutgoingCard = ({ item, onCancel, onResolve }) => {
                 <View style={[styles.responseBadge, { backgroundColor: rCfg.color + '18', borderColor: rCfg.color + '40' }]}>
                   <Icon name={rCfg.icon} size={11} color={rCfg.color} />
                   <Text style={[styles.responseBadgeText, { color: rCfg.color }]}>
-                    {n.response_status?.replace('_', ' ')}
+                    {rCfg.label}
                   </Text>
                 </View>
               </View>
@@ -128,22 +218,66 @@ const OutgoingCard = ({ item, onCancel, onResolve }) => {
         </View>
       )}
 
+      {/* ── Audio records ── */}
+      {audioRecords.length > 0 && (
+        <View style={styles.audioSection}>
+          <View style={styles.divider} />
+          <View style={styles.audioHeaderRow}>
+            <Text style={styles.audioLabel}>Audio records</Text>
+            <View style={styles.audioCountPill}>
+              <Icon name="waveform" size={11} color="#4A9EFF" />
+              <Text style={styles.audioCountText}>{audioRecords.length}</Text>
+            </View>
+          </View>
+          {audioRecords.map((record, index) => (
+            <View key={record.id?.toString() ?? record.file_url} style={styles.audioRow}>
+              <View style={styles.audioMetaWrap}>
+                <View style={styles.audioIconBubble}>
+                  <Icon name="music-note" size={14} color="#7EC0FF" />
+                </View>
+                <View style={styles.audioTextWrap}>
+                  <Text style={styles.audioFileName} numberOfLines={1}>
+                    { 'Audio record '+ (index + 1) }
+                  </Text>
+                  <Text style={styles.audioTimeText}>
+                    {formatTime(record.created_at)}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.audioPlayBtn}
+                onPress={() => handleOpenAudio(getMediaUrlFromRawUrl(record.file_url))}
+                activeOpacity={0.8}
+              >
+                <Icon name="play" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* ── Action buttons (active only) ── */}
       {isActive && (
         <>
           <View style={styles.divider} />
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => onCancel?.(item)} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => changeStatus('cancelled')} activeOpacity={0.7}>
               <Icon name="close-circle-outline" size={15} color="#F87171" />
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.resolveBtn} onPress={() => onResolve?.(item)} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.resolveBtn} onPress={() => changeStatus('resolved')} activeOpacity={0.7}>
               <Icon name="check-circle-outline" size={15} color="#4ADE80" />
               <Text style={styles.resolveBtnText}>Resolved</Text>
             </TouchableOpacity>
           </View>
         </>
       )}
+
+      <AudioPlayerModal
+        visible={isAudioModalVisible}
+        audioUrl={activeAudioUrl}
+        onClose={handleCloseAudio}
+      />
 
     </View>
   );
@@ -212,25 +346,125 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   // stats
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  statsSection: {
+    gap: 10,
   },
-  statBox: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  statLabel: {
+  statsHeading: {
     color: '#6B7C99',
     fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  statCard: {
+    width: '31%',
+    minWidth: 92,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  statCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statCardValue: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  statCardLabel: {
+    color: '#D1D9E6',
+    fontSize: 11,
+    fontWeight: '600',
   },
   // contacts
   contactsSection: {
     gap: 10,
+  },
+  audioSection: {
+    gap: 10,
+  },
+  audioHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  audioLabel: {
+    color: '#6B7C99',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
+  audioCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(74,158,255,0.35)',
+    backgroundColor: 'rgba(74,158,255,0.15)',
+  },
+  audioCountText: {
+    color: '#7EC0FF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  audioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(126,192,255,0.22)',
+    backgroundColor: 'rgba(126,192,255,0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 10,
+  },
+  audioMetaWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  audioIconBubble: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(74,158,255,0.18)',
+  },
+  audioTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  audioFileName: {
+    color: '#D9E8FF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  audioTimeText: {
+    color: '#8AA2C6',
+    fontSize: 11,
+  },
+  audioPlayBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4A9EFF',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   contactsLabel: {
     color: '#6B7C99',

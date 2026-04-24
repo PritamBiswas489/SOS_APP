@@ -1,7 +1,13 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { getProfileImage } from '../../config/utility';
+import { useState } from 'react';
+import { SOSService } from '../../services/sos.service';
+import useToast from '../../hook/useToast';
+import Spinner from 'react-native-loading-spinner-overlay';
+import AudioPlayerModal from '../audioPlayerModal';
+import { getMediaUrlFromRawUrl } from '../../config/utility';
  
 
 // ── Session status config ──────────────────────────────────────────────────
@@ -18,6 +24,8 @@ const RESPONSE_STATUS_CONFIG = {
   accepted:   { color: '#4ADE80', icon: 'check-circle-outline', label: 'Accepted'   },
   on_the_way: { color: '#4A9EFF', icon: 'car-arrow-right',      label: 'On the way' },
   declined:   { color: '#F87171', icon: 'close-circle-outline', label: 'Declined'   },
+  failed:     { color: '#EF4444', icon: 'alert-circle-outline',  label: 'Failed to reach'     },
+  reached :    { color: '#22C55E', icon: 'check-circle-outline', label: 'Reached'    },
 };
 
 const AVATAR_COLORS = ['#4A9EFF', '#4ADE80', '#FACC15', '#F87171', '#818CF8', '#FB923C'];
@@ -27,7 +35,7 @@ const formatTime = iso => {
   const d = new Date(iso);
   return d.toLocaleString('en-GB', {
     day: '2-digit', month: 'short',
-    hour: '2-digit', minute: '2-digit', hour12: false,
+    hour: '2-digit', minute: '2-digit', hour12: true,
   });
 };
 
@@ -62,30 +70,94 @@ const UserAvatar = ({ user, size = 52 }) => {
 // ---------------------------------------------------------------------------
 // Incoming SOS card
 // ---------------------------------------------------------------------------
-const IncomingCard = ({ item, navigationRef, onAccept, onDecline, onClose }) => {
+const IncomingCard = ({ item:incomingItem, navigationRef, onAccept, onDecline, onClose }) => {
+  const [item, setItem] = useState(incomingItem);
+  const [activeAudioUrl, setActiveAudioUrl] = useState('');
+  const [isAudioModalVisible, setIsAudioModalVisible] = useState(false);
   const session       = item.sos_session ?? {};
   const sender        = session.user ?? {};
+  const audioRecords = session.audio_records ?? [];
   const sessionStatus = (session.status ?? 'active').toLowerCase();
   const responseStatus = (item.response_status ?? 'pending').toLowerCase();
+  
    
-  const sCfg = SESSION_STATUS_CONFIG[sessionStatus]   ?? SESSION_STATUS_CONFIG.active;
-  const rCfg = RESPONSE_STATUS_CONFIG[responseStatus] ?? RESPONSE_STATUS_CONFIG.pending;
+  const sCfg =
+    SESSION_STATUS_CONFIG[sessionStatus] ?? SESSION_STATUS_CONFIG.active;
+  const rCfg =
+    RESPONSE_STATUS_CONFIG[responseStatus] ?? RESPONSE_STATUS_CONFIG.pending;
+  const { showError, showSuccess } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const changeStatus = newStatus => {
+    Alert.alert(
+      'Confirm Status Update',
+      'Are you sure you want to change your response status?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: () => {
+            setLoading(true);
+            SOSService.reponseSosNotification(
+              { notification_id: item.id, status: newStatus },
+              result => {
+                setLoading(false);
+                if (result.success === false) {
+                  console.error('Error updating SOS response status:', result);
+                  showError(result?.error ?? 'Failed to update SOS response status');
+                } else {
+                  setItem(prev => ({ ...prev, response_status: newStatus }));
+                  showSuccess('SOS response status updated successfully');
+                }
+              },
+            );
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  const handleOpenAudio = audioUrl => {
+    if (!audioUrl) {
+      showError('Audio file is not available');
+      return;
+    }
+    setActiveAudioUrl(audioUrl);
+    setIsAudioModalVisible(true);
+  };
+
+  const handleCloseAudio = () => {
+    setIsAudioModalVisible(false);
+    setActiveAudioUrl('');
+  };
+ 
 
   return (
     <View style={[styles.card, { borderColor: sCfg.color + '30' }]}>
-
+      <Spinner visible={loading} />
       {/* ── Top row: badge + session status pill ── */}
       <View style={styles.topRow}>
         <View style={styles.badgeRow}>
           <Icon name="shield-alert" size={14} color="#FF3B5C" />
-          <Text style={styles.badgeText}>INCOMING SOS</Text>
+          <Text style={styles.badgeText}>INCOMING SOS #{session.id}</Text>
         </View>
-        <View style={[
-          styles.statusPill,
-          { backgroundColor: sCfg.color + '18', borderColor: sCfg.color + '50' },
-        ]}>
+        <View
+          style={[
+            styles.statusPill,
+            {
+              backgroundColor: sCfg.color + '18',
+              borderColor: sCfg.color + '50',
+            },
+          ]}
+        >
           <Icon name={sCfg.icon} size={11} color={sCfg.color} />
-          <Text style={[styles.statusPillText, { color: sCfg.color }]}>{sCfg.label}</Text>
+          <Text style={[styles.statusPillText, { color: sCfg.color }]}>
+            {sCfg.label}
+          </Text>
         </View>
       </View>
 
@@ -98,7 +170,9 @@ const IncomingCard = ({ item, navigationRef, onAccept, onDecline, onClose }) => 
         <View style={styles.metaDivider} />
         <View style={styles.metaItem}>
           <Icon name="repeat-variant" size={12} color="#6B7C99" />
-          <Text style={styles.metaText}>Trigger #{session.number_of_trigger ?? 1}</Text>
+          <Text style={styles.metaText}>
+            Trigger #{session.number_of_trigger ?? 1}
+          </Text>
         </View>
         <View style={styles.metaDivider} />
         <View style={styles.metaItem}>
@@ -120,10 +194,15 @@ const IncomingCard = ({ item, navigationRef, onAccept, onDecline, onClose }) => 
             <Icon name="phone-outline" size={12} color="#6B7C99" />
             <Text style={styles.phoneText}>{sender.phone_number ?? '—'}</Text>
           </View>
-          <View style={[
-            styles.responseBadge,
-            { backgroundColor: rCfg.color + '18', borderColor: rCfg.color + '40' },
-          ]}>
+          <View
+            style={[
+              styles.responseBadge,
+              {
+                backgroundColor: rCfg.color + '18',
+                borderColor: rCfg.color + '40',
+              },
+            ]}
+          >
             <Icon name={rCfg.icon} size={11} color={rCfg.color} />
             <Text style={[styles.responseBadgeText, { color: rCfg.color }]}>
               My status: {rCfg.label}
@@ -139,18 +218,99 @@ const IncomingCard = ({ item, navigationRef, onAccept, onDecline, onClose }) => 
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={styles.declineBtn}
-            onPress={() => onDecline?.(item)}
-            activeOpacity={0.7}>
+            onPress={() => changeStatus('declined')}
+            activeOpacity={0.7}
+          >
             <Icon name="close-circle-outline" size={15} color="#F87171" />
             <Text style={styles.declineBtnText}>Decline</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.acceptBtn}
-            onPress={() => onAccept?.(item)}
-            activeOpacity={0.7}>
+            onPress={() => changeStatus('accepted')}
+            activeOpacity={0.7}
+          >
             <Icon name="check-circle-outline" size={15} color="#4ADE80" />
             <Text style={styles.acceptBtnText}>Accept</Text>
           </TouchableOpacity>
+        </View>
+      )}
+      {responseStatus === 'accepted' && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.declineBtn}
+            onPress={() => changeStatus('failed')}
+            activeOpacity={0.7}
+          >
+            <Icon name="alert-circle-outline" size={15} color="#EF4444" />
+            <Text style={styles.declineBtnText}>Failed to reach</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.acceptBtn}
+            onPress={() => changeStatus('on_the_way')}
+            activeOpacity={0.7}
+          >
+            <Icon name="car-arrow-right" size={15} color="#4A9EFF" />
+            <Text style={styles.acceptBtnText}>On the way</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {responseStatus === 'on_the_way' && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.declineBtn}
+            onPress={() => changeStatus('failed')}
+            activeOpacity={0.7}
+          >
+            <Icon name="alert-circle-outline" size={15} color="#EF4444" />
+            <Text style={styles.declineBtnText}>Failed to reach</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.acceptBtn}
+            onPress={() => changeStatus('reached')}
+            activeOpacity={0.7}
+          >
+            <Icon name="check-circle-outline" size={15} color="#22C55E" />
+            <Text style={styles.acceptBtnText}>Reached</Text>
+          </TouchableOpacity>
+        </View>
+        
+
+      )}
+
+      {/* ── Audio records ── */}
+      {audioRecords.length > 0 && (
+        <View style={styles.audioSection}>
+          <View style={styles.divider} />
+          <View style={styles.audioHeaderRow}>
+            <Text style={styles.audioLabel}>Audio records</Text>
+            <View style={styles.audioCountPill}>
+              <Icon name="waveform" size={11} color="#4A9EFF" />
+              <Text style={styles.audioCountText}>{audioRecords.length}</Text>
+            </View>
+          </View>
+
+          {audioRecords.map((record, index) => (
+            <View key={record.id?.toString() ?? record.file_url} style={styles.audioRow}>
+              <View style={styles.audioMetaWrap}>
+                <View style={styles.audioIconBubble}>
+                  <Icon name="music-note" size={14} color="#7EC0FF" />
+                </View>
+                <View style={styles.audioTextWrap}>
+                  <Text style={styles.audioFileName} numberOfLines={1}>
+                    {'Audio record ' + (index + 1)}
+                  </Text>
+                  <Text style={styles.audioTimeText}>{formatTime(record.created_at)}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.audioPlayBtn}
+                onPress={() => handleOpenAudio(getMediaUrlFromRawUrl(record.file_url))}
+                activeOpacity={0.8}
+              >
+                <Icon name="play" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
       )}
 
@@ -158,54 +318,66 @@ const IncomingCard = ({ item, navigationRef, onAccept, onDecline, onClose }) => 
 
       {/* ── Action buttons ── */}
       <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => {
-          if (navigationRef.isReady()) {
-            onClose?.();
-            navigationRef.navigate('Main', {
-              screen: 'MainTabs',
-              params: {
-                screen: 'Chat',
-                params: { selectedMapRecipentId: item.sos_session?.user?.id },
-              },
-            });
-          }
-        }} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => {
+            if (navigationRef.isReady()) {
+              onClose?.();
+              navigationRef.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'Chat',
+                  params: { selectedMapRecipentId: item.sos_session?.user?.id },
+                },
+              });
+            }
+          }}
+          activeOpacity={0.7}
+        >
           <View style={[styles.actionIconWrap, styles.actionIconChat]}>
             <Icon name="chat-outline" size={20} color="#4A9EFF" />
           </View>
           <Text style={[styles.actionLabel, { color: '#4A9EFF' }]}>Chat</Text>
         </TouchableOpacity>
         <View style={styles.actionSep} />
-        <TouchableOpacity style={styles.actionBtn} onPress={() => {
-          if (navigationRef.isReady()) {
-            onClose?.();
-            navigationRef.navigate('Main', {
-              screen: 'MainTabs',
-              params: {
-                screen: 'AudioStream',
-                params: { selectedMapRecipentId: item.sos_session?.user?.id },
-              },
-            });
-          }
-        }} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => {
+            if (navigationRef.isReady()) {
+              onClose?.();
+              navigationRef.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'AudioStream',
+                  params: { selectedMapRecipentId: item.sos_session?.user?.id },
+                },
+              });
+            }
+          }}
+          activeOpacity={0.7}
+        >
           <View style={[styles.actionIconWrap, styles.actionIconAudio]}>
             <Icon name="waveform" size={20} color="#00FF9C" />
           </View>
           <Text style={[styles.actionLabel, { color: '#00FF9C' }]}>Stream</Text>
         </TouchableOpacity>
         <View style={styles.actionSep} />
-        <TouchableOpacity style={styles.actionBtn} onPress={() => {
-          if (navigationRef.isReady()) {
-            onClose?.();
-            navigationRef.navigate('Main', {
-              screen: 'MainTabs',
-              params: {
-                screen: 'Map',
-                params: { selectedMapRecipentId: item.sos_session?.user?.id },
-              },
-            });
-          }
-        }} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => {
+            if (navigationRef.isReady()) {
+              onClose?.();
+              navigationRef.navigate('Main', {
+                screen: 'MainTabs',
+                params: {
+                  screen: 'Map',
+                  params: { selectedMapRecipentId: item.sos_session?.user?.id },
+                },
+              });
+            }
+          }}
+          activeOpacity={0.7}
+        >
           <View style={[styles.actionIconWrap, styles.actionIconMap]}>
             <Icon name="map-outline" size={20} color="#FFA502" />
           </View>
@@ -213,6 +385,11 @@ const IncomingCard = ({ item, navigationRef, onAccept, onDecline, onClose }) => 
         </TouchableOpacity>
       </View>
 
+      <AudioPlayerModal
+        visible={isAudioModalVisible}
+        audioUrl={activeAudioUrl}
+        onClose={handleCloseAudio}
+      />
     </View>
   );
 };
@@ -328,6 +505,85 @@ const styles = StyleSheet.create({
   responseBadgeText: {
     fontSize: 10,
     fontWeight: '600',
+  },
+  audioSection: {
+    gap: 10,
+  },
+  audioHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  audioLabel: {
+    color: '#6B7C99',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+  },
+  audioCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(74,158,255,0.35)',
+    backgroundColor: 'rgba(74,158,255,0.15)',
+  },
+  audioCountText: {
+    color: '#7EC0FF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  audioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(126,192,255,0.22)',
+    backgroundColor: 'rgba(126,192,255,0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 10,
+  },
+  audioMetaWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  audioIconBubble: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(74,158,255,0.18)',
+  },
+  audioTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  audioFileName: {
+    color: '#D9E8FF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  audioTimeText: {
+    color: '#8AA2C6',
+    fontSize: 11,
+  },
+  audioPlayBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4A9EFF',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   // actions
   actionRow: {
