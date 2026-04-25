@@ -87,7 +87,7 @@ const ProfessionalLoader = () => {
       <View style={styles.innerCore} />
 
       <Text style={styles.loaderTitle}>Setting Things Up</Text>
-      <Text style={styles.loaderSubtitle}>Preparing your secure workspace...</Text>
+      <Text style={styles.loaderSubtitle}>Preparing your secure environment...</Text>
 
       <View style={styles.progressTrack}>
         <Animated.View

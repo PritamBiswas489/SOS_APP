@@ -19,6 +19,14 @@ const ChatMessageItem = ({
   handleOpenDocument,
   renderStatusIcon,
 }) => {
+  const isMediaOnlyMessage = chatItem => {
+    const hasMedia = !!chatItem?.mediaUrl;
+    const hasText = !!chatItem?.text?.trim?.();
+    const hasLocation = !!chatItem?.locationJson;
+    const hasReply = !!(chatItem?.reply_to_message || chatItem?.replyTo);
+    return hasMedia && !hasText && !hasLocation && !hasReply;
+  };
+
   const renderMessageActions = (chatItem, isSelfMessage) => {
     const actionRowStyle = isSelfMessage
       ? styles.messageActionsRowRight
@@ -58,11 +66,13 @@ const ChatMessageItem = ({
   }
 
   if (item.type === 'left') {
+    const isMediaOnly = isMediaOnlyMessage(item);
+
     return (
       <ReplySwipeWrapper item={item} onSwipeReply={onReplyPress} enabled={item.type === 'left'}>
         <View style={styles.bubbleLeftWrapper}>
           <View style={styles.messageRowLeft}>
-            <View style={styles.bubbleLeft}>
+            <View style={[styles.bubbleLeft, isMediaOnly && styles.bubbleMediaOnly]}>
               <ReplyPreview
                 item={item}
                 isSelfMessage={false}
@@ -78,6 +88,7 @@ const ChatMessageItem = ({
               <MessageMediaContent
                 item={item}
                 styles={styles}
+                compact={isMediaOnly}
                 onOpenImageModal={handleOpenImageModal}
                 onOpenVideoModal={handleOpenVideoModal}
                 onOpenAudioModal={handleOpenAudioModal}
@@ -101,13 +112,15 @@ const ChatMessageItem = ({
   }
 
   if (item.type === 'right') {
+    const isMediaOnly = isMediaOnlyMessage(item);
+
     return (
       <ReplySwipeWrapper item={item} onSwipeReply={onReplyPress} enabled={item.type === 'right'}>
         <View>
           <View style={styles.messageRowRight}>
             {renderMessageActions(item, true)}
 
-            <View style={styles.bubbleRight}>
+            <View style={[styles.bubbleRight, isMediaOnly && styles.bubbleMediaOnly]}>
               <ReplyPreview
                 item={item}
                 isSelfMessage
@@ -123,6 +136,7 @@ const ChatMessageItem = ({
               <MessageMediaContent
                 item={item}
                 styles={styles}
+                compact={isMediaOnly}
                 onOpenImageModal={handleOpenImageModal}
                 onOpenVideoModal={handleOpenVideoModal}
                 onOpenAudioModal={handleOpenAudioModal}

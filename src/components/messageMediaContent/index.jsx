@@ -22,6 +22,7 @@ const isLikelyMediaUrl = value => {
 const MessageMediaContent = ({
   item,
   styles,
+  compact = false,
   onOpenImageModal,
   onOpenVideoModal,
   onOpenAudioModal,
@@ -39,6 +40,7 @@ const MessageMediaContent = ({
     <View
       style={[
         styles.mediaBubbleImage,
+        compact && styles.mediaBubbleCompact,
         {
           justifyContent: 'center',
           alignItems: 'center',
@@ -78,7 +80,7 @@ const MessageMediaContent = ({
       >
         <Image
           source={{ uri: item.mediaUrl }}
-          style={styles.mediaBubbleImage}
+          style={[styles.mediaBubbleImage, compact && styles.mediaBubbleCompact]}
           resizeMode="cover"
           onError={() => setMediaErrorText('Image not available')}
         />
@@ -93,14 +95,22 @@ const MessageMediaContent = ({
 
     return (
       <TouchableOpacity
-        style={styles.mediaBubbleVideo}
+        style={[styles.mediaBubbleVideo, compact && styles.mediaBubbleCompact]}
         activeOpacity={0.85}
         onPress={() => openMedia(onOpenVideoModal, 'Video not available')}
       >
-        <View style={styles.mediaBubblePlayBtn}>
-          <Icon name="play-arrow" size={28} color="#FFFFFF" />
+        <View style={styles.mediaBubbleMetaRow}>
+          <View style={styles.mediaTypePill}>
+            <Icon name="videocam" size={13} color="#DDF5FF" />
+            <Text style={styles.mediaTypePillText}>VIDEO</Text>
+          </View>
         </View>
-        <Text style={styles.mediaBubbleLabel}>Video</Text>
+
+        <View style={styles.mediaBubblePlayBtn}>
+          <Icon name="play-arrow" size={30} color="#FFFFFF" />
+        </View>
+        <Text style={styles.mediaBubbleLabel}>Tap to play video</Text>
+        <Text style={styles.mediaBubbleSubLabel}>HD attachment</Text>
       </TouchableOpacity>
     );
   }
@@ -112,12 +122,28 @@ const MessageMediaContent = ({
 
     return (
       <TouchableOpacity
-        style={styles.mediaBubbleAudio}
+        style={[styles.mediaBubbleAudio, compact && styles.mediaBubbleCompact]}
         activeOpacity={0.85}
         onPress={() => openMedia(onOpenAudioModal, 'Audio not available')}
       >
-        <Icon name="headset" size={22} color="#FFFFFF" />
-        <Text style={styles.mediaBubbleLabel}>Audio message</Text>
+        <View style={styles.mediaAudioIconWrap}>
+          <Icon name="headset" size={18} color="#FFFFFF" />
+        </View>
+
+        <View style={styles.mediaAudioContent}>
+          <Text style={styles.mediaBubbleLabel}>Audio message</Text>
+          <View style={styles.mediaAudioWaveRow}>
+            <View style={styles.mediaAudioWaveBarShort} />
+            <View style={styles.mediaAudioWaveBarTall} />
+            <View style={styles.mediaAudioWaveBarMedium} />
+            <View style={styles.mediaAudioWaveBarTall} />
+            <View style={styles.mediaAudioWaveBarShort} />
+            <View style={styles.mediaAudioWaveBarMedium} />
+            <View style={styles.mediaAudioWaveBarShort} />
+          </View>
+        </View>
+
+        <Icon name="play-arrow" size={22} color="#CFE9FF" />
       </TouchableOpacity>
     );
   }
@@ -129,7 +155,7 @@ const MessageMediaContent = ({
 
     return (
       <TouchableOpacity
-        style={styles.mediaBubbleDocument}
+        style={[styles.mediaBubbleDocument, compact && styles.mediaBubbleCompact]}
         activeOpacity={0.85}
         onPress={() => openMedia(onOpenDocument, 'Document not available')}
       >

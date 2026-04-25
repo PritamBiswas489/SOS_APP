@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect, useRef, use } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,84 +12,18 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import styles from './style';
 import { useSelector, useDispatch } from 'react-redux';
 import { audioSelectedContactActions } from '../../store/redux/audioSelectedContact.redux';
-import { useChatPresence } from '../../context/ChatContext';
-import { useChatContacts } from '../../hook/useChatContacts';
 import appColors from '../../theme/appColors';
-import { useUserData } from '../../hook/useUserData';
-import { getProfileImage } from '../../config/utility'; 
-import { useListenerMediaSoup } from '../../context/ListenerMediaSoupContext';
 
 
-const AudioAvatarList = ({ navigation, selectedReceipentId }) => {
+const AudioAvatarList = ({ chatContacts, fetchChatContacts }) => {
     const ONLINE_COLOR = '#2ED573';
-    const ONLINE_BG = '#0B2F2A';
-    const OFFLINE_COLOR = '#7A8499';
-    const OFFLINE_BG = '#1A2236';
 
-     const onlineUsers = useChatPresence();
      const [refreshing, setRefreshing] = useState(false);
-     const [isScrollable, setIsScrollable] = useState(false);
       const lastOffsetXRef = useRef(0);
       const endReachedFiredRef = useRef(false);
-      const listWidthRef = useRef(0);
-      const contentWidthRef = useRef(0);
 
      const dispatch = useDispatch();
-    const { contactList: chatContactList, fetchChatContacts } = useChatContacts();
      const audioSelectedContact = useSelector(state => state.audioSelectedContact);
-     const {userData} = useUserData();
-     const usrId = userData?.id;
-     const { currentStreamingRoomIds } = useListenerMediaSoup();
-      const hasAutoSelectedFromParamRef = useRef(false);
-
-     const chatContacts = useMemo(() => {
-      //console.log("currentStreamingRoomIds", currentStreamingRoomIds);
-      const list = chatContactList;
-      if (!list || list.length === 0) return [];
-
-      const trustedContacts = [];
-      const otherContacts = [];
-
-      for (const contact of list) {
-        const roomid = [contact.user_id, contact.trusted_user_id].sort().join(':');
-        if (contact.user_id === usrId) {
-          const displayName = contact.nickname || contact.trusted_contact.name || contact.relationship || '?';
-          trustedContacts.push({
-            id: contact.id,
-            name: displayName,
-            initial: displayName?.charAt(0).toUpperCase(),
-            isOnline: onlineUsers[contact.trusted_user_id] || false,
-            isStreaming: currentStreamingRoomIds?.[`sos-live-${contact.trusted_user_id}`] || false,
-            receipent_id: contact.trusted_user_id,
-            phone_number: contact.trusted_contact.phone_number,
-            roomId: roomid,
-            profile_image: contact?.trusted_contact?.profile_photo ? getProfileImage(contact.trusted_contact.profile_photo) : null,
-          });
-        } else if (contact.trusted_user_id === usrId) {
-          const displayName = contact?.inviter?.name || contact?.inviter?.phone_number || 'Unknown';
-          otherContacts.push({
-            id: contact.id,
-            name: displayName,
-            initial: displayName.charAt(0).toUpperCase(),
-            phone_number: contact?.inviter?.phone_number,
-            isOnline: onlineUsers[contact.user_id] || false,
-            receipent_id: contact.user_id,
-            roomId: roomid,
-            profile_image: contact?.inviter?.profile_photo ? getProfileImage(contact.inviter.profile_photo) : null,
-            isStreaming: currentStreamingRoomIds?.[`sos-live-${contact.user_id}`] || false,
-          });
-        }
-      }
-
-      const filteredOtherContacts = otherContacts.filter(
-        oc => !trustedContacts.some(tc => tc.roomId === oc.roomId),
-      );
-
-      return [...trustedContacts, ...filteredOtherContacts].sort((a, b) => {
-        if (a.isStreaming === b.isStreaming) return 0;
-        return a.isStreaming ? -1 : 1;
-      });
-    }, [chatContactList, usrId, onlineUsers, currentStreamingRoomIds]);
 
     const selectContact = useCallback(item => {
       console.log('Selected contact:', item);
@@ -119,34 +53,22 @@ const getAvatarColor = item => {
 
     const renderContactItem = useCallback(({ item }) => {
       const isSelected = audioSelectedContact?.id === item.id;
-      const statusColor =  OFFLINE_COLOR;
-      const statusBgColor = item.isOnline ? ONLINE_BG : OFFLINE_BG;
       const avatarColor = getAvatarColor(item);
 
       return (
         <TouchableOpacity
           key={item.id}
-          style={styles.avatarItem}
+          style={[styles.avatarItem, isSelected && styles.avatarItemSelected]}
           activeOpacity={0.7}
           onPress={() => selectContact(item)}
         >
           <View style={styles.avatarCircleWrap}>
-            {isSelected && <View style={styles.selectedTopLine} />}
             <View
               style={[
                 styles.avatarCircle,
                 {
-                  borderColor: appColors.white,
+                  borderColor: isSelected ? appColors.primary : 'rgba(255,255,255,0.35)',
                   backgroundColor: avatarColor,
-                },
-                isSelected && {
-                  borderWidth: 6,
-                  borderColor: appColors.primary,
-                  shadowColor: appColors.primary,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.8,
-                  shadowRadius: 8,
-                  elevation: 8,
                 },
               ]} 
             >
@@ -171,14 +93,22 @@ const getAvatarColor = item => {
             )}
           </View>
 
-          <Text style={[styles.avatarLabel,  isSelected && { color: appColors.primary, fontWeight: 'bold' }]}>
-            {item.name}
-          </Text>
-          {item.phone_number && (
-            <Text style={[styles.avatarPhoneNumber,    isSelected && { color: appColors.primary, fontWeight: 'bold' }]}>
-              {item.phone_number}
+          <View style={styles.avatarMeta}>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[styles.avatarLabel, isSelected && styles.avatarLabelSelected]}
+            >
+              {item.name}
             </Text>
-          )}
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[styles.avatarPhoneNumber, isSelected && styles.avatarPhoneSelected]}
+            >
+              {item.phone_number || 'No phone'}
+            </Text>
+          </View>
         </TouchableOpacity>
       );
     }, [audioSelectedContact?.id, selectContact]);
@@ -208,46 +138,6 @@ const getAvatarColor = item => {
       }
     }, [handleRefresh]);
 
-
-   
-
-      useEffect(() => {
-          if (chatContacts.length === 0) return;
-    
-          // Auto-select from navigation param — runs only once when contacts load
-          if (selectedReceipentId && !hasAutoSelectedFromParamRef.current) {
-            hasAutoSelectedFromParamRef.current = true;
-            const contactToSelect = chatContacts.find(
-              c => c.receipent_id === selectedReceipentId,
-            );
-            dispatch(
-              audioSelectedContactActions.setAudioSelectedContact(
-                contactToSelect ?? chatContacts[0],
-              ),
-            );
-            return;
-          }
-    
-          // If the currently selected contact was removed from the list, fall back to first
-          const stillExists = audioSelectedContact?.id
-            ? chatContacts.some(c => c.id === audioSelectedContact.id)
-            : false;
-    
-          if (!stillExists) {
-            dispatch(
-              audioSelectedContactActions.setAudioSelectedContact(chatContacts[0]),
-            );
-          }
-        // audioSelectedContact intentionally excluded — including it causes an infinite loop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [chatContacts, selectedReceipentId, dispatch]);
-
-         useEffect(() => {
-              hasAutoSelectedFromParamRef.current = false;
-            }, [selectedReceipentId]);
-        
-    
-
   return (
     <View style={styles.avatarRowContainer}>
       <FlatList
@@ -261,14 +151,6 @@ const getAvatarColor = item => {
         contentContainerStyle={styles.avatarRowContent}
         onScroll={handleHorizontalScroll}
         scrollEventThrottle={16}
-        onLayout={e => {
-          listWidthRef.current = e.nativeEvent.layout.width;
-          setIsScrollable(contentWidthRef.current > listWidthRef.current);
-        }}
-        onContentSizeChange={(w) => {
-          contentWidthRef.current = w;
-          setIsScrollable(w > listWidthRef.current);
-        }}
         refreshControl={
            <RefreshControl
                       refreshing={refreshing}
@@ -282,18 +164,18 @@ const getAvatarColor = item => {
         
        
       />
-      {!isScrollable && (
-        <TouchableOpacity
-          onPress={handleRefresh}
-          disabled={refreshing}
-          style={styles.refreshIconBtn}
-          activeOpacity={0.7}
-        >
-          {refreshing
-            ? <ActivityIndicator size={16} color={ONLINE_COLOR} />
-            : <Icon name="refresh" size={20} color={ONLINE_COLOR} />}
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        onPress={handleRefresh}
+        disabled={refreshing}
+        style={styles.refreshIconBtn}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Refresh contacts"
+      >
+        {refreshing
+          ? <ActivityIndicator size={16} color={ONLINE_COLOR} />
+          : <Icon name="refresh" size={20} color={ONLINE_COLOR} />}
+      </TouchableOpacity>
     </View>
   );
 };

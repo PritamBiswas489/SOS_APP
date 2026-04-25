@@ -14,7 +14,9 @@ export default StyleSheet.create({
   },
 
   chatContent: {
-    paddingBottom: SW(8),
+    paddingBottom: SW(10),
+    paddingHorizontal: SW(6),
+    paddingTop: SH(6),
   },
 
   chatContentEmpty: {
@@ -224,10 +226,19 @@ export default StyleSheet.create({
 
   dayLabel: {
     textAlign: 'center',
-    color: appColors.bodyColor,
-    fontFamily: appFonts.NunitoExtraBold,
-    fontSize: SF(10),
-    marginTop: 20,
+    color: '#8DA3B8',
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(9),
+    marginTop: SH(12),
+    marginBottom: SH(6),
+    alignSelf: 'center',
+    backgroundColor: 'rgba(138, 162, 190, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(138, 162, 190, 0.22)',
+    borderRadius: SW(10),
+    paddingHorizontal: SW(10),
+    paddingVertical: SH(3),
+    overflow: 'hidden',
   },
 
   /* SOS ALERT */
@@ -305,19 +316,19 @@ export default StyleSheet.create({
   /* MESSAGE LEFT */
 
   bubbleLeftWrapper: {
-    marginTop: SW(14),
-    marginLeft: SW(14),
+    marginTop: SH(8),
+    marginLeft: SW(8),
   },
 
   messageFooterLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: SW(6),
+    marginTop: SH(4),
   },
 
   timeLeftInline: {
-    color: appColors.bodyColor,
-    fontSize: SF(10),
+    color: '#8BA0B3',
+    fontSize: SF(9),
     fontFamily: appFonts.NunitoRegular,
     marginLeft: SW(6),
   },
@@ -328,10 +339,21 @@ export default StyleSheet.create({
   },
 
   bubbleLeft: {
-    backgroundColor: appColors.whiteBdrTransparent,
-    padding: SW(10),
-    borderRadius: 14,
-    maxWidth: '75%',
+    backgroundColor: '#1E2A33',
+    paddingHorizontal: SW(11),
+    paddingVertical: SH(8),
+    borderRadius: SW(16),
+    borderTopLeftRadius: SW(6),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    maxWidth: '82%',
+  },
+
+  bubbleMediaOnly: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
 
   messageActionsRow: {
@@ -353,12 +375,12 @@ export default StyleSheet.create({
   messageActionButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: SW(28),
-    height: SW(28),
-    borderRadius: SW(14),
-    backgroundColor: 'rgba(143, 163, 200, 0.14)',
+    width: SW(24),
+    height: SW(24),
+    borderRadius: SW(12),
+    backgroundColor: 'rgba(143, 163, 200, 0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(143, 163, 200, 0.22)',
+    borderColor: 'rgba(143, 163, 200, 0.18)',
   },
 
   messageActionModalOverlay: {
@@ -368,7 +390,7 @@ export default StyleSheet.create({
   },
 
   messageActionModalSheet: {
-    backgroundColor: '#0E1E35',
+    backgroundColor: '#101C28',
     borderTopLeftRadius: SW(20),
     borderTopRightRadius: SW(20),
     paddingBottom: SH(28),
@@ -405,7 +427,7 @@ export default StyleSheet.create({
   },
 
   messageActionModalText: {
-    color: '#D7E3FF',
+    color: '#E5EDF4',
     fontSize: SF(15),
     fontFamily: appFonts.NunitoSemiBold,
   },
@@ -430,8 +452,10 @@ export default StyleSheet.create({
   },
 
   messageText: {
-    color: appColors.white,
+    color: '#E9EDF1',
     fontSize: SF(12),
+    lineHeight: SF(17),
+    fontFamily: appFonts.NunitoRegular,
   },
 
   replyPreviewBox: {
@@ -443,13 +467,13 @@ export default StyleSheet.create({
   },
 
   replyPreviewBoxLeft: {
-    borderLeftColor: '#60A6FF',
-    backgroundColor: 'rgba(96, 166, 255, 0.15)',
+    borderLeftColor: '#7FB4E8',
+    backgroundColor: 'rgba(127, 180, 232, 0.13)',
   },
 
   replyPreviewBoxRight: {
-    borderLeftColor: '#FF8FA0',
-    backgroundColor: 'rgba(255, 143, 160, 0.12)',
+    borderLeftColor: '#89D7C7',
+    backgroundColor: 'rgba(137, 215, 199, 0.12)',
   },
 
   replyPreviewTitle: {
@@ -497,15 +521,19 @@ export default StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
-    marginTop: SW(15),
-    marginRight: SW(15),
+    marginTop: SH(8),
+    marginRight: SW(8),
   },
 
   bubbleRight: {
-    backgroundColor: '#5C141C',
-    padding: SW(10),
-    borderRadius: 14,
-    maxWidth: '75%',
+    backgroundColor: '#045C4B',
+    paddingHorizontal: SW(11),
+    paddingVertical: SH(8),
+    borderRadius: SW(16),
+    borderTopRightRadius: SW(6),
+    borderWidth: 1,
+    borderColor: 'rgba(125, 221, 197, 0.22)',
+    maxWidth: '82%',
   },
 
   avatarSmallPink: {
@@ -528,11 +556,11 @@ export default StyleSheet.create({
   },
 
   timeRight: {
-    color: appColors.bodyColor,
-    fontSize: SF(10),
+    color: '#A8C9C1',
+    fontSize: SF(9),
     textAlign: 'right',
     marginRight: SW(48),
-    marginTop: 4,
+    marginTop: SH(3),
   },
 
   messageStatusRow: {
@@ -540,66 +568,152 @@ export default StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     marginRight: SW(48),
-    marginTop: 2,
+    marginTop: SH(1),
   },
 
   /* MEDIA BUBBLES */
 
   mediaBubbleImage: {
-    width: SW(200),
-    height: SW(160),
-    borderRadius: SW(8),
-    marginBottom: SW(4),
+    width: SW(210),
+    height: SW(165),
+    borderRadius: SW(12),
+    marginBottom: SW(6),
     backgroundColor: appColors.secondary,
   },
 
   mediaBubbleVideo: {
-    width: SW(200),
-    height: SW(120),
-    borderRadius: SW(8),
-    marginBottom: SW(4),
-    backgroundColor: '#1A2B44',
-    justifyContent: 'center',
+    width: SW(210),
+    height: SW(128),
+    borderRadius: SW(12),
+    marginBottom: SW(6),
+    backgroundColor: '#1D2E3D',
+    borderWidth: 1,
+    borderColor: 'rgba(155, 190, 219, 0.22)',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: SH(10),
+    paddingHorizontal: SW(10),
+  },
+
+  mediaBubbleMetaRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+  },
+
+  mediaTypePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: SW(12),
+    backgroundColor: 'rgba(63, 111, 146, 0.50)',
+    borderWidth: 1,
+    borderColor: 'rgba(196, 223, 246, 0.34)',
+    paddingHorizontal: SW(8),
+    paddingVertical: SH(3),
+  },
+
+  mediaTypePillText: {
+    color: '#E7F4FF',
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(9),
+    marginLeft: SW(4),
+    letterSpacing: 0.4,
   },
 
   mediaBubblePlayBtn: {
-    width: SW(48),
-    height: SW(48),
-    borderRadius: SW(24),
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: SW(54),
+    height: SW(54),
+    borderRadius: SW(27),
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SW(4),
   },
 
   mediaBubbleAudio: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A2B44',
-    borderRadius: SW(8),
+    backgroundColor: '#1D2E3D',
+    borderRadius: SW(10),
+    borderWidth: 1,
+    borderColor: 'rgba(155, 190, 219, 0.22)',
     paddingVertical: SW(10),
-    paddingHorizontal: SW(12),
-    marginBottom: SW(4),
-    minWidth: SW(140),
+    paddingHorizontal: SW(10),
+    marginBottom: SW(6),
+    minWidth: SW(190),
+  },
+
+  mediaAudioIconWrap: {
+    width: SW(34),
+    height: SW(34),
+    borderRadius: SW(17),
+    backgroundColor: 'rgba(110, 173, 223, 0.34)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  mediaAudioContent: {
+    flex: 1,
+    marginHorizontal: SW(10),
+  },
+
+  mediaAudioWaveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SH(4),
+  },
+
+  mediaAudioWaveBarShort: {
+    width: SW(3),
+    height: SH(5),
+    borderRadius: SW(2),
+    backgroundColor: 'rgba(215, 236, 252, 0.72)',
+    marginRight: SW(2),
+  },
+
+  mediaAudioWaveBarMedium: {
+    width: SW(3),
+    height: SH(8),
+    borderRadius: SW(2),
+    backgroundColor: 'rgba(215, 236, 252, 0.82)',
+    marginRight: SW(2),
+  },
+
+  mediaAudioWaveBarTall: {
+    width: SW(3),
+    height: SH(11),
+    borderRadius: SW(2),
+    backgroundColor: '#E6F5FF',
+    marginRight: SW(2),
   },
 
   mediaBubbleDocument: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A2B44',
-    borderRadius: SW(8),
+    backgroundColor: '#1B2B39',
+    borderRadius: SW(10),
     paddingVertical: SW(10),
     paddingHorizontal: SW(12),
-    marginBottom: SW(4),
+    marginBottom: SW(6),
     minWidth: SW(140),
   },
 
   mediaBubbleLabel: {
-    color: appColors.white,
-    fontFamily: appFonts.NunitoRegular,
+    color: '#EAF4FD',
+    fontFamily: appFonts.NunitoSemiBold,
     fontSize: SF(12),
-    marginLeft: SW(8),
+  },
+
+  mediaBubbleSubLabel: {
+    color: '#9BB4C8',
+    fontFamily: appFonts.NunitoRegular,
+    fontSize: SF(9),
+    marginTop: SH(1),
+  },
+
+  mediaBubbleCompact: {
+    marginBottom: 0,
   },
 
   locationMessageCard: {
@@ -610,13 +724,13 @@ export default StyleSheet.create({
   },
 
   locationMessageCardLeft: {
-    backgroundColor: 'rgba(61, 131, 255, 0.12)',
-    borderColor: 'rgba(96, 166, 255, 0.35)',
+    backgroundColor: 'rgba(127, 180, 232, 0.10)',
+    borderColor: 'rgba(127, 180, 232, 0.28)',
   },
 
   locationMessageCardRight: {
-    backgroundColor: 'rgba(255, 91, 109, 0.16)',
-    borderColor: 'rgba(255, 126, 141, 0.38)',
+    backgroundColor: 'rgba(95, 206, 176, 0.12)',
+    borderColor: 'rgba(95, 206, 176, 0.30)',
   },
 
   locationMessageHeader: {
@@ -685,7 +799,7 @@ export default StyleSheet.create({
     width: SW(38),
     height: SW(38),
     borderRadius: SW(19),
-    backgroundColor: appColors.primary,
+    backgroundColor: '#22A884',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

@@ -465,12 +465,12 @@ const ConversationList = ({
     });
   }, [navigation, selectedContact?.receipent_id]);
 
-  const handleOpenChat = useCallback(() => {
+  const handleOpenAudio = useCallback(() => {
     if (!selectedContact?.receipent_id) return;
     navigation.navigate('Main', {
       screen: 'MainTabs',
       params: {
-        screen: 'Chat',
+        screen: 'AudioStream',
         params: { selectedReceipentId: selectedContact.receipent_id },
       },
     });
@@ -928,7 +928,7 @@ const handleReload = useCallback(() => {
 
           <TouchableOpacity
             activeOpacity={0.86}
-            onPress={handleOpenChat}
+            onPress={handleOpenAudio}
             style={{
               width: 44,
               height: 44,
@@ -940,7 +940,7 @@ const handleReload = useCallback(() => {
               alignItems: 'center',
             }}
           >
-            <Icon name="chat" size={20} color="#60A6FF" />
+            <Icon name="mic" size={20} color="#60A6FF" />
           </TouchableOpacity>
         </View>
       )}

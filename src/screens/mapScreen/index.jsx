@@ -6,14 +6,16 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import MapAvatarList from '../../components/mapAvatarList';
 import { useNavigation } from '@react-navigation/native';
 import { useUserData } from '../../hook/useUserData';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useContactLocations } from '../../hook/useContactLocations';
+import { useChatPresence } from '../../context/ChatContext';
+import { useChatContacts } from '../../hook/useChatContacts';
+import { mapSelectedContactActions } from '../../store/redux/mapSelectedContact.redux';
+import { getProfileImage } from '../../config/utility';
 import axios from 'axios';
 import { GOOGLE_MAPS_API_KEY } from '../../../environment';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { useLocation } from '../../context/LocationContext';
- 
-import { useDispatch } from 'react-redux';
 const darkMapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#0a1628' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#5a7a9a' }] },
@@ -130,6 +132,96 @@ const MapScreen = ({route}) => {
   const {userData} = useUserData();
   const { updateCurrentLocation, updateMyGprsLocation } = useLocation();
   const selectedMapRecipentId = route?.params?.selectedMapRecipentId;
+  const [normalizedSelectedMapRecipentId, setNormalizedSelectedMapRecipentId] = useState(null);
+  const hasAutoSelectedFromParamRef = useRef(false);
+  const onlineUsers = useChatPresence();
+   
+       const usrId = userData?.id;
+  const { contactList: chatContactList, fetchChatContacts } = useChatContacts();
+
+  useEffect(() => {
+    hasAutoSelectedFromParamRef.current = false;
+    setNormalizedSelectedMapRecipentId(
+      selectedMapRecipentId === null || selectedMapRecipentId === undefined
+        ? null
+        : String(selectedMapRecipentId),
+    );
+  }, [selectedMapRecipentId]);
+
+  const mappedMapContacts = useMemo(() => {
+    const list = chatContactList;
+    if (!list || list.length === 0) return [];
+
+    const trustedContacts = [];
+    const otherContacts = [];
+
+    for (const contact of list) {
+      const roomid = [contact.user_id, contact.trusted_user_id].sort().join(':');
+      if (contact.user_id === usrId) {
+        const displayName = contact.nickname || contact.trusted_contact.name || contact.relationship || '?';
+        trustedContacts.push({
+          id: contact.id,
+          name: displayName,
+          initial: displayName?.charAt(0).toUpperCase(),
+          isOnline: onlineUsers[contact.trusted_user_id] || false,
+          receipent_id: contact.trusted_user_id,
+          phone_number: contact.trusted_contact.phone_number,
+          roomId: roomid,
+          profile_image: contact?.trusted_contact?.profile_photo ? getProfileImage(contact.trusted_contact.profile_photo) : null,
+        });
+      } else if (contact.trusted_user_id === usrId) {
+        const displayName = contact?.inviter?.name || contact?.inviter?.phone_number || 'Unknown';
+        otherContacts.push({
+          id: contact.id,
+          name: displayName,
+          initial: displayName.charAt(0).toUpperCase(),
+          phone_number: contact?.inviter?.phone_number,
+          isOnline: onlineUsers[contact.user_id] || false,
+          receipent_id: contact.user_id,
+          roomId: roomid,
+          profile_image: contact?.inviter?.profile_photo ? getProfileImage(contact.inviter.profile_photo) : null,
+        });
+      }
+    }
+
+    const filteredOtherContacts = otherContacts.filter(
+      oc => !trustedContacts.some(tc => tc.roomId === oc.roomId),
+    );
+
+    return [...trustedContacts, ...filteredOtherContacts].sort((a, b) => {
+      if (a.isOnline === b.isOnline) return 0;
+      return a.isOnline ? -1 : 1;
+    });
+  }, [chatContactList, usrId, onlineUsers]);
+
+  useEffect(() => {
+    if (mappedMapContacts.length === 0) return;
+
+    if (normalizedSelectedMapRecipentId && !hasAutoSelectedFromParamRef.current) {
+      hasAutoSelectedFromParamRef.current = true;
+      const contactToSelect = mappedMapContacts.find(
+        c => String(c.receipent_id) === normalizedSelectedMapRecipentId,
+      );
+      dispatch(
+        mapSelectedContactActions.setMapSelectedContact(
+          contactToSelect ?? mappedMapContacts[0],
+        ),
+      );
+      return;
+    }
+
+    const stillExists = mapSelectedContact?.id
+      ? mappedMapContacts.some(c => c.id === mapSelectedContact.id)
+      : false;
+
+    if (!stillExists) {
+      dispatch(
+        mapSelectedContactActions.setMapSelectedContact(mappedMapContacts[0]),
+      );
+    }
+  // mapSelectedContact intentionally excluded — including it causes an infinite loop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mappedMapContacts, normalizedSelectedMapRecipentId, dispatch]);
 
   const [CONTACT_MARKER, setContactMarkers] = useState(null);
   const [routeCoords, setRouteCoords] = useState([]);
@@ -293,7 +385,7 @@ const MapScreen = ({route}) => {
       screen: 'MainTabs',
       params: {
         screen: 'AudioStream',
-        params: { selectedMapRecipentId: mapSelectedContact.receipent_id },
+        params: { selectedReceipentId: mapSelectedContact.receipent_id },
       },
     });
 
@@ -624,7 +716,7 @@ const MapScreen = ({route}) => {
           {/* LOCATION CARD */}
           <View style={styles.locationCard}>
             <View style={styles.cardHandle} />
-            <MapAvatarList navigation={navigation} selectedMapRecipentId={selectedMapRecipentId} />
+            <MapAvatarList navigation={navigation} chatContacts={mappedMapContacts} fetchChatContacts={fetchChatContacts} />
           </View>
         </>
       

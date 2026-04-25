@@ -8,7 +8,7 @@ export const TURN_SERVER_PASS = TURN_SERVER_PASSWORD;
 export const GOOGLE_MAPS_API_KEY = _GOOGLE_MAPS_API_KEY;
 
 export const env = {
-  type: 'dev', //prod staging dev
+  type: 'prod', //prod staging dev
   appUrls: {
     dev: {
       apiUrl: 'https://99bpkvn6-4000.inc1.devtunnels.ms',

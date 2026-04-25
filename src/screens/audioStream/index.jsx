@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -13,11 +14,17 @@ import {
   Image,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { audioSelectedContactActions } from '../../store/redux/audioSelectedContact.redux';
 import { useSocket } from '../../context/SocketContext';
 import { useListenerMediaSoup } from '../../context/ListenerMediaSoupContext';
+import { useChatPresence } from '../../context/ChatContext';
+import { useChatContacts } from '../../hook/useChatContacts';
+import { useUserData } from '../../hook/useUserData';
+import { getProfileImage } from '../../config/utility';
 import AudioVisualizer from '../../components/audioVisualizer';
 import AudioAvatarList from '../../components/audioAvatarList';
 import { useNavigation } from '@react-navigation/native';
@@ -58,24 +65,119 @@ let RTCView;
 try { RTCView = require('react-native-webrtc').RTCView; } catch (_) { RTCView = null; }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-const AudioStreamScreen = () => {
+const AudioStreamScreen = ({route}) => {
   const { isConnected }      = useSocket();
   const selectedContact      = useSelector(state => state.audioSelectedContact);
   const navigation           = useNavigation();
+  const dispatch             = useDispatch();
+  const { userData }         = useUserData();
+  const usrId                = userData?.id;
+  const onlineUsers          = useChatPresence();
+  const { contactList: chatContactList, fetchChatContacts } = useChatContacts();
   const {
     status, statusText,
     remoteStream, joinRoom, leaveRoom,
+    currentStreamingRoomIds,
   } = useListenerMediaSoup();
 
-  const prevContactIdRef = useRef(null);
-  const spinAnim         = useRef(new Animated.Value(0)).current;
-  const pulseAnim        = useRef(new Animated.Value(1)).current;
-  const panelAnim        = useRef(new Animated.Value(0)).current;
+  const prevContactIdRef         = useRef(null);
+  const hasAutoSelectedFromParamRef = useRef(false);
+  const spinAnim                 = useRef(new Animated.Value(0)).current;
+  const pulseAnim                = useRef(new Animated.Value(1)).current;
+  const panelAnim                = useRef(new Animated.Value(0)).current;
 
   const cfg         = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
   const isInRoom    = status !== 'idle' && status !== 'error';
   const isListening = status === 'listening';
   const hasContact  = !!selectedContact?.id;
+  const selectedReceipentId = route?.params?.selectedReceipentId;
+  const [normalizedSelectedReceipentId, setNormalizedSelectedReceipentId] = useState(null);
+
+  useEffect(() => {
+    hasAutoSelectedFromParamRef.current = false;
+    setNormalizedSelectedReceipentId(
+      selectedReceipentId === null || selectedReceipentId === undefined
+        ? null
+        : String(selectedReceipentId),
+    );
+  }, [selectedReceipentId]);
+
+  const mappedAudioContacts = useMemo(() => {
+    const list = chatContactList;
+    if (!list || list.length === 0) return [];
+
+    const trustedContacts = [];
+    const otherContacts = [];
+
+    for (const contact of list) {
+      const roomid = [contact.user_id, contact.trusted_user_id].sort().join(':');
+      if (contact.user_id === usrId) {
+        const displayName = contact.nickname || contact.trusted_contact.name || contact.relationship || '?';
+        trustedContacts.push({
+          id: contact.id,
+          name: displayName,
+          initial: displayName?.charAt(0).toUpperCase(),
+          isOnline: onlineUsers[contact.trusted_user_id] || false,
+          isStreaming: currentStreamingRoomIds?.[`sos-live-${contact.trusted_user_id}`] || false,
+          receipent_id: contact.trusted_user_id,
+          phone_number: contact.trusted_contact.phone_number,
+          roomId: roomid,
+          profile_image: contact?.trusted_contact?.profile_photo ? getProfileImage(contact.trusted_contact.profile_photo) : null,
+        });
+      } else if (contact.trusted_user_id === usrId) {
+        const displayName = contact?.inviter?.name || contact?.inviter?.phone_number || 'Unknown';
+        otherContacts.push({
+          id: contact.id,
+          name: displayName,
+          initial: displayName.charAt(0).toUpperCase(),
+          phone_number: contact?.inviter?.phone_number,
+          isOnline: onlineUsers[contact.user_id] || false,
+          receipent_id: contact.user_id,
+          roomId: roomid,
+          profile_image: contact?.inviter?.profile_photo ? getProfileImage(contact.inviter.profile_photo) : null,
+          isStreaming: currentStreamingRoomIds?.[`sos-live-${contact.user_id}`] || false,
+        });
+      }
+    }
+
+    const filteredOtherContacts = otherContacts.filter(
+      oc => !trustedContacts.some(tc => tc.roomId === oc.roomId),
+    );
+
+    return [...trustedContacts, ...filteredOtherContacts].sort((a, b) => {
+      if (a.isStreaming === b.isStreaming) return 0;
+      return a.isStreaming ? -1 : 1;
+    });
+  }, [chatContactList, usrId, onlineUsers, currentStreamingRoomIds]);
+
+  useEffect(() => {
+    if (mappedAudioContacts.length === 0) return;
+
+    if (normalizedSelectedReceipentId && !hasAutoSelectedFromParamRef.current) {
+      hasAutoSelectedFromParamRef.current = true;
+      const contactToSelect = mappedAudioContacts.find(
+        c => String(c.receipent_id) === normalizedSelectedReceipentId,
+      );
+      dispatch(
+        audioSelectedContactActions.setAudioSelectedContact(
+          contactToSelect ?? mappedAudioContacts[0],
+        ),
+      );
+      return;
+    }
+
+    const stillExists = selectedContact?.id
+      ? mappedAudioContacts.some(c => c.id === selectedContact.id)
+      : false;
+
+    if (!stillExists) {
+      dispatch(
+        audioSelectedContactActions.setAudioSelectedContact(mappedAudioContacts[0]),
+      );
+    }
+  // selectedContact intentionally excluded — including it causes an infinite loop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mappedAudioContacts, normalizedSelectedReceipentId, dispatch]);
 
   // ── Connecting spin animation ──────────────────────────────────────────────
   useEffect(() => {
@@ -155,6 +257,7 @@ const AudioStreamScreen = () => {
 
   const navigateToChat = useCallback(() => {
     if (!selectedContact) return;
+     
     navigation.navigate('Main', {
       screen: 'MainTabs',
       params: {
@@ -187,7 +290,7 @@ const AudioStreamScreen = () => {
 
         {/* ── Contacts strip (AudioAvatarList handles selection → audioSelectedContact redux) ── */}
          
-        <AudioAvatarList />
+        <AudioAvatarList chatContacts={mappedAudioContacts} fetchChatContacts={fetchChatContacts} />
 
         {/* ── Main panel (shown after contact selected) ── */}
         <Animated.View style={[ls.mainPanel, { opacity: panelOpacity, maxHeight: panelMaxH }]}>

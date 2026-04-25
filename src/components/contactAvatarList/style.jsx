@@ -9,14 +9,14 @@ export default StyleSheet.create({
   avatarRowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SW(18),
-    marginTop: SW(16),
+    paddingHorizontal: SW(12),
+    marginTop: SW(8),
     borderTopColor: appColors.secondary,
     borderTopWidth: 0.8,
     borderBottomColor: appColors.secondary,
     borderBottomWidth: 0.8,
-    paddingVertical: SW(12),
-    backgroundColor: 'rgba(255, 255, 255, 0.01)',
+    paddingVertical: SW(8),
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
 
   refreshIconBtn: {
@@ -28,7 +28,8 @@ export default StyleSheet.create({
     backgroundColor: 'rgba(46, 213, 115, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SW(10),
+    marginLeft: SW(8),
+    marginRight: SW(2),
     shadowColor: '#2ED573',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
@@ -37,41 +38,43 @@ export default StyleSheet.create({
   },
 
   avatarRow: {
-    flexGrow: 0,
+    flex: 1,
   },
 
   avatarRowContent: {
     paddingRight: SW(12),
-    alignItems: 'center',
+    alignItems: 'stretch',
     gap: SW(8),
   },
   avatarItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: SW(4),
+    marginRight: SW(6),
+    minWidth: SW(142),
+    maxWidth: SW(170),
+    paddingVertical: SW(6),
+    paddingHorizontal: SW(8),
+    borderRadius: SW(16),
+    borderWidth: 1,
+    borderColor: 'rgba(143,163,200,0.24)',
+    backgroundColor: 'rgba(15, 29, 52, 0.7)',
   },
+
+  avatarItemSelected: {
+    borderColor: 'rgba(77,163,255,0.85)',
+    backgroundColor: 'rgba(77,163,255,0.14)',
+  },
+
   avatarCircleWrap: {
     position: 'relative',
-    paddingTop: SW(8),
+    marginRight: SW(8),
   },
-  selectedTopLine: {
-    position: 'absolute',
-    top: 0,
-    alignSelf: 'center',
-    width: SW(24),
-    height: SW(3),
-    borderRadius: SW(2),
-    backgroundColor: '#4DA3FF',
-    shadowColor: '#4DA3FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.75,
-    shadowRadius: 5,
-    elevation: 5,
-  },
+
   avatarCircle: {
-    width: SW(48),
-    height: SW(48),
-    borderRadius: SW(24),
-    borderWidth: SW(1.8),
+    width: SW(38),
+    height: SW(38),
+    borderRadius: SW(19),
+    borderWidth: SW(1.4),
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -83,20 +86,21 @@ export default StyleSheet.create({
   },
   onlineDot: {
     position: 'absolute',
-    right: SW(1),
-    bottom: SW(1),
-    width: SW(11),
-    height: SW(11),
-    borderRadius: SW(5.5),
+    right: 0,
+    bottom: 0,
+    width: SW(10),
+    height: SW(10),
+    borderRadius: SW(5),
     backgroundColor: '#2ED573',
-    borderWidth: 1.6,
+    borderWidth: 1.4,
     borderColor: '#0A1628',
   },
+
   avatarAdd: {
-    width: SW(48),
-    height: SW(48),
-    borderRadius: SW(24),
-    borderWidth: SW(1.8),
+    width: SW(38),
+    height: SW(38),
+    borderRadius: SW(19),
+    borderWidth: SW(1.4),
     borderColor: '#4DA3FF',
     borderStyle: 'dashed',
     justifyContent: 'center',
@@ -117,23 +121,39 @@ export default StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: SW(24),
+    borderRadius: SW(19),
+  },
+
+  avatarMeta: {
+    flex: 1,
+    minWidth: 0,
   },
 
   avatarLabel: {
     color: appColors.white,
     fontFamily: appFonts.NunitoBold,
     fontSize: SF(12),
-    marginTop: 6,
-    textAlign: 'center',
     lineHeight: SF(14),
   },
 
+  avatarLabelSelected: {
+    color: '#7EC0FF',
+  },
+
   avatarPhoneNumber: {
-    color: appColors.white,
+    color: appColors.bodyColor,
     fontFamily: appFonts.NunitoRegular,
-    fontSize: SF(9),
+    fontSize: SF(10),
     marginTop: 2,
+  },
+
+  avatarPhoneSelected: {
+    color: '#AFCBEF',
+  },
+
+  addItem: {
+    borderColor: 'rgba(77,163,255,0.45)',
+    backgroundColor: 'rgba(77,163,255,0.08)',
   },
 
   selectedDot: {

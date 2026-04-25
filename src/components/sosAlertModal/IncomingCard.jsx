@@ -327,7 +327,7 @@ const IncomingCard = ({ item:incomingItem, navigationRef, onAccept, onDecline, o
                 screen: 'MainTabs',
                 params: {
                   screen: 'Chat',
-                  params: { selectedMapRecipentId: item.sos_session?.user?.id },
+                  params: { selectedReceipentId: item.sos_session?.user?.id },
                 },
               });
             }
@@ -349,7 +349,7 @@ const IncomingCard = ({ item:incomingItem, navigationRef, onAccept, onDecline, o
                 screen: 'MainTabs',
                 params: {
                   screen: 'AudioStream',
-                  params: { selectedMapRecipentId: item.sos_session?.user?.id },
+                  params: { selectedReceipentId: item.sos_session?.user?.id },
                 },
               });
             }
