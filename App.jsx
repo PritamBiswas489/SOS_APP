@@ -41,12 +41,15 @@ import SOSAlertModal, { DUMMY_INCOMING_SOS, DUMMY_OUTGOING_SOS } from './src/com
 import SosFab from './src/components/sosFab/index.jsx';
 import { useIncomingSosNotifications } from './src/hook/useIncomingSosNotifications.jsx';
 import { useMySosSessions } from './src/hook/useMySosSessions.jsx';
+import { initCrashLogger, logError } from './src/middleware/nativeCrashLogger.js';
+initCrashLogger();
+// logError(new Error('Test error from App.jsx to verify crash logging is working correctly')); 
 // Isolated so that opening from FAB only re-renders this component logic
 const SOSController = React.memo(({ fabVisible, navigationRef, sosModalVisible, setSosModalVisible }) => {
   const [isOpening, setIsOpening] = useState(false);
 
   const handleFabPress = () => {
-    setIsOpening(true);
+    setIsOpening(true); 
     setSosModalVisible(true);
   };
 
@@ -96,7 +99,7 @@ const toastConfig = {
       text1Style={{color: '#fff', fontSize: 14, fontWeight: 'bold'}}
       text2Style={{color: '#aaa', fontSize: 12}}
     />
-  ),
+  ), 
 };
 const Stack = createNativeStackNavigator();
 

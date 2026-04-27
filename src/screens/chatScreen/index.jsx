@@ -122,7 +122,7 @@ const ChatScreen = ({ route }) => {
 
   useEffect(() => {
     fetchChatContacts();
-  }, [fetchChatContacts]);
+  }, [fetchChatContacts]); 
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;

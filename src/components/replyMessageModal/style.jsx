@@ -4,6 +4,10 @@ import appFonts from '../../theme/appFonts';
 import { SH, SW, SF } from '../../theme/dimensions';
 
 export default StyleSheet.create({
+  keyboardAvoiding: {
+    flex: 1,
+  },
+
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(2, 11, 27, 0.82)',

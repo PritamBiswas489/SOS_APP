@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ const AudioAvatarList = ({ chatContacts, fetchChatContacts }) => {
      const [refreshing, setRefreshing] = useState(false);
       const lastOffsetXRef = useRef(0);
       const endReachedFiredRef = useRef(false);
+      const flatListRef = useRef(null);
+      const lastAutoScrolledIdRef = useRef(null);
 
      const dispatch = useDispatch();
      const audioSelectedContact = useSelector(state => state.audioSelectedContact);
@@ -138,9 +140,47 @@ const getAvatarColor = item => {
       }
     }, [handleRefresh]);
 
+    useEffect(() => {
+      if (!audioSelectedContact?.id || !Array.isArray(chatContacts) || chatContacts.length === 0) {
+        return;
+      }
+
+      if (lastAutoScrolledIdRef.current === audioSelectedContact.id) {
+        return;
+      }
+
+      const selectedIndex = chatContacts.findIndex(contact => contact?.id === audioSelectedContact.id);
+      if (selectedIndex < 0) {
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToIndex({
+          index: selectedIndex,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      });
+
+      lastAutoScrolledIdRef.current = audioSelectedContact.id;
+    }, [chatContacts, audioSelectedContact?.id]);
+
+    const handleScrollToIndexFailed = useCallback((info) => {
+      const estimatedOffset = Math.max(0, info.averageItemLength * info.index);
+      flatListRef.current?.scrollToOffset({ offset: estimatedOffset, animated: true });
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({
+          index: info.index,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      }, 100);
+    }, []);
+
   return (
     <View style={styles.avatarRowContainer}>
       <FlatList
+        ref={flatListRef}
         horizontal
         data={chatContacts}
         keyExtractor={item => String(item.id)}
@@ -150,6 +190,7 @@ const getAvatarColor = item => {
         style={styles.avatarRow}
         contentContainerStyle={styles.avatarRowContent}
         onScroll={handleHorizontalScroll}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
         scrollEventThrottle={16}
         refreshControl={
            <RefreshControl

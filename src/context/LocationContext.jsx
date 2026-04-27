@@ -14,6 +14,7 @@ import BackgroundActions from 'react-native-background-actions';
 import { useSocket } from './SocketContext';
 import { useUserData } from '../hook/useUserData';
 import { useContactLocations } from '../hook/useContactLocations';
+import { LocationsService } from '../services/locations.service';
  
  
 
@@ -332,23 +333,30 @@ export const LocationProvider = ({ children }) => {
   const getContactsLastLocations = useCallback(async () => {
     console.log('Fetching contacts last locations from server...');
     try {
-      const response = await emit('contacts:get-locations', null);
-      console.log('Received response for contacts locations request:', response);
-      if (response?.contacts) {
-        console.log('Received contacts last locations:', response.contacts);
-        const initialLocations = {};
-        response.contacts.forEach(locData => {
-          initialLocations[locData.user_id] = {
-            latitude: locData.latitude,
-            longitude: locData.longitude,
-            altitude: locData.altitude || 0,
-            accuracy: locData.accuracy || 0,
-            heading: locData.heading || 0,
-            speed: locData.speed || 0.5,
-            isBackground: true,
-          };
+
+      const response = await new Promise((resolve, reject) => {
+        LocationsService.getContactsLastLocations(result => {
+          if (result.success) {
+            resolve(result.data);
+          } else {            
+            reject(new Error(result.error || 'Unknown error fetching locations'));
+          }        
         });
-        updateContactLocations(initialLocations);
+      });
+      if(response?.data){
+           const initialLocations = {};
+           response.data.forEach(locData => {
+              initialLocations[locData.user_id] = {
+                latitude: locData.latitude,
+                longitude: locData.longitude,
+                altitude: locData.altitude || 0,
+                accuracy: locData.accuracy || 0,
+                heading: locData.heading || 0,
+                speed: locData.speed || 0.5,
+                isBackground: true,
+              };
+           });
+           updateContactLocations(initialLocations);
       }
     } catch (err) {
       console.error('Failed to get contacts locations:', err.message);

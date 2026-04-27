@@ -96,7 +96,9 @@ const MapScreen = ({ route }) => {
   const [useGoogleMap, setUseGoogleMap] = useState(USE_GOOGLE_MAPS);
 
  
-
+ useEffect(() => {
+    console.log('Google Maps Enabled:', USE_GOOGLE_MAPS);
+  }, [USE_GOOGLE_MAPS]);
 
   // ─── Nominatim search state (used only when useGoogleMap = false) ─────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -574,25 +576,7 @@ const handleNominatimPlaceSelect = place => {
           )}
         </MapView>
 
-        {/* ══════════════════════════════════════════════════════
-            GOOGLE MAP TOGGLE SWITCH
-            ══════════════════════════════════════════════════════ */}
-        <View style={googleToggleStyle.wrapper}>
-          <Icon
-            name={useGoogleMap ? 'map' : 'public'}
-            size={14}
-            color={useGoogleMap ? '#4DA3FF' : '#7A8499'}
-          />
-          <Text style={googleToggleStyle.label}>
-            {useGoogleMap ? 'Google Map' : 'OSM Map'}
-          </Text>
-          <Switch
-            value={useGoogleMap}
-            onValueChange={val => setUseGoogleMap(val)}
-            trackColor={{ false: '#1e2a3a', true: '#1a3a6a' }}
-            thumbColor={useGoogleMap ? '#4DA3FF' : '#7A8499'}
-          />
-        </View>
+        
 
         {/* ROUTE INFO BADGE */}
         {routeInfo && (
