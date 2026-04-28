@@ -26,6 +26,7 @@ DerivedData
 .env
 .env.local
 .env.production
+keyStorePassword.txt
 
 # Android/IntelliJ
 #

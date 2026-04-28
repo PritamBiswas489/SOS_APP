@@ -14,6 +14,7 @@ import { SocketProvider } from './src/context/SocketContext';
 import { ChatProvider } from './src/context/ChatContext';
 import { LocationProvider } from './src/context/LocationContext.jsx';
 import { TrustedContactsProvider } from './src/context/TrustedProviderContext.jsx';
+import HealthProvider from './src/context/HealthProvider.jsx';
 
 import NetInfo from '@react-native-community/netinfo';
 import InAppNotificationBanner from './src/components/inAppNotificationBanner/index.jsx'; 
@@ -42,7 +43,7 @@ import SosFab from './src/components/sosFab/index.jsx';
 import { useIncomingSosNotifications } from './src/hook/useIncomingSosNotifications.jsx';
 import { useMySosSessions } from './src/hook/useMySosSessions.jsx';
 import { initCrashLogger, logError } from './src/middleware/nativeCrashLogger.js';
-initCrashLogger();
+// initCrashLogger();
 // logError(new Error('Test error from App.jsx to verify crash logging is working correctly')); 
 // Isolated so that opening from FAB only re-renders this component logic
 const SOSController = React.memo(({ fabVisible, navigationRef, sosModalVisible, setSosModalVisible }) => {
@@ -427,6 +428,13 @@ const App = () => {
       <TrustedContactsProvider>
         <ChatProvider>
           <LocationProvider>
+            <HealthProvider
+              userAge={28}              // user's age → used for max HR calculation
+              criticalThreshold={80}   // stress score that triggers SOS alert
+              gfRefreshMs={30_000}     // Google Fit polling interval
+              onSos={() => {}}         // called when user confirms SOS
+
+            >
             <GestureHandlerRootView style={{ flex: 1 }}>
               <SafeAreaProvider>
                 {renderContent()}
@@ -445,6 +453,7 @@ const App = () => {
                 setSosModalVisible={setSosModalVisible}
               />
             </GestureHandlerRootView>
+            </HealthProvider>
           </LocationProvider>
         </ChatProvider>
       </TrustedContactsProvider>
