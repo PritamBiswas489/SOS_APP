@@ -10,6 +10,7 @@ import MapScreen from '../screens/mapScreen';
 import HealthScreen from '../screens/healthScreen';
 import AudioStreamScreen from '../screens/audioStream';
 import ChatScreen from '../screens/chatScreen';
+import StressMonitorScreen from '../screens/stressMonitor';
  
 
 const Tab = createBottomTabNavigator();
@@ -77,7 +78,11 @@ const BottomTabNavigator = () => {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="Health" component={HealthScreen} />
+      <Tab.Screen name="Health" component={StressMonitorScreen}
+       options={{
+          title: 'Stress Monitor',
+       }}
+      />
       <Tab.Screen
         name="AudioStream"
         component={AudioStreamScreen}

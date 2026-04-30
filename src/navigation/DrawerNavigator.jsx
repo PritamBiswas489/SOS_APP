@@ -16,7 +16,7 @@ import ContactsScreen from '../screens/contactsScreen';
 import analysisScreen from '../screens/analysis';
 import CreatorScreen from '../screens/soupCreatorScreen/index.jsx';
 import ListenerScreen from '../screens/soupListenerScreen/index.jsx';
-import StressMonitorScreen from '../screens/stressMonitor/index.jsx';
+ 
 import { Alert } from 'react-native';
  
 import { UserService } from '../services/user.service';
@@ -208,19 +208,7 @@ const DrawerNavigator = () => {
 
       )}
 
-      {isDevUser && (
-        <Drawer.Screen
-          name="StressMonitor"
-          component={StressMonitorScreen}
-          options={{
-            drawerLabel: 'Stress Monitor',
-            drawerIcon: ({ color, size }) => (
-              <Icon name="settings" size={size} color={color} />
-            ),
-          }}
-        />
-        
-      )}
+      
     </Drawer.Navigator>
   );
 };

@@ -615,16 +615,7 @@ const ConversationList = ({
     loadMessages(currentRoomId, 1, NUMBER_OF_MESSAGES_TO_LOAD).catch(() => {});
   }, [currentRoomId, loadMessages]);
 
-  useEffect(() => {
-    if (!currentRoomId || isHistoryLoading || chatItems.length === 0) return;
-    if (didInitialRoomScrollRef.current) return;
 
-    scrollToBottomImmediate();
-    didInitialRoomScrollRef.current = true;
-    setShowScrollToBottom(false);
-  }, [currentRoomId, isHistoryLoading, chatItems.length, scrollToBottomImmediate]);
-
- 
 const focusCallback = useCallback(() => {
   if (!currentRoomId || !currentRoomConversations?.length) return;
 
@@ -788,8 +779,7 @@ const handleReload = useCallback(() => {
   const handleContentSizeChange = useCallback(() => {
     if (
       !shouldScrollAfterLoadRef.current ||
-      chatItems.length === 0 ||
-      isHistoryLoading
+      chatItems.length === 0
     ) {
       return;
     }
@@ -805,7 +795,7 @@ const handleReload = useCallback(() => {
       shouldScrollAfterLoadRef.current = false;
       pendingAutoScrollPassesRef.current = 0;
     }
-  }, [chatItems.length, isHistoryLoading, scrollToBottomImmediate]);
+  }, [chatItems.length, scrollToBottomImmediate]);
 
   const renderNoConversation = useCallback(() => {
     if (isInitialConversationLoading) {

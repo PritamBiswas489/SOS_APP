@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const FAB_SIZE = 60;
-const PADDING = 16; // min distance from screen edges
+const FAB_SIZE = 40;
+const PADDING = 10; // min distance from screen edges
 
 const SosFab = ({ onPress, visible = true, loading = false }) => {
   const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -20,14 +20,14 @@ const SosFab = ({ onPress, visible = true, loading = false }) => {
   const position = useRef(
     new Animated.ValueXY({
       x: SCREEN_W - FAB_SIZE - PADDING,
-      y: 60,
+      y: 20,
     }),
   ).current;
 
   // Track raw coords for clamping
   const posRef = useRef({
     x: SCREEN_W - FAB_SIZE - PADDING,
-    y: 60,
+    y: 20,
   });
 
   // Entrance scale

@@ -5,9 +5,22 @@
 import 'react-native-gesture-handler';
 import { registerGlobals } from 'react-native-webrtc';
 registerGlobals();
+
+// Suppress unhandled rejections from react-native-ble-plx internal promises
+// when BleManager is destroyed or re-initialized during hot reload / component unmount.
+// These are library-internal promises that react-native-ble-plx never attaches .catch() to.
+const _globalHandler = ErrorUtils.getGlobalHandler();
+ErrorUtils.setGlobalHandler((error, isFatal) => {
+  if (
+    error?.name === 'BleError' ||
+    error?.message?.includes('BleManager was destroyed') ||
+    error?.message?.includes('This is probably a bug')
+  ) return;
+  _globalHandler(error, isFatal);
+});
 import { Alert, AppRegistry } from 'react-native';
 import App from './App';
-import { name as appName } from './app.json';
+import { name as appName } from './app.json'; 
 import { Provider } from 'react-redux';
 import store from './src/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
