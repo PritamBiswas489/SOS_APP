@@ -9,14 +9,14 @@ const STRESS_CONTACTS_LAST_HEALTH_DATA_ENDPOINT = '/trusted-contact/contacts-get
 export class StressDataService {
   static async insertFromContext(payload, callback = () => {}) {
     try {
-      const record = buildStressRecord(payload);
-      if (!record) {
+     
+      if (!payload) {
         callback({success: false, error: 'No device/Health Connect data to save'});
         return;
       }
 
-      const response = await api.post(STRESS_DB_ENDPOINT, record);
-      callback({success: true, data: {record, remote: response.data}});
+      const response = await api.post(STRESS_DB_ENDPOINT, payload);
+      callback({success: true, data: {record: payload, remote: response.data}});
     } catch (error) {
       callback({
         success: false,

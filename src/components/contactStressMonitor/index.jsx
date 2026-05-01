@@ -15,17 +15,20 @@ import {
   Easing,
 } from 'react-native';
 import styles from './style';
+import { useSelector } from 'react-redux';
+import { STRESS_STATE } from '../../context/StressContext';
+import { useStress } from '../../context/StressContext';
+import { formatDateSeparator, formatMessageTime } from '../../config/utility';
 
 // ─────────────────────────────────────────────
 // STATIC PLACEHOLDER DATA  (replace with props / selector later)
 // ─────────────────────────────────────────────
- 
- 
+
 const STRESS_TIPS = {
-  Relaxed:  'Your contact is calm and balanced. No action needed.',
-  Low:      'Mild tension. A quick check-in message might be nice.',
+  Relaxed: 'Your contact is calm and balanced. No action needed.',
+  Low: 'Mild tension. A quick check-in message might be nice.',
   Moderate: 'Stress is building — consider reaching out.',
-  High:     'Elevated stress detected. Recommend contacting them soon.',
+  High: 'Elevated stress detected. Recommend contacting them soon.',
   Critical: 'Critical level — contact them immediately or send SOS.',
 };
 
@@ -39,8 +42,16 @@ function ContactAvatar({ contact, stressColor }) {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.07, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1,    duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, {
+          toValue: 1.07,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
       ]),
     );
     loop.start();
@@ -48,12 +59,25 @@ function ContactAvatar({ contact, stressColor }) {
   }, []);
 
   return (
-    <Animated.View style={[styles.avatarOuter, { transform: [{ scale: pulseAnim }], shadowColor: stressColor }]}>
+    <Animated.View
+      style={[
+        styles.avatarOuter,
+        { transform: [{ scale: pulseAnim }], shadowColor: stressColor },
+      ]}
+    >
       <View style={[styles.avatarRing, { borderColor: stressColor }]}>
         {contact.profile_image ? (
-          <Image source={{ uri: contact.profile_image }} style={styles.avatarImg} />
+          <Image
+            source={{ uri: contact.profile_image }}
+            style={styles.avatarImg}
+          />
         ) : (
-          <View style={[styles.avatarFallback, { backgroundColor: stressColor + '22' }]}>
+          <View
+            style={[
+              styles.avatarFallback,
+              { backgroundColor: stressColor + '22' },
+            ]}
+          >
             <Text style={[styles.avatarInitial, { color: stressColor }]}>
               {contact.initial || contact.name?.[0]?.toUpperCase() || '?'}
             </Text>
@@ -65,16 +89,18 @@ function ContactAvatar({ contact, stressColor }) {
 }
 
 function StressGauge({ score, state }) {
-  const anim      = useRef(new Animated.Value(0)).current;
+  const anim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseLoop = useRef(null);
   const safeScore = Math.max(0, Math.min(100, Number(score) || 0));
-  const scorePct  = Math.round(safeScore);
+  const scorePct = Math.round(safeScore);
 
   useEffect(() => {
     Animated.timing(anim, {
-      toValue: safeScore / 100, duration: 1200,
-      easing: Easing.out(Easing.cubic), useNativeDriver: false,
+      toValue: safeScore / 100,
+      duration: 1200,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
     }).start();
   }, [safeScore]);
 
@@ -84,8 +110,16 @@ function StressGauge({ score, state }) {
     if (state.level >= 3) {
       pulseLoop.current = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.04, duration: 700, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1,    duration: 700, useNativeDriver: true }),
+          Animated.timing(pulseAnim, {
+            toValue: 1.04,
+            duration: 700,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 700,
+            useNativeDriver: true,
+          }),
         ]),
       );
       pulseLoop.current.start();
@@ -94,28 +128,47 @@ function StressGauge({ score, state }) {
   }, [state.level]);
 
   const ZONES = [
-    { from: 0,  to: 25,  color: '#00E5A0', label: 'Relaxed' },
-    { from: 25, to: 50,  color: '#FFD166', label: 'Elevated' },
-    { from: 50, to: 75,  color: '#FF8C42', label: 'High' },
+    { from: 0, to: 25, color: '#00E5A0', label: 'Relaxed' },
+    { from: 25, to: 50, color: '#FFD166', label: 'Elevated' },
+    { from: 50, to: 75, color: '#FF8C42', label: 'High' },
     { from: 75, to: 100, color: '#FF3366', label: 'Critical' },
   ];
 
   const activeZone = ZONES.find(z => scorePct < z.to) ?? ZONES[3];
 
   return (
-    <Animated.View style={[styles.gaugeCard, { transform: [{ scale: pulseAnim }] }]}>
+    <Animated.View
+      style={[styles.gaugeCard, { transform: [{ scale: pulseAnim }] }]}
+    >
       {/* Top color accent bar */}
       <View style={[styles.gaugeAccentBar, { backgroundColor: state.color }]} />
 
       {/* Circular dial */}
       <View style={styles.gaugeCircleWrap}>
-        <View style={[styles.gaugeOuterRing, { borderColor: state.color, shadowColor: state.color }]}>
+        <View
+          style={[
+            styles.gaugeOuterRing,
+            { borderColor: state.color, shadowColor: state.color },
+          ]}
+        >
           <View style={styles.gaugeInner}>
             <Text style={styles.gaugeEmoji}>{state.emoji}</Text>
-            <Text style={[styles.gaugeScore, { color: state.color }]}>{scorePct}</Text>
+            <Text style={[styles.gaugeScore, { color: state.color }]}>
+              {scorePct}
+            </Text>
             <Text style={styles.gaugeScoreUnit}>/ 100</Text>
-            <View style={[styles.gaugeStatePill, { backgroundColor: state.color + '20', borderColor: state.color + '50' }]}>
-              <Text style={[styles.gaugeStateLabel, { color: state.color }]}>{state.label}</Text>
+            <View
+              style={[
+                styles.gaugeStatePill,
+                {
+                  backgroundColor: state.color + '20',
+                  borderColor: state.color + '50',
+                },
+              ]}
+            >
+              <Text style={[styles.gaugeStateLabel, { color: state.color }]}>
+                {state.label}
+              </Text>
             </View>
           </View>
         </View>
@@ -129,12 +182,16 @@ function StressGauge({ score, state }) {
         </View>
         <View style={styles.gaugeStatSep} />
         <View style={styles.gaugeStatItem}>
-          <Text style={[styles.gaugeStatVal, { color: state.color }]}>{state.label}</Text>
+          <Text style={[styles.gaugeStatVal, { color: state.color }]}>
+            {state.label}
+          </Text>
           <Text style={styles.gaugeStatKey}>State</Text>
         </View>
         <View style={styles.gaugeStatSep} />
         <View style={styles.gaugeStatItem}>
-          <Text style={[styles.gaugeStatVal, { color: activeZone.color }]}>{activeZone.label}</Text>
+          <Text style={[styles.gaugeStatVal, { color: activeZone.color }]}>
+            {activeZone.label}
+          </Text>
           <Text style={styles.gaugeStatKey}>Zone</Text>
         </View>
       </View>
@@ -143,33 +200,52 @@ function StressGauge({ score, state }) {
       <View style={styles.gaugeZoneWrap}>
         <View style={styles.gaugeZoneHeaderRow}>
           <Text style={styles.gaugeZoneHeaderLabel}>Stress Load</Text>
-          <Text style={[styles.gaugeZoneHeaderPct, { color: state.color }]}>{scorePct}%</Text>
+          <Text style={[styles.gaugeZoneHeaderPct, { color: state.color }]}>
+            {scorePct}%
+          </Text>
         </View>
         <View style={styles.gaugeSegBar}>
           {ZONES.map((z, i) => (
             <View key={i} style={styles.gaugeSegSlot}>
-              <View style={[styles.gaugeSegTrack, { backgroundColor: z.color + '20' }]}>
-                <Animated.View style={[styles.gaugeSegFill, {
-                  backgroundColor: z.color,
-                  width: anim.interpolate({
-                    inputRange: [z.from / 100, z.to / 100],
-                    outputRange: ['0%', '100%'],
-                    extrapolate: 'clamp',
-                  }),
-                }]} />
+              <View
+                style={[
+                  styles.gaugeSegTrack,
+                  { backgroundColor: z.color + '20' },
+                ]}
+              >
+                <Animated.View
+                  style={[
+                    styles.gaugeSegFill,
+                    {
+                      backgroundColor: z.color,
+                      width: anim.interpolate({
+                        inputRange: [z.from / 100, z.to / 100],
+                        outputRange: ['0%', '100%'],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                  ]}
+                />
               </View>
             </View>
           ))}
         </View>
         <View style={styles.gaugeTickRow}>
           {['0', '25', '50', '75', '100'].map((t, i) => (
-            <Text key={i} style={styles.gaugeTick}>{t}</Text>
+            <Text key={i} style={styles.gaugeTick}>
+              {t}
+            </Text>
           ))}
         </View>
         <View style={styles.gaugeZoneLegend}>
           {ZONES.map((z, i) => (
             <View key={i} style={styles.gaugeZoneLegendItem}>
-              <View style={[styles.gaugeZoneLegendDot, { backgroundColor: z.color }]} />
+              <View
+                style={[
+                  styles.gaugeZoneLegendDot,
+                  { backgroundColor: z.color },
+                ]}
+              />
               <Text style={styles.gaugeZoneLegendText}>{z.label}</Text>
             </View>
           ))}
@@ -186,8 +262,16 @@ function BpmHero({ bpm, avgBpm, stressColor, isLive, lastUpdated }) {
     if (!isLive) return;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(dotAnim, { toValue: 0.2, duration: 500, useNativeDriver: true }),
-        Animated.timing(dotAnim, { toValue: 1,   duration: 500, useNativeDriver: true }),
+        Animated.timing(dotAnim, {
+          toValue: 0.2,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dotAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
       ]),
     );
     loop.start();
@@ -199,11 +283,13 @@ function BpmHero({ bpm, avgBpm, stressColor, isLive, lastUpdated }) {
       <View style={styles.bpmHeroLeft}>
         <Text style={styles.bpmHeroLabel}>Heart Rate</Text>
         <View style={styles.bpmValRow}>
-          <Text style={[styles.bpmVal, { color: stressColor }]}>{bpm ?? '––'}</Text>
+          <Text style={[styles.bpmVal, { color: stressColor }]}>
+            {bpm ?? '––'}
+          </Text>
           <Text style={styles.bpmUnit}>bpm</Text>
         </View>
         <Text style={styles.bpmMeta}>
-          Avg {avgBpm || '–'} bpm  ·  {lastUpdated}
+          Avg {avgBpm || '–'} bpm · {lastUpdated}
         </Text>
       </View>
 
@@ -214,7 +300,9 @@ function BpmHero({ bpm, avgBpm, stressColor, isLive, lastUpdated }) {
             <Text style={styles.liveText}>LIVE</Text>
           </View>
         )}
-        <View style={[styles.bpmPulseRing, { borderColor: stressColor + '60' }]}>
+        <View
+          style={[styles.bpmPulseRing, { borderColor: stressColor + '60' }]}
+        >
           <Text style={styles.bpmPulseIcon}>🫀</Text>
         </View>
       </View>
@@ -260,18 +348,27 @@ function BreakdownBar({ label, score, max, color, icon }) {
         <View style={styles.barTopRow}>
           <Text style={styles.barLabel}>{label}</Text>
           <Text style={[styles.barScore, { color }]}>
-            {score}<Text style={styles.barMax}>/{max}</Text>
+            {score}
+            <Text style={styles.barMax}>/{max}</Text>
           </Text>
         </View>
         <View style={styles.barTrack}>
           <Animated.View
-            style={[styles.barFill, {
-              width: widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
-              backgroundColor: color,
-            }]}
+            style={[
+              styles.barFill,
+              {
+                width: widthAnim.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: ['0%', '100%'],
+                }),
+                backgroundColor: color,
+              },
+            ]}
           />
         </View>
-        <Text style={[styles.barPct, { color: color + 'AA' }]}>{Math.round(pct)}% of max</Text>
+        <Text style={[styles.barPct, { color: color + 'AA' }]}>
+          {Math.round(pct)}% of max
+        </Text>
       </View>
     </View>
   );
@@ -284,8 +381,16 @@ function StatusBanner({ level, stressColor, label }) {
     if (level >= 3) {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(opacity, { toValue: 1,   duration: 500, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0.4, duration: 500, useNativeDriver: true }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0.4,
+            duration: 500,
+            useNativeDriver: true,
+          }),
         ]),
       );
       loop.start();
@@ -298,10 +403,21 @@ function StatusBanner({ level, stressColor, label }) {
   if (level < 2) return null;
 
   return (
-    <Animated.View style={[styles.banner, { opacity, borderColor: stressColor, backgroundColor: stressColor + '10' }]}>
+    <Animated.View
+      style={[
+        styles.banner,
+        {
+          opacity,
+          borderColor: stressColor,
+          backgroundColor: stressColor + '10',
+        },
+      ]}
+    >
       <Text style={styles.bannerIcon}>{level >= 3 ? '⚠️' : 'ℹ️'}</Text>
       <Text style={[styles.bannerText, { color: stressColor }]}>
-        {level >= 3 ? `${label} Stress — Consider reaching out` : `${label} Stress — Monitoring closely`}
+        {level >= 3
+          ? `${label} Stress — Consider reaching out`
+          : `${label} Stress — Monitoring closely`}
       </Text>
     </Animated.View>
   );
@@ -311,16 +427,52 @@ function StatusBanner({ level, stressColor, label }) {
 // Main Component
 // ─────────────────────────────────────────────
 
-export default function ContactStressMonitor({
-  // TODO: pass these props from the parent screen when real data is available
-  contact, 
-  stress  , 
-  metrics  ,
-  breakdown  
-}) {
-  const hrvColor  = metrics.rmssd > 40 ? '#00E5A0' : metrics.rmssd > 20 ? '#FFD166' : '#FF3366';
-  const zoneColor = metrics.hrIntensity > 70 ? '#FF3366' : metrics.hrIntensity > 50 ? '#FFD166' : '#00E5A0';
-return (
+export default function ContactStressMonitor() {
+   const healthSelectedContact = useSelector(
+    state => state.healthSelectedContact,
+  );
+  const {contactsLastHealthData} = useStress();
+  const selectedContactData =
+    contactsLastHealthData?.[healthSelectedContact?.item?.receipent_id];
+  const contact = healthSelectedContact?.item;
+  const stress = {
+    score: selectedContactData?.stress?.score ?? 0,
+    label:
+      selectedContactData?.stress?.state?.label ?? STRESS_STATE.RELAXED.label,
+    emoji:
+      selectedContactData?.stress?.state?.emoji ?? STRESS_STATE.RELAXED.emoji,
+    color:
+      selectedContactData?.stress?.state?.color ?? STRESS_STATE.RELAXED.color,
+    level:
+      selectedContactData?.stress?.state?.level ?? STRESS_STATE.RELAXED.level,
+  };
+  const metrics = {
+    bpm: selectedContactData?.stress?.currentHR ?? 0,
+    avgBpm: selectedContactData?.stress?.avgHR ?? 0,
+    rmssd: selectedContactData?.stress?.rmssd ?? 0,
+    hrIntensity: selectedContactData?.stress?.hrIntensity ?? 0,
+    lastUpdated:
+      formatDateSeparator(selectedContactData?.recordedAt) +
+      ' ' +
+      formatMessageTime(selectedContactData?.recordedAt),
+    isLive: true,
+  };
+  const breakdown = {
+    hrScore: selectedContactData?.stress?.hrScore ?? 0,
+    rmssdScore: selectedContactData?.stress?.rmssdScore ?? 0,
+  };
+  const hrvColor =
+    metrics.rmssd > 40 ? '#00E5A0' : metrics.rmssd > 20 ? '#FFD166' : '#FF3366';
+  const zoneColor =
+    metrics.hrIntensity > 70
+      ? '#FF3366'
+      : metrics.hrIntensity > 50
+      ? '#FFD166'
+      : '#00E5A0';
+ 
+  
+
+  return (
     <ScrollView
       style={styles.root}
       contentContainerStyle={styles.scrollContent}
@@ -330,20 +482,34 @@ return (
       <View style={styles.contactHeader}>
         <ContactAvatar contact={contact} stressColor={stress.color} />
         <View style={styles.contactInfo}>
-          <Text style={styles.contactName} numberOfLines={1}>{contact.name}</Text>
+          <Text style={styles.contactName} numberOfLines={1}>
+            {contact.name}
+          </Text>
           {contact.phone_number ? (
             <Text style={styles.contactPhone}>{contact.phone_number}</Text>
           ) : null}
-          <View style={[styles.stressLevelPill, { backgroundColor: stress.color + '18', borderColor: stress.color + '40' }]}>
+          <View
+            style={[
+              styles.stressLevelPill,
+              {
+                backgroundColor: stress.color + '18',
+                borderColor: stress.color + '40',
+              },
+            ]}
+          >
             <Text style={[styles.stressLevelText, { color: stress.color }]}>
-              {stress.emoji}  {stress.label}
+              {stress.emoji} {stress.label}
             </Text>
           </View>
         </View>
       </View>
 
       {/* ── Alert Banner ── */}
-      <StatusBanner level={stress.level} stressColor={stress.color} label={stress.label} />
+      <StatusBanner
+        level={stress.level}
+        stressColor={stress.color}
+        label={stress.label}
+      />
 
       {/* ── Stress Gauge ── */}
       <StressGauge score={stress.score} state={stress} />
@@ -365,7 +531,13 @@ return (
           value={metrics.rmssd}
           unit="ms"
           color={hrvColor}
-          sub={metrics.rmssd > 40 ? 'Good' : metrics.rmssd > 20 ? 'Moderate' : 'Low'}
+          sub={
+            metrics.rmssd > 40
+              ? 'Good'
+              : metrics.rmssd > 20
+              ? 'Moderate'
+              : 'Low'
+          }
         />
         <MetricCard
           icon="⚡"
@@ -373,7 +545,13 @@ return (
           value={metrics.hrIntensity}
           unit="%"
           color={zoneColor}
-          sub={metrics.hrIntensity > 70 ? 'High' : metrics.hrIntensity > 50 ? 'Elevated' : 'Normal'}
+          sub={
+            metrics.hrIntensity > 70
+              ? 'High'
+              : metrics.hrIntensity > 50
+              ? 'Elevated'
+              : 'Normal'
+          }
         />
       </View>
 
@@ -381,15 +559,37 @@ return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Score Breakdown</Text>
-          <View style={[styles.scorePill, { backgroundColor: stress.color + '18', borderColor: stress.color + '40' }]}>
-            <Text style={[styles.scorePillText, { color: stress.color }]}>{stress.score}/100</Text>
+          <View
+            style={[
+              styles.scorePill,
+              {
+                backgroundColor: stress.color + '18',
+                borderColor: stress.color + '40',
+              },
+            ]}
+          >
+            <Text style={[styles.scorePillText, { color: stress.color }]}>
+              {stress.score}/100
+            </Text>
           </View>
         </View>
         <Text style={styles.sectionDesc}>
           How the stress index is calculated from this contact's biometrics.
         </Text>
-        <BreakdownBar icon="🫀" label="Heart Rate"   score={breakdown.hrScore}    max={40} color="#FF8C42" />
-        <BreakdownBar icon="💓" label="HRV Quality"  score={breakdown.rmssdScore} max={30} color="#5352ED" />
+        <BreakdownBar
+          icon="🫀"
+          label="Heart Rate"
+          score={breakdown.hrScore}
+          max={40}
+          color="#FF8C42"
+        />
+        <BreakdownBar
+          icon="💓"
+          label="HRV Quality"
+          score={breakdown.rmssdScore}
+          max={30}
+          color="#5352ED"
+        />
       </View>
 
       {/* ── Tip ── */}
@@ -398,7 +598,8 @@ return (
         <View style={styles.tipBody}>
           <Text style={styles.tipTitle}>Recommendation</Text>
           <Text style={styles.tipText}>
-            {STRESS_TIPS[stress.label] ?? `Keep monitoring this contact's wellbeing.`}
+            {STRESS_TIPS[stress.label] ??
+              `Keep monitoring this contact's wellbeing.`}
           </Text>
         </View>
       </View>
@@ -407,6 +608,3 @@ return (
     </ScrollView>
   );
 }
-
-
- 

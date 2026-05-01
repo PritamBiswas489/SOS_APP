@@ -22,6 +22,8 @@ import {Vibration, Alert} from 'react-native';
 import {useGoogleFit} from './GoogleFitContext';
 import {useBle} from './BleContext';
 import {StressDataService} from '../services/stressData.service';
+import { useSocket } from './SocketContext';
+import { buildStressRecord } from '../models/stressRecord.model';
 
 // ── Stress States ─────────────────────────────
 export const STRESS_STATE = {
@@ -189,6 +191,7 @@ export function StressProvider({
   const prevScoreRef = useRef(0);
   const lastSavedAtRef = useRef(0);
   const lastSavedFingerprintRef = useRef('');
+  const { on, emitNoAck, emit, isConnected } = useSocket();
 
   // ────────────────────────────────────────────
   // GOOGLE FIT DATA BLOCK
@@ -341,14 +344,16 @@ export function StressProvider({
 
     lastSavedAtRef.current = now;
     lastSavedFingerprintRef.current = fingerprint;
-
-    StressDataService.insertFromContext(
-      {
+    const insertData = buildStressRecord( {
         stress,
         activeSource,
         bleData,
         googleFitData,
-      },
+      });
+    // Emit to trusted contacts before saving, so they get the update faster (no API roundtrip)  
+    emitNoAck('contact:healthdata:update', JSON.stringify(insertData)); 
+    StressDataService.insertFromContext(
+      insertData,
       result => {
         if (__DEV__ && !result.success) {
           console.log('Stress save skipped/failed:', result.error);
@@ -363,6 +368,7 @@ export function StressProvider({
     gf.hrReadings.length,
     googleFitData,
     stress,
+    emitNoAck
   ]);
 
   // ────────────────────────────────────────────
@@ -461,6 +467,66 @@ export function StressProvider({
     // Fetch contacts' last health data on mount
     getContactLastHealthData();
   }, [getContactLastHealthData]);
+
+  useEffect(() => {
+    if(!isConnected) return;
+
+    const unsubs = [
+      on('contact:healthdata:updated', (payload) => {
+         const data = {};
+         if (typeof payload === 'string') {
+           try {
+             const parsed = JSON.parse(payload);
+             Object.assign(data, parsed);
+           } catch (err) {
+             console.error(
+               'Failed to parse contact:healthdata:updated payload:',
+               err.message,
+             );
+             return;
+           }
+         } else if (typeof payload === 'object' && payload !== null) {
+           Object.assign(data, payload);
+         } else {
+           console.error(
+             'Received invalid payload for contact:healthdata:updated:',
+             payload,
+           );
+           return;
+         }
+         console.log('Received contact:healthdata:updated event with data:', data);
+         if(data?.userId){
+          console.log(`Received health data update for user ${data.userId}:`, data);
+          const healthData = data.healthData || {};
+          const fallbackState = {
+                stress: {
+                  score:       Number(healthData.stress_score ?? 0),
+                  state:       Object.values(STRESS_STATE).find(
+                                 s => s.label.toLowerCase() === (healthData.stress_state ?? '').toLowerCase()
+                               ) ?? STRESS_STATE.RELAXED,
+                  rmssd:       Number(healthData.rmssd ?? 0),
+                  currentHR:   healthData.current_hr  == null ? null : Number(healthData.current_hr),
+                  avgHR:       healthData.avg_hr      == null ? null : Number(healthData.avg_hr),
+                  hrIntensity: Number(healthData.hr_intensity ?? 0),
+                  hrScore:     Number(healthData.hr_score     ?? 0),
+                  rmssdScore:  Number(healthData.rmssd_score  ?? 0),
+                },
+                source:     healthData.source,
+                recordedAt: healthData.created_at,
+              };
+              console.log(`Updating last health data for user ${data.userId} with:`, fallbackState);
+            setContactsLastHealthData(prev => ({
+              ...prev,
+              [data.userId]:  fallbackState,
+             }));
+         }
+      })
+    ];
+    return () => {      
+      unsubs.forEach(unsub => unsub());
+    }
+
+  },[isConnected, on, emitNoAck])
 
   // ────────────────────────────────────────────
   // CONTEXT VALUE
