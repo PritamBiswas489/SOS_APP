@@ -14,39 +14,13 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import styles from './style';
 
 // ─────────────────────────────────────────────
 // STATIC PLACEHOLDER DATA  (replace with props / selector later)
 // ─────────────────────────────────────────────
-const STATIC_CONTACT = {
-  name: 'Sarah Johnson',
-  phone_number: '+1 (555) 012‑3456',
-  profile_image: null,        // TODO: replace with contact.profile_image
-  initial: 'S',
-};
-
-const STATIC_STRESS = {
-  score: 62,                  // TODO: replace with live score
-  label: 'Moderate',          // TODO: derive from score
-  emoji: '😐',               // TODO: derive from score
-  color: '#FFD166',           // TODO: derive from score
-  level: 2,                   // 0–4
-};
-
-const STATIC_METRICS = {
-  bpm: 88,                    // TODO: replace with contact live BPM
-  avgBpm: 74,                 // TODO: replace with contact avg BPM
-  rmssd: 28,                  // TODO: replace with contact HRV
-  hrIntensity: 55,            // TODO: replace (%)
-  lastUpdated: '2 min ago',   // TODO: replace with real timestamp
-  isLive: false,              // TODO: true when receiving real-time data
-};
-
-const STATIC_BREAKDOWN = {
-  hrScore: 26,                // TODO: replace with real HR sub-score  (max 40)
-  rmssdScore: 17,             // TODO: replace with real HRV sub-score (max 30)
-};
-
+ 
+ 
 const STRESS_TIPS = {
   Relaxed:  'Your contact is calm and balanced. No action needed.',
   Low:      'Mild tension. A quick check-in message might be nice.',
@@ -91,29 +65,117 @@ function ContactAvatar({ contact, stressColor }) {
 }
 
 function StressGauge({ score, state }) {
-  const anim = useRef(new Animated.Value(0)).current;
+  const anim      = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseLoop = useRef(null);
+  const safeScore = Math.max(0, Math.min(100, Number(score) || 0));
+  const scorePct  = Math.round(safeScore);
 
   useEffect(() => {
     Animated.timing(anim, {
-      toValue: score / 100,
-      duration: 1200,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+      toValue: safeScore / 100, duration: 1200,
+      easing: Easing.out(Easing.cubic), useNativeDriver: false,
     }).start();
-  }, [score]);
+  }, [safeScore]);
+
+  useEffect(() => {
+    pulseLoop.current?.stop();
+    pulseAnim.setValue(1);
+    if (state.level >= 3) {
+      pulseLoop.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.04, duration: 700, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1,    duration: 700, useNativeDriver: true }),
+        ]),
+      );
+      pulseLoop.current.start();
+    }
+    return () => pulseLoop.current?.stop();
+  }, [state.level]);
+
+  const ZONES = [
+    { from: 0,  to: 25,  color: '#00E5A0', label: 'Relaxed' },
+    { from: 25, to: 50,  color: '#FFD166', label: 'Elevated' },
+    { from: 50, to: 75,  color: '#FF8C42', label: 'High' },
+    { from: 75, to: 100, color: '#FF3366', label: 'Critical' },
+  ];
+
+  const activeZone = ZONES.find(z => scorePct < z.to) ?? ZONES[3];
 
   return (
-    <View style={styles.gaugeWrap}>
-      <View style={[styles.gaugeOuter, { shadowColor: state.color }]}>
-        <View style={[styles.gaugeRing, { borderColor: state.color, shadowColor: state.color }]} />
-        <View style={styles.gaugeInner}>
-          <Text style={styles.gaugeEmoji}>{state.emoji}</Text>
-          <Text style={[styles.gaugeScore, { color: state.color }]}>{score}</Text>
-          <Text style={[styles.gaugeStateLabel, { color: state.color }]}>{state.label}</Text>
-          <Text style={styles.gaugeSubLabel}>Stress Index</Text>
+    <Animated.View style={[styles.gaugeCard, { transform: [{ scale: pulseAnim }] }]}>
+      {/* Top color accent bar */}
+      <View style={[styles.gaugeAccentBar, { backgroundColor: state.color }]} />
+
+      {/* Circular dial */}
+      <View style={styles.gaugeCircleWrap}>
+        <View style={[styles.gaugeOuterRing, { borderColor: state.color, shadowColor: state.color }]}>
+          <View style={styles.gaugeInner}>
+            <Text style={styles.gaugeEmoji}>{state.emoji}</Text>
+            <Text style={[styles.gaugeScore, { color: state.color }]}>{scorePct}</Text>
+            <Text style={styles.gaugeScoreUnit}>/ 100</Text>
+            <View style={[styles.gaugeStatePill, { backgroundColor: state.color + '20', borderColor: state.color + '50' }]}>
+              <Text style={[styles.gaugeStateLabel, { color: state.color }]}>{state.label}</Text>
+            </View>
+          </View>
         </View>
       </View>
-    </View>
+
+      {/* Stats strip */}
+      <View style={styles.gaugeStatsStrip}>
+        <View style={styles.gaugeStatItem}>
+          <Text style={styles.gaugeStatVal}>{scorePct}</Text>
+          <Text style={styles.gaugeStatKey}>Score</Text>
+        </View>
+        <View style={styles.gaugeStatSep} />
+        <View style={styles.gaugeStatItem}>
+          <Text style={[styles.gaugeStatVal, { color: state.color }]}>{state.label}</Text>
+          <Text style={styles.gaugeStatKey}>State</Text>
+        </View>
+        <View style={styles.gaugeStatSep} />
+        <View style={styles.gaugeStatItem}>
+          <Text style={[styles.gaugeStatVal, { color: activeZone.color }]}>{activeZone.label}</Text>
+          <Text style={styles.gaugeStatKey}>Zone</Text>
+        </View>
+      </View>
+
+      {/* Segmented zone bar */}
+      <View style={styles.gaugeZoneWrap}>
+        <View style={styles.gaugeZoneHeaderRow}>
+          <Text style={styles.gaugeZoneHeaderLabel}>Stress Load</Text>
+          <Text style={[styles.gaugeZoneHeaderPct, { color: state.color }]}>{scorePct}%</Text>
+        </View>
+        <View style={styles.gaugeSegBar}>
+          {ZONES.map((z, i) => (
+            <View key={i} style={styles.gaugeSegSlot}>
+              <View style={[styles.gaugeSegTrack, { backgroundColor: z.color + '20' }]}>
+                <Animated.View style={[styles.gaugeSegFill, {
+                  backgroundColor: z.color,
+                  width: anim.interpolate({
+                    inputRange: [z.from / 100, z.to / 100],
+                    outputRange: ['0%', '100%'],
+                    extrapolate: 'clamp',
+                  }),
+                }]} />
+              </View>
+            </View>
+          ))}
+        </View>
+        <View style={styles.gaugeTickRow}>
+          {['0', '25', '50', '75', '100'].map((t, i) => (
+            <Text key={i} style={styles.gaugeTick}>{t}</Text>
+          ))}
+        </View>
+        <View style={styles.gaugeZoneLegend}>
+          {ZONES.map((z, i) => (
+            <View key={i} style={styles.gaugeZoneLegendItem}>
+              <View style={[styles.gaugeZoneLegendDot, { backgroundColor: z.color }]} />
+              <Text style={styles.gaugeZoneLegendText}>{z.label}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -251,10 +313,10 @@ function StatusBanner({ level, stressColor, label }) {
 
 export default function ContactStressMonitor({
   // TODO: pass these props from the parent screen when real data is available
-  contact = STATIC_CONTACT,
-  stress  = STATIC_STRESS,
-  metrics = STATIC_METRICS,
-  breakdown = STATIC_BREAKDOWN,
+  contact, 
+  stress  , 
+  metrics  ,
+  breakdown  
 }) {
   const hrvColor  = metrics.rmssd > 40 ? '#00E5A0' : metrics.rmssd > 20 ? '#FFD166' : '#FF3366';
   const zoneColor = metrics.hrIntensity > 70 ? '#FF3366' : metrics.hrIntensity > 50 ? '#FFD166' : '#00E5A0';
@@ -347,202 +409,4 @@ return (
 }
 
 
-// ─────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────
-const styles = StyleSheet.create({
-  root:          { flex: 1 },
-  scrollContent: { paddingHorizontal: 14, paddingTop: 12 },
-
-  // Contact Header
-  contactHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0C0F1A',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#111827',
-    gap: 14,
-  },
-  avatarOuter: {
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  avatarRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2.5,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarImg: { width: 64, height: 64, borderRadius: 32 },
-  avatarFallback: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: { fontSize: 26, fontWeight: '900' },
-  contactInfo:   { flex: 1 },
-  contactName:   { fontSize: 17, fontWeight: '800', color: '#E8EDF5', marginBottom: 2 },
-  contactPhone:  { fontSize: 11, color: '#3D4E6A', marginBottom: 7 },
-  stressLevelPill: {
-    alignSelf: 'flex-start',
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  stressLevelText: { fontSize: 12, fontWeight: '700' },
-
-  // Alert Banner
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingVertical: 9,
-    paddingHorizontal: 13,
-    marginBottom: 9,
-    gap: 7,
-  },
-  bannerIcon: { fontSize: 14 },
-  bannerText: { fontWeight: '700', fontSize: 12, letterSpacing: 0.4, flex: 1 },
-
-  // Gauge
-  gaugeWrap:      { alignItems: 'center', marginVertical: 10 },
-  gaugeOuter: {
-    width: 176,
-    height: 176,
-    borderRadius: 88,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0C0F1A',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 22,
-    elevation: 10,
-  },
-  gaugeRing: {
-    position: 'absolute',
-    width: 164,
-    height: 164,
-    borderRadius: 82,
-    borderWidth: 4,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  gaugeInner:     { alignItems: 'center' },
-  gaugeEmoji:     { fontSize: 26, marginBottom: 2 },
-  gaugeScore:     { fontSize: 46, fontWeight: '900', lineHeight: 52 },
-  gaugeStateLabel:{ fontSize: 13, fontWeight: '700', color: '#E8EDF5', marginTop: 1 },
-  gaugeSubLabel:  { fontSize: 9, color: '#3D4E6A', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 1 },
-
-  // BPM Hero
-  bpmHero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#0C0F1A',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#111827',
-  },
-  bpmHeroLeft:  { flex: 1 },
-  bpmHeroLabel: { fontSize: 10, color: '#3D4E6A', letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 4 },
-  bpmValRow:    { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
-  bpmVal:       { fontSize: 50, fontWeight: '900', lineHeight: 54 },
-  bpmUnit:      { fontSize: 15, color: '#3D4E6A', fontWeight: '600', marginBottom: 6 },
-  bpmMeta:      { fontSize: 11, color: '#3D4E6A', marginTop: 3 },
-  bpmHeroRight: { paddingLeft: 12, alignItems: 'center', gap: 8 },
-  bpmPulseRing: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  bpmPulseIcon: { fontSize: 24 },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#00E5A012',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#00E5A030',
-    gap: 4,
-  },
-  liveDot:  { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#00E5A0' },
-  liveText: { fontSize: 8, color: '#00E5A0', fontWeight: '800', letterSpacing: 1 },
-
-  // Metric Grid
-  grid:        { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#0C0F1A',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#111827',
-    alignItems: 'center',
-  },
-  metricIconWrap: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  metricIcon:  { fontSize: 18 },
-  metricValue: { fontSize: 20, fontWeight: '800' },
-  metricUnit:  { fontSize: 11, color: '#3D4E6A', fontWeight: '400' },
-  metricLabel: { fontSize: 9, color: '#3D4E6A', marginTop: 2, textTransform: 'uppercase', letterSpacing: 1 },
-  metricSub:   { fontSize: 10, fontWeight: '600', marginTop: 3 },
-
-  // Section
-  section: {
-    backgroundColor: '#0C0F1A',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#111827',
-  },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  sectionTitle:  { fontSize: 13, fontWeight: '700', color: '#E8EDF5', letterSpacing: 0.3 },
-  sectionDesc:   { fontSize: 11, color: '#3D4E6A', marginBottom: 11, lineHeight: 17 },
-  scorePill:     { flexDirection: 'row', alignItems: 'center', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
-  scorePillText: { fontSize: 11, fontWeight: '800' },
-
-  // Breakdown Bars
-  barRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 11, gap: 10 },
-  barIconWrap:{ width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  barIcon:    { fontSize: 15 },
-  barContent: { flex: 1 },
-  barTopRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
-  barLabel:   { fontSize: 12, color: '#E8EDF5', fontWeight: '600' },
-  barTrack:   { height: 5, backgroundColor: '#1A2235', borderRadius: 3, overflow: 'hidden' },
-  barFill:    { height: 5, borderRadius: 3 },
-  barScore:   { fontSize: 12, fontWeight: '800' },
-  barMax:     { fontSize: 10, color: '#3D4E6A', fontWeight: '400' },
-  barPct:     { fontSize: 9, marginTop: 4, letterSpacing: 0.3 },
-
-  // Tip
-  tipCard: {
-    flexDirection: 'row',
-    backgroundColor: '#0C0F1A',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#111827',
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  tipIcon:  { fontSize: 20, marginTop: 2 },
-  tipBody:  { flex: 1 },
-  tipTitle: { fontSize: 12, fontWeight: '700', color: '#E8EDF5', marginBottom: 4 },
-  tipText:  { color: '#A0AEC0', fontSize: 12, lineHeight: 18 },
-});
+ 

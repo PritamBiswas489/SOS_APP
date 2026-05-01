@@ -16,10 +16,12 @@
 import React, {
   createContext, useContext, useState, useEffect,
   useMemo, useCallback, useRef,
+  use,
 } from 'react';
 import {Vibration, Alert} from 'react-native';
 import {useGoogleFit} from './GoogleFitContext';
 import {useBle} from './BleContext';
+import {StressDataService} from '../services/stressData.service';
 
 // ── Stress States ─────────────────────────────
 export const STRESS_STATE = {
@@ -29,6 +31,9 @@ export const STRESS_STATE = {
   HIGH:     {label: 'High',     color: '#FF8C42', emoji: '😟', level: 3},
   CRITICAL: {label: 'Critical', color: '#FF3366', emoji: '🆘', level: 4},
 };
+
+ 
+ 
 
 // ── Stress Algorithm ──────────────────────────
 export function computeStress({
@@ -179,7 +184,11 @@ export function StressProvider({
   const ble = useBle();
 
   const [sosArmed, setSosArmed] = useState(false);
+  const [lastRecordedFallback, setLastRecordedFallback] = useState(null);
+  const [contactsLastHealthData, setContactsLastHealthData] = useState(null);
   const prevScoreRef = useRef(0);
+  const lastSavedAtRef = useRef(0);
+  const lastSavedFingerprintRef = useRef('');
 
   // ────────────────────────────────────────────
   // GOOGLE FIT DATA BLOCK
@@ -255,6 +264,107 @@ export function StressProvider({
     [mergedHRValues.join(',')],
   );
 
+  const hasLiveData = mergedHRValues.length > 0;
+
+  useEffect(() => {
+    if (hasLiveData) {
+      setLastRecordedFallback(null);
+      return;
+    }
+
+    StressDataService.getLatest(result => {
+      if (!result?.success) return;
+      const latest = result.data;
+
+      if (!latest) {
+        setLastRecordedFallback(null);
+        return;
+      }
+
+      const fallbackState =
+        Object.values(STRESS_STATE).find(s => s.label === latest.stress_state) ||
+        STRESS_STATE.RELAXED;
+
+      setLastRecordedFallback({
+        stress: {
+          score: Number(latest.stress_score ?? 0),
+          state: fallbackState,
+          rmssd: Number(latest.rmssd ?? 0),
+          currentHR: latest.current_hr == null ? null : Number(latest.current_hr),
+          avgHR: latest.avg_hr == null ? null : Number(latest.avg_hr),
+          hrIntensity: Number(latest.hr_intensity ?? 0),
+          hrScore: Number(latest.hr_score ?? 0),
+          rmssdScore: Number(latest.rmssd_score ?? 0),
+        },
+        source: latest.source,
+        recordedAt: latest.created_at,
+      
+      });
+    });
+  }, [hasLiveData]);
+
+  const resolvedStress = hasLiveData
+    ? stress
+    : (lastRecordedFallback?.stress ?? stress);
+
+  const resolvedActiveSource = hasLiveData
+    ? activeSource
+    : (lastRecordedFallback?.source ?? activeSource);
+
+  // ────────────────────────────────────────────
+  // STRESS/HR PERSISTENCE
+  // Save only when a valid source has data
+  // ────────────────────────────────────────────
+  useEffect(() => {
+    const hasBleData = ble.connected && ble.hrBuffer.length > 0;
+    const hasGfData = gf.hrReadings.length > 0;
+
+    // Skip insert if both sources are empty.
+    if (!hasBleData && !hasGfData) return;
+
+    // Skip insert if stress was computed without a current HR value.
+    if (stress.currentHR == null) return;
+
+    const now = Date.now();
+    const saveThrottleMs = 10_000;
+    if (now - lastSavedAtRef.current < saveThrottleMs) return;
+
+    const fingerprint = [
+      activeSource,
+      stress.currentHR,
+      stress.score,
+      stress.rmssd,
+      stress.avgHR,
+    ].join(':');
+
+    if (fingerprint === lastSavedFingerprintRef.current) return;
+
+    lastSavedAtRef.current = now;
+    lastSavedFingerprintRef.current = fingerprint;
+
+    StressDataService.insertFromContext(
+      {
+        stress,
+        activeSource,
+        bleData,
+        googleFitData,
+      },
+      result => {
+        if (__DEV__ && !result.success) {
+          console.log('Stress save skipped/failed:', result.error);
+        }
+      },
+    );
+  }, [
+    activeSource,
+    ble.connected,
+    ble.hrBuffer.length,
+    bleData,
+    gf.hrReadings.length,
+    googleFitData,
+    stress,
+  ]);
+
   // ────────────────────────────────────────────
   // SOS AUTO-TRIGGER
   // Fires only on rising edge: normal → critical
@@ -276,7 +386,7 @@ export function StressProvider({
           `Stress Index : ${stress.score}/100`,
           `Heart Rate   : ${stress.currentHR ?? '–'} bpm`,
           `HRV (RMSSD)  : ${stress.rmssd} ms`,
-          `Source       : ${activeSource === 'ble'
+            `Source       : ${activeSource === 'ble'
               ? `BLE — ${ble.deviceName}`
               : 'Google Fit'}`,
         ].join('\n'),
@@ -305,17 +415,80 @@ export function StressProvider({
   const dismissSos = useCallback(() => setSosArmed(false), []);
 
   // ────────────────────────────────────────────
+  // FETCH CONTACTS' LAST HEALTH DATA
+  // For map/list fallback when no live data
+  // ────────────────────────────────────────────
+  const getContactLastHealthData = useCallback(async () => {
+    try{
+      const response = await new Promise((resolve, reject) => {
+              StressDataService.getContactsLastHealthData(result => {
+                if (result.success) {
+                  resolve(result.data);
+                } else {            
+                  reject(new Error(result.error || 'Unknown error fetching health data'));
+                }        
+              });
+            });
+            if(response?.data){
+              console.log('Fetched contacts last health data:', response.data);
+              const contactStressData = []
+              response.data.forEach(contact => {
+                contactStressData[contact.user_id] = {
+                  stress: {
+                    score:       Number(contact.stress_score ?? 0),
+                    state:       Object.values(STRESS_STATE).find(
+                                   s => s.label.toLowerCase() === (contact.stress_state ?? '').toLowerCase()
+                                 ) ?? STRESS_STATE.RELAXED,
+                    rmssd:       Number(contact.rmssd ?? 0),
+                    currentHR:   contact.current_hr  == null ? null : Number(contact.current_hr),
+                    avgHR:       contact.avg_hr       == null ? null : Number(contact.avg_hr),
+                    hrIntensity: Number(contact.hr_intensity ?? 0),
+                    hrScore:     Number(contact.hr_score     ?? 0),
+                    rmssdScore:  Number(contact.rmssd_score  ?? 0),
+                  },
+                  source:     contact.source,
+                  recordedAt: contact.created_at,
+                }
+              });
+              setContactsLastHealthData(contactStressData);
+            }
+
+    }catch (err) {
+      console.error('Failed to get contacts last health data:', err.message);
+    }
+  },[]);
+  useEffect(() => {
+    // Fetch contacts' last health data on mount
+    getContactLastHealthData();
+  }, [getContactLastHealthData]);
+
+  // ────────────────────────────────────────────
   // CONTEXT VALUE
   // ────────────────────────────────────────────
   const value = useMemo(() => ({
-    stress,           // computed stress result
+    stress: resolvedStress, // live stress or last saved fallback
     googleFitData,    // ← GF-only block
     bleData,          // ← BLE-only block
-    activeSource,     // 'ble' | 'googlefit'
+    activeSource: resolvedActiveSource, // 'ble' | 'googlefit'
+    hasLiveData,
+    isUsingLastRecord: !hasLiveData && !!lastRecordedFallback,
+    lastRecordedAt: lastRecordedFallback?.recordedAt ?? null,
     sosArmed,
     sendSos,
     dismissSos,
-  }), [stress, googleFitData, bleData, activeSource, sosArmed]);
+    contactsLastHealthData, // ← Contacts' last health data for fallback in map/list  
+  }), [
+    resolvedStress,
+    googleFitData,
+    bleData,
+    resolvedActiveSource,
+    hasLiveData,
+    lastRecordedFallback,
+    sosArmed,
+    sendSos,
+    dismissSos,
+    contactsLastHealthData
+  ]);
 
   return (
     <StressContext.Provider value={value}>

@@ -361,15 +361,14 @@ export const LocationProvider = ({ children }) => {
     } catch (err) {
       console.error('Failed to get contacts locations:', err.message);
     }
-  }, [emit]);
+  }, []);
 
    
 
   // Fetch contacts' last locations on mount
   useEffect(() => {
-    if(!isConnected) return;
     getContactsLastLocations();
-  }, [isConnected, getContactsLastLocations]);
+  }, [getContactsLastLocations]);
   
 
    

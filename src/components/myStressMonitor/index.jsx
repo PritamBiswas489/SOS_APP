@@ -4,25 +4,29 @@
 
 import React, {useRef, useEffect, useState} from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Animated, Easing, Platform,
+  View, Text, TouchableOpacity, ScrollView,
+  Animated, Easing,
 } from 'react-native';
+import styles from './style';
 import {useStress, STRESS_STATE} from '../../context/StressContext';
 import {useGoogleFit} from '../../context/GoogleFitContext';
 import {useBle} from '../../context/BleContext';
+import { formatDateSeparator, formatMessageTime } from '../../config/utility';
 
 // ── Animated Stress Gauge ─────────────────────
 function StressGauge({score, state}) {
   const anim      = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseLoop = useRef(null);
+  const safeScore = Math.max(0, Math.min(100, Number(score) || 0));
+  const scorePct = Math.round(safeScore);
 
   useEffect(() => {
     Animated.timing(anim, {
-      toValue: score / 100, duration: 1200,
+      toValue: safeScore / 100, duration: 1200,
       easing: Easing.out(Easing.cubic), useNativeDriver: false,
     }).start();
-  }, [score]);
+  }, [safeScore]);
 
   useEffect(() => {
     pulseLoop.current?.stop();
@@ -30,8 +34,8 @@ function StressGauge({score, state}) {
     if (state.level >= 3) {
       pulseLoop.current = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, {toValue: 1.06, duration: 600, useNativeDriver: true}),
-          Animated.timing(pulseAnim, {toValue: 1,    duration: 600, useNativeDriver: true}),
+          Animated.timing(pulseAnim, {toValue: 1.04, duration: 700, useNativeDriver: true}),
+          Animated.timing(pulseAnim, {toValue: 1,    duration: 700, useNativeDriver: true}),
         ]),
       );
       pulseLoop.current.start();
@@ -39,15 +43,86 @@ function StressGauge({score, state}) {
     return () => pulseLoop.current?.stop();
   }, [state.level]);
 
+  const ZONES = [
+    {from: 0,  to: 25,  color: '#00E5A0', label: 'Relaxed'},
+    {from: 25, to: 50,  color: '#FFD166', label: 'Elevated'},
+    {from: 50, to: 75,  color: '#FF8C42', label: 'High'},
+    {from: 75, to: 100, color: '#FF3366', label: 'Critical'},
+  ];
+
+  const activeZone = ZONES.find(z => scorePct < z.to) ?? ZONES[3];
+
   return (
-    <Animated.View style={[styles.gaugeWrap, {transform: [{scale: pulseAnim}]}]}>
-      <View style={[styles.gaugeOuter, {shadowColor: state.color}]}>
-        <View style={[styles.gaugeRing, {borderColor: state.color, shadowColor: state.color}]} />
-        <View style={styles.gaugeInner}>
-          <Text style={styles.gaugeEmoji}>{state.emoji}</Text>
-          <Text style={[styles.gaugeScore, {color: state.color}]}>{score}</Text>
-          <Text style={[styles.gaugeStateLabel, {color: state.color}]}>{state.label}</Text>
-          <Text style={styles.gaugeSubLabel}>Stress Index</Text>
+    <Animated.View style={[styles.gaugeCard, {transform: [{scale: pulseAnim}]}]}>
+      {/* Top color accent bar */}
+      <View style={[styles.gaugeAccentBar, {backgroundColor: state.color}]} />
+
+      {/* Circular dial */}
+      <View style={styles.gaugeCircleWrap}>
+        <View style={[styles.gaugeOuterRing, {borderColor: state.color, shadowColor: state.color}]}>
+          <View style={styles.gaugeInner}>
+            <Text style={styles.gaugeEmoji}>{state.emoji}</Text>
+            <Text style={[styles.gaugeScore, {color: state.color}]}>{scorePct}</Text>
+            <Text style={styles.gaugeScoreUnit}>/ 100</Text>
+            <View style={[styles.gaugeStatePill, {backgroundColor: state.color + '20', borderColor: state.color + '50'}]}>
+              <Text style={[styles.gaugeStateLabel, {color: state.color}]}>{state.label}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Stats strip */}
+      <View style={styles.gaugeStatsStrip}>
+        <View style={styles.gaugeStatItem}>
+          <Text style={styles.gaugeStatVal}>{scorePct}</Text>
+          <Text style={styles.gaugeStatKey}>Score</Text>
+        </View>
+        <View style={styles.gaugeStatSep} />
+        <View style={styles.gaugeStatItem}>
+          <Text style={[styles.gaugeStatVal, {color: state.color}]}>{state.label}</Text>
+          <Text style={styles.gaugeStatKey}>State</Text>
+        </View>
+        <View style={styles.gaugeStatSep} />
+        <View style={styles.gaugeStatItem}>
+          <Text style={[styles.gaugeStatVal, {color: activeZone.color}]}>{activeZone.label}</Text>
+          <Text style={styles.gaugeStatKey}>Zone</Text>
+        </View>
+      </View>
+
+      {/* Segmented zone bar */}
+      <View style={styles.gaugeZoneWrap}>
+        <View style={styles.gaugeZoneHeaderRow}>
+          <Text style={styles.gaugeZoneHeaderLabel}>Stress Load</Text>
+          <Text style={[styles.gaugeZoneHeaderPct, {color: state.color}]}>{scorePct}%</Text>
+        </View>
+        <View style={styles.gaugeSegBar}>
+          {ZONES.map((z, i) => (
+            <View key={i} style={styles.gaugeSegSlot}>
+              <View style={[styles.gaugeSegTrack, {backgroundColor: z.color + '20'}]}>
+                <Animated.View style={[styles.gaugeSegFill, {
+                  backgroundColor: z.color,
+                  width: anim.interpolate({
+                    inputRange: [z.from / 100, z.to / 100],
+                    outputRange: ['0%', '100%'],
+                    extrapolate: 'clamp',
+                  }),
+                }]} />
+              </View>
+            </View>
+          ))}
+        </View>
+        <View style={styles.gaugeTickRow}>
+          {['0', '25', '50', '75', '100'].map((t, i) => (
+            <Text key={i} style={styles.gaugeTick}>{t}</Text>
+          ))}
+        </View>
+        <View style={styles.gaugeZoneLegend}>
+          {ZONES.map((z, i) => (
+            <View key={i} style={styles.gaugeZoneLegendItem}>
+              <View style={[styles.gaugeZoneLegendDot, {backgroundColor: z.color}]} />
+              <Text style={styles.gaugeZoneLegendText}>{z.label}</Text>
+            </View>
+          ))}
         </View>
       </View>
     </Animated.View>
@@ -296,12 +371,28 @@ function BleDevicePanel({ble}) {
 
 // ── Main Component ────────────────────────────
 export default function MyStressMonitor() {
-  const {stress, sosArmed, sendSos, dismissSos} = useStress();
+  const {
+    stress,
+    sosArmed,
+    sendSos,
+    dismissSos,
+    isUsingLastRecord,
+    lastRecordedAt,
+    activeSource,
+  } = useStress();
   const gf  = useGoogleFit();
   const ble = useBle();
 
   const displayHR = ble.connected && ble.currentHR ? ble.currentHR : stress.currentHR;
-  const hrSource  = ble.connected ? 'Live BLE' : 'Health Connect';
+  const hrSource = isUsingLastRecord
+    ? `Last saved (${activeSource === 'ble' ? 'BLE' : 'Health Connect'})`
+    : (ble.connected ? 'Live BLE' : 'Health Connect');
+
+  const fallbackDate = isUsingLastRecord ? formatDateSeparator(lastRecordedAt) : '';
+  const fallbackTime = isUsingLastRecord ? formatMessageTime(lastRecordedAt) : '';
+  const fallbackDisplay = isUsingLastRecord
+    ? [fallbackDate, fallbackTime].filter(Boolean).join(' · ')
+    : '';
 
   const hrvColor  = stress.rmssd > 40 ? '#00E5A0' : stress.rmssd > 20 ? '#FFD166' : '#FF3366';
   const zoneColor = stress.hrIntensity > 70 ? '#FF3366' : stress.hrIntensity > 50 ? '#FFD166' : '#00E5A0';
@@ -343,6 +434,13 @@ export default function MyStressMonitor() {
           <SourceBadge active={ble.connected}  label={ble.connected ? ble.deviceName : 'BLE Device'} icon="📡" />
         </View>
 
+        {isUsingLastRecord ? (
+          <View style={styles.snapshotBadge}>
+            <Text style={styles.snapshotBadgeIcon}>🕒</Text>
+            <Text style={styles.snapshotBadgeText}>Offline snapshot</Text>
+          </View>
+        ) : null}
+
         {/* ── Heart Rate Hero ── */}
         <View style={styles.hrHero}>
           <View style={styles.hrHeroLeft}>
@@ -355,6 +453,9 @@ export default function MyStressMonitor() {
               <Text style={styles.hrSourceDot}>● </Text>
               {hrSource}  ·  Avg {stress.avgHR || '–'} bpm
             </Text>
+            {fallbackDisplay ? (
+              <Text style={styles.hrHeroMeta}>Last record: {fallbackDisplay}</Text>
+            ) : null}
           </View>
           <View style={styles.hrHeroRight}>
             <View style={[styles.hrPulseRing, {borderColor: stress.state.color + '60'}]}>
@@ -430,146 +531,4 @@ export default function MyStressMonitor() {
   );
 }
 
-const styles = StyleSheet.create({
-  root:   {flex: 1},
 
-  // Header
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 42 : 50,
-    paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#111827',
-  },
-  headerTitle: {fontSize: 20, fontWeight: '800', color: '#E8EDF5', letterSpacing: 0.3},
-  headerSub:   {fontSize: 10, color: '#3D4E6A', marginTop: 2, letterSpacing: 1.4, textTransform: 'uppercase'},
-  syncBtn:        {width: 36, height: 36, borderRadius: 18, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#1E2D45'},
-  syncBtnActive:  {borderColor: '#5352ED'},
-  syncBtnText:    {color: '#7EB8F7', fontSize: 16, fontWeight: '700'},
-
-  scroll:        {flex: 1},
-  scrollContent: {paddingHorizontal: 14, paddingTop: 8},
-
-  // Gauge
-  gaugeWrap:      {alignItems: 'center', marginVertical: 10},
-  gaugeOuter:     {
-    width: 176, height: 176, borderRadius: 88,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#0C0F1A',
-    shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.35, shadowRadius: 22, elevation: 10,
-  },
-  gaugeRing:      {position: 'absolute', width: 164, height: 164, borderRadius: 82, borderWidth: 4, shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.8, shadowRadius: 12, elevation: 8},
-  gaugeInner:     {alignItems: 'center'},
-  gaugeEmoji:     {fontSize: 26, marginBottom: 2},
-  gaugeScore:     {fontSize: 46, fontWeight: '900', lineHeight: 52},
-  gaugeStateLabel:{fontSize: 13, fontWeight: '700', color: '#E8EDF5', marginTop: 1},
-  gaugeSubLabel:  {fontSize: 9, color: '#3D4E6A', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 1},
-
-  // SOS Banner
-  sosBanner:    {flexDirection: 'row', alignItems: 'center', borderRadius: 10, borderWidth: 1, paddingVertical: 9, paddingHorizontal: 13, marginBottom: 9, backgroundColor: '#FF336608', gap: 7},
-  sosBannerIcon:{fontSize: 14},
-  sosBannerText:{fontWeight: '700', fontSize: 12, letterSpacing: 0.4, flex: 1},
-
-  // SOS Actions
-  sosActions:    {flexDirection: 'row', gap: 8, marginBottom: 10},
-  sosBtn:        {flex: 2, backgroundColor: '#FF3366', borderRadius: 12, paddingVertical: 13, alignItems: 'center'},
-  sosBtnText:    {color: '#fff', fontWeight: '800', fontSize: 14, letterSpacing: 0.3},
-  dismissBtn:    {flex: 1, backgroundColor: '#111827', borderRadius: 12, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#1E2D45'},
-  dismissBtnText:{color: '#A0AEC0', fontWeight: '600', fontSize: 13},
-
-  // Badges
-  badgeRow:   {flexDirection: 'row', gap: 6, marginBottom: 10},
-  badge:      {flexDirection: 'row', alignItems: 'center', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, gap: 5, borderWidth: 1},
-  badgeIcon:  {fontSize: 11},
-  badgeDot:   {width: 5, height: 5, borderRadius: 2.5},
-  badgeText:  {fontSize: 11, fontWeight: '600'},
-
-  // HR Hero
-  hrHero:      {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#0C0F1A', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: '#111827'},
-  hrHeroLeft:  {flex: 1},
-  hrHeroLabel: {fontSize: 10, color: '#3D4E6A', letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 4},
-  hrHeroValRow:{flexDirection: 'row', alignItems: 'flex-end', gap: 4},
-  hrHeroVal:   {fontSize: 50, fontWeight: '900', color: '#E8EDF5', lineHeight: 54},
-  hrHeroUnit:  {fontSize: 15, color: '#3D4E6A', fontWeight: '600', marginBottom: 6},
-  hrHeroMeta:  {fontSize: 11, color: '#3D4E6A', marginTop: 3},
-  hrSourceDot: {color: '#00E5A0'},
-  hrHeroRight: {paddingLeft: 12},
-  hrPulseRing: {width: 56, height: 56, borderRadius: 28, borderWidth: 2, alignItems: 'center', justifyContent: 'center'},
-  hrPulseEmoji:{fontSize: 24},
-
-  // Metric Grid
-  grid:        {flexDirection: 'row', gap: 8, marginBottom: 10},
-  metricCard:  {flex: 1, backgroundColor: '#0C0F1A', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: '#111827', alignItems: 'center'},
-  metricIconWrap:{width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginBottom: 6},
-  metricIcon:  {fontSize: 18},
-  metricValue: {fontSize: 20, fontWeight: '800'},
-  metricUnit:  {fontSize: 11, color: '#3D4E6A', fontWeight: '400'},
-  metricLabel: {fontSize: 9, color: '#3D4E6A', marginTop: 2, textTransform: 'uppercase', letterSpacing: 1},
-  metricSub:   {fontSize: 10, fontWeight: '600', marginTop: 3},
-
-  // Section
-  section:       {backgroundColor: '#0C0F1A', borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#111827'},
-  sectionHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4},
-  sectionTitle:  {fontSize: 13, fontWeight: '700', color: '#E8EDF5', letterSpacing: 0.3},
-  sectionDesc:   {fontSize: 11, color: '#3D4E6A', marginBottom: 11, lineHeight: 17},
-  connectedPill: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#00E5A010', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, gap: 4, borderWidth: 1, borderColor: '#00E5A030'},
-  connectedDot:  {width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#00E5A0'},
-  connectedText: {fontSize: 10, color: '#00E5A0', fontWeight: '600'},
-
-  // Breakdown bars
-  barRow:      {flexDirection: 'row', alignItems: 'center', marginBottom: 11, gap: 10},
-  barIconWrap: {width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
-  barIcon:     {fontSize: 15},
-  barContent:  {flex: 1},
-  barTopRow:   {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5},
-  barLabel:    {fontSize: 12, color: '#E8EDF5', fontWeight: '600'},
-  barTrack:    {height: 5, backgroundColor: '#1A2235', borderRadius: 3, overflow: 'hidden'},
-  barFill:     {height: 5, borderRadius: 3},
-  barScore:    {fontSize: 12, fontWeight: '800'},
-  barMax:      {fontSize: 10, color: '#3D4E6A', fontWeight: '400'},
-  barPct:      {fontSize: 9, marginTop: 4, letterSpacing: 0.3},
-  scorePill:   {flexDirection: 'row', alignItems: 'center', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1},
-  scorePillText:{fontSize: 11, fontWeight: '800'},
-
-  // Buttons
-  btnPrimary: {backgroundColor: '#1A3A8F', borderRadius: 12, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: '#2D55CC'},
-  btnDanger:  {backgroundColor: '#2A0815', borderRadius: 12, borderWidth: 1, borderColor: '#FF336650', paddingVertical: 12, alignItems: 'center'},
-  btnMuted:   {opacity: 0.4},
-  btnText:    {color: '#E8EDF5', fontWeight: '700', fontSize: 13, letterSpacing: 0.3},
-  errorText:  {color: '#FF3366', fontSize: 11, marginBottom: 8, textAlign: 'center'},
-
-  // BLE Panel — compact fixed strip above scroll
-  blePanel:                   {marginHorizontal: 14, marginTop: 8, marginBottom: 4, backgroundColor: '#0C0F1A', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: '#111827'},
-  blePanelRow:                {flexDirection: 'row', alignItems: 'center', gap: 10},
-  bleIconWrap:                {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
-  bleScanRing:                {position: 'absolute', width: 44, height: 44, borderRadius: 22, borderWidth: 1.5},
-  bleIconCircle:              {width: 38, height: 38, borderRadius: 19, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center'},
-  bleIconText:                {fontSize: 17},
-  bleStatusDot:               {position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#0C0F1A'},
-  bleInfo:                    {flex: 1},
-  bleDeviceName:              {fontSize: 13, fontWeight: '700', color: '#E8EDF5', marginBottom: 1},
-  bleDeviceSub:               {fontSize: 10, color: '#3D4E6A', letterSpacing: 0.2},
-  bleHrRow:                   {flexDirection: 'row', alignItems: 'baseline', gap: 1},
-  bleHrVal:                   {fontSize: 18, fontWeight: '900', color: '#00E5A0', lineHeight: 22},
-  bleHrUnit:                  {fontSize: 11, color: '#3D4E6A', fontWeight: '600'},
-  bleLiveBadge:               {flexDirection: 'row', alignItems: 'center', backgroundColor: '#00E5A012', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1, borderColor: '#00E5A030', gap: 3, marginLeft: 5},
-  bleLiveDot:                 {width: 4, height: 4, borderRadius: 2, backgroundColor: '#00E5A0'},
-  bleLiveText:                {fontSize: 8, color: '#00E5A0', fontWeight: '800', letterSpacing: 1},
-  scanDots:                   {flexDirection: 'row', alignItems: 'center', gap: 3},
-  scanDot:                    {width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#7EB8F7'},
-  bleActionBtn:               {backgroundColor: '#122040', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: '#2D55CC', alignItems: 'center', justifyContent: 'center', minHeight: 34, minWidth: 56},
-  bleActionBtnMuted:          {opacity: 0.55, borderColor: '#7EB8F740', paddingHorizontal: 8},
-  bleActionBtnText:           {color: '#7EB8F7', fontWeight: '700', fontSize: 12, letterSpacing: 0.4},
-  bleActionBtnDisconnect:     {backgroundColor: '#1A0A0F', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#FF336640', alignItems: 'center', justifyContent: 'center'},
-  bleActionBtnDisconnectText: {color: '#FF3366', fontWeight: '700', fontSize: 11, letterSpacing: 0.3},
-  bleErrorBox:                {flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF336610', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#FF336630', marginTop: 8, gap: 6},
-  bleErrorIcon:               {fontSize: 11, color: '#FF3366'},
-  bleErrorText:               {flex: 1, color: '#FF3366', fontSize: 10, lineHeight: 15},
-
-  // Tip
-  tipCard: {flexDirection: 'row', backgroundColor: '#0C0F1A', borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#111827', gap: 12, alignItems: 'flex-start'},
-  tipIcon: {fontSize: 20, marginTop: 2},
-  tipBody: {flex: 1},
-  tipTitle:{fontSize: 12, fontWeight: '700', color: '#E8EDF5', marginBottom: 4},
-  tipText: {color: '#A0AEC0', fontSize: 12, lineHeight: 18},
-});

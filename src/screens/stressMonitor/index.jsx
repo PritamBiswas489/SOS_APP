@@ -9,6 +9,9 @@ import { getProfileImage } from '../../config/utility';
 import { useSelector, useDispatch } from 'react-redux';
 import HealthAvatarList from '../../components/healthAvatarList';
 import ContactStressMonitor from '../../components/contactStressMonitor';
+import { STRESS_STATE } from '../../context/StressContext';
+import { useStress } from '../../context/StressContext';
+import { formatDateSeparator, formatMessageTime } from '../../config/utility';
 
 export default function StressMonitorScreen({ route }) {
   const { userData } = useUserData();
@@ -27,8 +30,10 @@ export default function StressMonitorScreen({ route }) {
       selectedMapRecipentId == null ? null : String(selectedMapRecipentId),
     );
   }, [selectedMapRecipentId]);
+  const {contactsLastHealthData} = useStress();
 
   const isMe = healthSelectedContact?.isMe;
+  const selectedContactData = contactsLastHealthData?.[healthSelectedContact?.item?.receipent_id];
   // Auto-select logic: when contact list changes, try to maintain the same selection if possible. If a selected contact no longer exists, select "Me". If there's a selectedMapRecipentId from params and we haven't already auto-selected from it, try to select that contact.
   const mappedHealthContacts = useMemo(() => {
     const list = chatContactList;
@@ -112,6 +117,7 @@ export default function StressMonitorScreen({ route }) {
       }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [healthSelectedContact, normalizedSelectedMapRecipentId, dispatch]);
+   
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="#07090F" />
@@ -121,21 +127,24 @@ export default function StressMonitorScreen({ route }) {
         <ContactStressMonitor
           contact={healthSelectedContact?.item}
           stress={{
-            score: 74,
-            label: 'High',
-            emoji: '😰',
-            color: '#FF6B35',
-            level: 3,
+            score: selectedContactData?.stress?.score ?? 0,
+            label: selectedContactData?.stress?.state?.label ?? STRESS_STATE.RELAXED.label,
+            emoji: selectedContactData?.stress?.state?.emoji ?? STRESS_STATE.RELAXED.emoji,
+            color: selectedContactData?.stress?.state?.color ?? STRESS_STATE.RELAXED.color,
+            level: selectedContactData?.stress?.state?.level ?? STRESS_STATE.RELAXED.level,
           }}
           metrics={{
-            bpm: 101,
-            avgBpm: 80,
-            rmssd: 18,
-            hrIntensity: 72,
-            lastUpdated: 'just now',
+            bpm:         selectedContactData?.stress?.currentHR ?? 0,
+            avgBpm:      selectedContactData?.stress?.avgHR ?? 0,
+            rmssd:       selectedContactData?.stress?.rmssd ?? 0,
+            hrIntensity: selectedContactData?.stress?.hrIntensity ?? 0,
+            lastUpdated: formatDateSeparator(selectedContactData?.recordedAt) + ' ' + formatMessageTime(selectedContactData?.recordedAt),
             isLive: true,
           }}
-          breakdown={{ hrScore: 32, rmssdScore: 20 }}
+          breakdown={{
+            hrScore:    selectedContactData?.stress?.hrScore ?? 0,
+            rmssdScore: selectedContactData?.stress?.rmssdScore ?? 0,
+          }}
         />
       ) : null}
 

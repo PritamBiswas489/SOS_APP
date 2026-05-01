@@ -16,6 +16,8 @@ import { healthSelectedContactActions } from '../../store/redux/healthSelectedCo
 import appColors from '../../theme/appColors';
 import { useChatPresence } from '../../context/ChatContext';
 import { useChatContacts } from '../../hook/useChatContacts';
+import { useUserData } from '../../hook/useUserData';
+import { getProfileImage } from '../../config/utility';
 
 const HealthAvatarList = ({ chatContacts, fetchChatContacts }) => {
     const ONLINE_COLOR = '#2ED573';
@@ -29,7 +31,8 @@ const HealthAvatarList = ({ chatContacts, fetchChatContacts }) => {
      const dispatch = useDispatch();
      const healthSelectedContact = useSelector(state => state.healthSelectedContact);
      console.log("healthSelectedContact?", healthSelectedContact?.item?.id);
-    const currentUser = useSelector(state => state.user?.user ?? state.auth?.user ?? null);
+    const {userData: currentUser}= useUserData();
+     ;
 
     const isMe =  healthSelectedContact?.isMe;
 
@@ -204,8 +207,8 @@ const getAvatarColor = item => {
             end={{x: 1, y: 1}}
             style={styles.meBtnGradient}>
             <View style={styles.meBtnAvatar}>
-              {currentUser?.profile_image ? (
-                <Image source={{uri: currentUser.profile_image}} style={styles.meBtnAvatarImg} />
+              {currentUser?.profile_photo ? (
+                <Image source={{uri: getProfileImage(currentUser.profile_photo)}} style={styles.meBtnAvatarImg} />
               ) : (
                 <Text style={styles.meBtnAvatarInitial}>
                   {currentUser?.name?.[0]?.toUpperCase() ?? 'M'}
@@ -213,13 +216,13 @@ const getAvatarColor = item => {
               )}
             </View>
             <Text style={styles.meBtnTextActive}>Me</Text>
-            <View style={styles.meBtnActiveDot} />
+          
           </LinearGradient>
         ) : (
           <View style={styles.meBtnIdle}>
             <View style={styles.meBtnAvatarIdle}>
-              {currentUser?.profile_image ? (
-                <Image source={{uri: currentUser.profile_image}} style={styles.meBtnAvatarImg} />
+              {currentUser?.profile_photo ? (
+                <Image source={{uri: getProfileImage(currentUser.profile_photo)}} style={styles.meBtnAvatarImg} />
               ) : (
                 <Text style={styles.meBtnAvatarInitialIdle}>
                   {currentUser?.name?.[0]?.toUpperCase() ?? 'M'}

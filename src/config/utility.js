@@ -599,3 +599,34 @@ export function getMediaUrlFromRawUrl(rawUrl){
 
   return mediaUrl;
 }
+
+export const formatDateSeparator = timestamp => {
+  if (!timestamp) return 'Unknown date';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return 'Unknown date';
+
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfMessageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((startOfToday - startOfMessageDay) / 86400000);
+
+  if (diffDays === 0) return 'TODAY';
+  if (diffDays === 1) return 'YESTERDAY';
+
+  return new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date).toUpperCase();
+};
+
+export const formatMessageTime = timestamp => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+};
