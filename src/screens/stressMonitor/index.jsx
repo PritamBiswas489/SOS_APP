@@ -15,8 +15,8 @@ import { formatDateSeparator, formatMessageTime } from '../../config/utility';
 export default function StressMonitorScreen({ route }) {
   const { userData } = useUserData();
   const { contactsLastHealthData } = useStress();
-  const selectedMapRecipentId = route?.params?.selectedMapRecipentId;
-  const [normalizedSelectedMapRecipentId, setNormalizedSelectedMapRecipentId] =
+  const selectedHealthRecipentId = route?.params?.selectedHealthRecipentId;
+  const [normalizedselectedHealthRecipentId, setNormalizedselectedHealthRecipentId] =
     useState(null);
   const hasAutoSelectedFromParamRef = useRef(false);
   const onlineUsers = useChatPresence();
@@ -26,13 +26,13 @@ export default function StressMonitorScreen({ route }) {
   const dispatch = useDispatch();
   useEffect(() => {
     hasAutoSelectedFromParamRef.current = false;
-    setNormalizedSelectedMapRecipentId(
-      selectedMapRecipentId == null ? null : String(selectedMapRecipentId),
+    setNormalizedselectedHealthRecipentId(
+      selectedHealthRecipentId == null ? null : String(selectedHealthRecipentId),
     );
-  }, [selectedMapRecipentId]);
+  }, [selectedHealthRecipentId]);
   
   const isMe = healthSelectedContact?.isMe;
-  // Auto-select logic: when contact list changes, try to maintain the same selection if possible. If a selected contact no longer exists, select "Me". If there's a selectedMapRecipentId from params and we haven't already auto-selected from it, try to select that contact.
+  // Auto-select logic: when contact list changes, try to maintain the same selection if possible. If a selected contact no longer exists, select "Me". If there's a selectedHealthRecipentId from params and we haven't already auto-selected from it, try to select that contact.
   const mappedHealthContacts = useMemo(() => {
     const list = chatContactList;
     if (!list || list.length === 0) return [];
@@ -97,12 +97,12 @@ export default function StressMonitorScreen({ route }) {
   useEffect(() => {
     if (mappedHealthContacts.length === 0) return;
     if (
-      normalizedSelectedMapRecipentId &&
+      normalizedselectedHealthRecipentId &&
       !hasAutoSelectedFromParamRef.current
     ) {
       hasAutoSelectedFromParamRef.current = true;
       const contactToSelect = mappedHealthContacts.find(
-        c => String(c.receipent_id) === normalizedSelectedMapRecipentId,
+        c => String(c.receipent_id) === normalizedselectedHealthRecipentId,
       );
       dispatch(
         healthSelectedContactActions.setHealthSelectedContact({
@@ -122,7 +122,7 @@ export default function StressMonitorScreen({ route }) {
         );
       }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [healthSelectedContact, normalizedSelectedMapRecipentId, dispatch, contactsLastHealthData]);
+  }, [healthSelectedContact, normalizedselectedHealthRecipentId, dispatch, contactsLastHealthData]);
    
   return (
     <View style={styles.root}>

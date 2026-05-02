@@ -183,8 +183,9 @@ const styles = StyleSheet.create({
   },
 
   actionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    position: 'relative',
   },
 
   actionIconButton: {
@@ -195,6 +196,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: appColors.secondary,
     marginLeft: SW(6),
+  },
+
+  kebabButton: {
+    width: SW(32),
+    height: SW(32),
+    borderRadius: SW(16),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  dropdownMenu: {
+    position: 'absolute',
+    right: SW(0),
+    top: SW(34),
+    backgroundColor: '#1E2A3A',
+    borderRadius: SW(10),
+    borderWidth: 1,
+    borderColor: '#2A3A50',
+    paddingVertical: SW(4),
+    minWidth: SW(130),
+    zIndex: 999,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
+
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SW(10),
+    paddingHorizontal: SW(14),
+    gap: SW(10),
+  },
+
+  dropdownItemText: {
+    fontSize: SW(13),
+    fontWeight: '500',
   },
 
   addBtn: {

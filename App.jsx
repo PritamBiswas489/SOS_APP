@@ -23,6 +23,7 @@ import NoPermissionsScreen from './src/components/noPermissionsScreen/index.jsx'
 import { checkRequiredPermissions, requestLocationPermissions, requestMicrophonePermission } from './src/services/permissions.service';
 import CompleteProfileScreen from './src/screens/completeProfileScreen/index.jsx';
 import AuthLoadingScreen from './src/screens/authLoadingScreen/index.jsx';
+import EditProfileScreen from './src/screens/editProfileScreen/index.jsx';
 import {
   createNotificationChannels,
   requestNotificationPermissions,
@@ -411,6 +412,7 @@ const App = () => {
             <Stack.Screen name="Process" component={ProcessScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen
               name="AddContact"
               component={AddContactsScreen}
@@ -448,7 +450,7 @@ const App = () => {
                   Array.isArray(missingPermissions) &&
                   missingPermissions.length === 0 &&
                   activeScreen !== null &&
-                  !['Splash', 'Process', 'Login', 'CompleteProfile'].includes(activeScreen)
+                  !['Splash', 'Process', 'Login', 'CompleteProfile','AuthLoading'].includes(activeScreen)
                 }
                 navigationRef={navigationRef}
                 sosModalVisible={sosModalVisible}

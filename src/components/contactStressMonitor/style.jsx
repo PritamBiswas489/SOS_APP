@@ -226,6 +226,43 @@ const styles = StyleSheet.create({
   tipBody:  { flex: 1 },
   tipTitle: { fontSize: 12, fontWeight: '700', color: '#E8EDF5', marginBottom: 4 },
   tipText:  { color: '#A0AEC0', fontSize: 12, lineHeight: 18 },
+
+  // Action Buttons
+  actionRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 10,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    paddingVertical: 7,
+    gap: 5,
+    borderWidth: 1,
+  },
+  actionBtnChat: {
+    backgroundColor: '#4A90FF18',
+    borderColor: '#4A90FF40',
+  },
+  actionBtnAudio: {
+    backgroundColor: '#00E5A018',
+    borderColor: '#00E5A040',
+  },
+  actionBtnHeart: {
+    backgroundColor: '#FF336618',
+    borderColor: '#FF336640',
+  },
+  actionBtnPressed: {
+    opacity: 0.6,
+  },
+  actionBtnLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 });
 
 export default styles;

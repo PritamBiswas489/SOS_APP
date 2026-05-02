@@ -278,6 +278,18 @@ const AudioStreamScreen = ({route}) => {
     });
   }, [navigation, selectedContact]);
 
+  const navigateToHealth = useCallback(() => {
+    if (!selectedContact) return;
+    navigation.navigate('Main', {
+      screen: 'MainTabs',
+      params: {
+        screen: 'Health',
+        params: { selectedHealthRecipentId: selectedContact.receipent_id },
+      },
+
+    });
+     }, [navigation, selectedContact]);
+
   return (
     <SafeAreaView style={ls.safe}>
       <ScrollView
@@ -339,6 +351,15 @@ const AudioStreamScreen = ({route}) => {
                     accessibilityLabel="View on map"
                   >
                     <Icon name="map" size={17} color={C.green} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[ls.heroActionBtn, { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.3)' }]}
+                    activeOpacity={0.75}
+                    onPress={() => navigateToHealth(selectedContact)}
+                    accessibilityLabel="View health data"
+                  >
+                    <Icon name="favorite" size={17} color={C.red} />
                   </TouchableOpacity>
                 </View>
               </View>

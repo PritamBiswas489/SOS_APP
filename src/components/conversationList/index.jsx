@@ -448,6 +448,17 @@ const ConversationList = ({
     });
   }, [navigation, selectedContact?.receipent_id]);
 
+  const handleOpenHealth = useCallback(() => {
+    if (!selectedContact?.receipent_id) return;
+    navigation.navigate('Main', { 
+      screen: 'MainTabs',
+      params: {
+        screen: 'Health',
+        params: { selectedHealthRecipentId: selectedContact.receipent_id },
+      },
+    });
+  }, [navigation, selectedContact?.receipent_id]);
+
   const handleReplyClose = useCallback(() => {
     dispatch(selectedReplyMessageActions.resetState());
   }, [dispatch]);
@@ -864,46 +875,79 @@ const handleReload = useCallback(() => {
         <View
           style={{
             position: 'absolute',
-            left: 12,
-            bottom: 96,
+            top: 12,
+            left: 0,
+            right: 0,
             zIndex: 10,
             alignItems: 'center',
+            pointerEvents: 'box-none',
           }}
         >
-          <TouchableOpacity
-            activeOpacity={0.86}
-            onPress={handleOpenMap}
+          <View
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: '#14312A',
-              borderWidth: 1,
-              borderColor: 'rgba(52, 211, 153, 0.45)',
-              justifyContent: 'center',
+              flexDirection: 'row',
               alignItems: 'center',
-              marginBottom: 10,
+              backgroundColor: 'rgba(15, 20, 35, 0.82)',
+              borderRadius: 28,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.08)',
+              paddingHorizontal: 4,
+              paddingVertical: 4,
+              gap: 2,
             }}
           >
-            <Icon name="map" size={20} color="#34D399" />
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleOpenMap}
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: 22,
+                gap: 3,
+              }}
+            >
+              <Icon name="map" size={16} color="#34D399" />
+              
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.86}
-            onPress={handleOpenAudio}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: '#132844',
-              borderWidth: 1,
-              borderColor: 'rgba(96, 166, 255, 0.45)',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Icon name="mic" size={20} color="#60A6FF" />
-          </TouchableOpacity>
+            <View style={{ width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleOpenAudio}
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: 22,
+                gap: 3,
+              }}
+            >
+              <Icon name="mic" size={16} color="#60A6FF" />
+             
+            </TouchableOpacity>
+
+            <View style={{ width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleOpenHealth}
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: 22,
+                gap: 3,
+              }}
+            >
+              <Icon name="favorite" size={16} color="#AA3CFF" />
+              
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 

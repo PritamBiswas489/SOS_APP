@@ -7,7 +7,7 @@ export const TURN_SERVER_USER = TURN_SERVER_USERNAME;
 export const TURN_SERVER_PASS = TURN_SERVER_PASSWORD;
 export const MAP_TILE_API_KEY = MAPTILE_API_KEY;
 export const ORS_KEY = ORS_API_KEY;
-export const USE_GOOGLE_MAPS = false;
+export const USE_GOOGLE_MAPS = true;
 
 export const GOOGLE_MAPS_API_KEY = _GOOGLE_MAPS_API_KEY;
 

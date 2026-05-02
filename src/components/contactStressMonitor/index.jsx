@@ -13,13 +13,15 @@ import {
   StyleSheet,
   Animated,
   Easing,
+  Pressable,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import styles from './style';
 import { useSelector } from 'react-redux';
 import { STRESS_STATE } from '../../context/StressContext';
 import { useStress } from '../../context/StressContext';
 import { formatDateSeparator, formatMessageTime } from '../../config/utility';
-
+import { useNavigation } from '@react-navigation/native';
 // ─────────────────────────────────────────────
 // STATIC PLACEHOLDER DATA  (replace with props / selector later)
 // ─────────────────────────────────────────────
@@ -432,6 +434,7 @@ export default function ContactStressMonitor() {
     state => state.healthSelectedContact,
   );
   const {contactsLastHealthData} = useStress();
+  const navigation = useNavigation();
   const selectedContactData =
     contactsLastHealthData?.[healthSelectedContact?.item?.receipent_id];
   const contact = healthSelectedContact?.item;
@@ -500,6 +503,85 @@ export default function ContactStressMonitor() {
             <Text style={[styles.stressLevelText, { color: stress.color }]}>
               {stress.emoji} {stress.label}
             </Text>
+          </View>
+
+          {/* ── Action Buttons ── */}
+          <View style={styles.actionRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                styles.actionBtnChat,
+                pressed && styles.actionBtnPressed,
+              ]}
+              onPress={() => {
+                navigation.navigate('Main', {
+                  screen: 'MainTabs',
+                  params: {
+                    screen: 'Chat',
+                    params: {
+                      selectedReceipentId:
+                        healthSelectedContact?.item?.receipent_id,
+                    },
+                  },
+                });
+              }}
+            >
+              <Icon name="chat" size={15} color="#4A90FF" />
+              <Text style={[styles.actionBtnLabel, { color: '#4A90FF' }]}>
+                Chat
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                styles.actionBtnAudio,
+                pressed && styles.actionBtnPressed,
+              ]}
+              onPress={() => {
+                navigation.navigate('Main', {
+                  screen: 'MainTabs',
+                  params: {
+                    screen: 'AudioStream',
+                    params: {
+                      selectedReceipentId:
+                        healthSelectedContact?.item?.receipent_id,
+                    },
+                  },
+                });
+              }}
+            >
+              <Icon name="mic" size={15} color="#00E5A0" />
+              <Text style={[styles.actionBtnLabel, { color: '#00E5A0' }]}>
+                Audio
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                styles.actionBtnHeart,
+                pressed && styles.actionBtnPressed,
+              ]}
+              onPress={() => {
+                navigation.navigate('Main', {
+                  screen: 'MainTabs',
+                  params: {
+                    screen: 'Map',
+                    params: {
+                      selectedMapRecipentId:
+                        healthSelectedContact?.item?.receipent_id,
+                    },
+                  },
+                });
+                return;
+              }}
+            >
+              <Icon name="map" size={15} color="#FF3366" />
+              <Text style={[styles.actionBtnLabel, { color: '#FF3366' }]}>
+                Map
+              </Text>
+            </Pressable>
           </View>
         </View>
       </View>

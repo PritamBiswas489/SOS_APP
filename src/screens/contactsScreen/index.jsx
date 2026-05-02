@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   View,
   Text,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import ContactRowItem from '../../components/contactRowItem';
 import styles from './style';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -123,32 +123,64 @@ const ContactsScreen = () => {
         { key: 'cancel', icon: 'close', color: '#FF4757' },
       ];
     }
-    return [{ key: 'chat', icon: 'chat', color: '#2F6BFF' },{ key: 'delete', icon: 'delete', color: '#FF4757' }];
+    return [
+      { key: 'chat', icon: 'chat', color: '#2F6BFF' },
+      { key: 'audio', icon: 'mic', color: '#2ED573' },
+      { key: 'map', icon: 'map', color: '#FFA726' },
+      { key: 'health', icon: 'favorite', color: '#FF3B5C' },
+      { key: 'delete', icon: 'delete', color: '#FF4757' }];
   };
 
-  const onActionPress = (action, item, tab) => {
+  const onActionPress = useCallback((action, item) => {
+    const tab = activeTab;
     const actionText = action.charAt(0).toUpperCase() + action.slice(1);
     if (action === 'chat' && tab === 'contact') {
-      const usrId = userData?.id;
-      const roomid = [item.user_id, item.trusted_user_id].sort().join(':');
-      const displayName = item.nickname || item.trusted_contact?.name || `${item.trusted_contact?.phone_number}` || 'Unknown';
-      dispatch(
-        chatSelectedTrustedContactActions.setSelectedTrustedContact({
-          id: item.id,
-          name: displayName,
-          initial: displayName.charAt(0).toUpperCase(),
-          receipent_id: item.trusted_user_id,
-          phone_number: item.trusted_contact?.phone_number,
-          roomId: roomid,
-          isOnline: false,
-        }),
-      );
+     
       navigation.navigate('Main', {
         screen: 'MainTabs',
-        params: { screen: 'Chat' },
+        params: { 
+          screen: 'Chat',
+          params: { selectedReceipentId : item.trusted_user_id },
+         },
         });
       return;
     }
+     if (action === 'map' && tab === 'contact') {
+       navigation.navigate('Main', {
+        screen: 'MainTabs',
+        params: { 
+          screen: 'Map',
+          params: { selectedMapRecipentId : item.trusted_user_id },
+         },
+        });
+      return;
+
+
+     }
+     if (action === 'audio' && tab === 'contact') {
+       navigation.navigate('Main', {
+        screen: 'MainTabs',
+        params: { 
+          screen: 'AudioStream',
+          params: { selectedReceipentId : item.trusted_user_id },
+         },
+        });
+      return;
+
+
+     }
+     if (action === 'health' && tab === 'contact') {
+       navigation.navigate('Main', {
+        screen: 'MainTabs',
+        params: { 
+          screen: 'Health',
+          params: { selectedHealthRecipentId : item.trusted_user_id },
+         },
+        });
+      return;
+
+
+     }
     if (action === 'cancel' && tab === 'outgoing') {
       //need a confirm and cancel alert
       Alert.alert(
@@ -274,7 +306,7 @@ const ContactsScreen = () => {
 
 
     }
-  };
+  }, [activeTab, contacts, incomingRequests, outgoingRequests, deleteTrustedContactRequest, acceptTrustedContactRequest, setTrustedContacts, setIncomingRequests, setOutgoingRequests, setActiveTab, showSuccess, showError, navigation]);
 
   const gotToAddContactScreen = () => {
     navigation.navigate('AddContact');
@@ -414,63 +446,43 @@ const ContactsScreen = () => {
         )}
 
         {!loader && currentList.map(item => {
-          // console.log('Rendering contact item:', item);
-          let displayName  = '?';
-          if(activeTab === 'incoming') {
-             displayName = item?.inviter?.name  || item?.relationship || '?';
+          let displayName = '?';
+          if (activeTab === 'incoming') {
+            displayName = item?.inviter?.name || item?.relationship || '?';
           }
-          if(activeTab === 'outgoing') {
-              displayName = item?.nickname || item?.trusted_contact?.name || item?.relationship || '?';
+          if (activeTab === 'outgoing') {
+            displayName = item?.nickname || item?.trusted_contact?.name || item?.relationship || '?';
           }
           displayName = item?.nickname || item?.trusted_contact?.name || item?.relationship || displayName;
+
           let profileImage = null;
-          if(activeTab === 'incoming') {
-             profileImage = item?.inviter?.profile_photo ? getProfileImage(item?.inviter?.profile_photo) : null;
-          }else if(activeTab === 'outgoing') {
-              profileImage = item?.trusted_contact?.profile_photo ? getProfileImage(item?.trusted_contact?.profile_photo) : null;
-          }else{
-              profileImage = item?.trusted_contact?.profile_photo ? getProfileImage(item?.trusted_contact?.profile_photo) : null;
+          if (activeTab === 'incoming') {
+            profileImage = item?.inviter?.profile_photo ? getProfileImage(item?.inviter?.profile_photo) : null;
+          } else {
+            profileImage = item?.trusted_contact?.profile_photo ? getProfileImage(item?.trusted_contact?.profile_photo) : null;
           }
 
-          return (<View key={item.id} style={styles.contactRow}>
-            <View
-              style={[styles.avatar, { backgroundColor: getAvatarColor(item) }]}
-            >
-              {profileImage ? (
-                <Image
-                  source={{ uri: profileImage }}
-                  style={styles.avatarImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Text style={styles.avatarText}>{displayName.charAt(0)}</Text>
-              )}
-            </View>
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactName}>
-                {displayName}
-              </Text>
-              {/* small text */}
-              <Text style={styles.contactRelation}>{item.relationship}</Text>
-              <Text style={styles.contactDetails}>
-                {activeTab === 'incoming'
-                  ? item?.inviter?.phone_number
-                  : item?.trusted_contact?.phone_number}
-              </Text>
-            </View>
-            <View style={styles.actionContainer}>
-              {getActionIcons().map(action => (
-                <TouchableOpacity
-                  key={`${item.id}-${action.key}`}
-                  style={styles.actionIconButton}
-                  onPress={() => onActionPress(action.key, item, activeTab)}
-                >
-                  <Icon name={action.icon} size={18} color={action.color} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>)
-})}
+          const phoneNumber = activeTab === 'incoming'
+            ? item?.inviter?.phone_number
+            : item?.trusted_contact?.phone_number;
+
+          const normalizedItem = {
+            ...item,
+            displayName,
+            profileImage,
+            phoneNumber,
+          };
+
+          return (
+            <ContactRowItem
+              key={item.id}
+              item={normalizedItem}
+              actions={getActionIcons()}
+              onActionPress={onActionPress}
+              getAvatarColor={getAvatarColor}
+            />
+          );
+        })}
       </ScrollView>
 
       {/* Add Trusted Contact — fixed */}

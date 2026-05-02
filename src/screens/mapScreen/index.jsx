@@ -4,7 +4,7 @@ import styles from './style';
 import MapView, { Marker, Circle, Polyline, UrlTile, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MapAvatarList from '../../components/mapAvatarList';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUserData } from '../../hook/useUserData';
 import { useSelector, useDispatch } from 'react-redux';
 import { useContactLocations } from '../../hook/useContactLocations';
@@ -177,6 +177,7 @@ const MapScreen = ({ route }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mappedMapContacts, normalizedSelectedMapRecipentId, dispatch]);
 
+  const [mapKey, setMapKey] = useState(0);
   const [CONTACT_MARKER, setContactMarkers] = useState(null);
   const [routeCoords, setRouteCoords] = useState([]);
   const [routeInfo, setRouteInfo] = useState(null);
@@ -204,6 +205,14 @@ const MapScreen = ({ route }) => {
     if (!userData?.latitude || !userData?.longitude) return;
     mapRef.current?.animateToRegion({ ...userLocation, latitudeDelta: 0.012, longitudeDelta: 0.012 }, 600);
   }, [userLocation]);
+
+  // Force MapView remount on every focus — the only reliable fix for blank
+  // UrlTile tiles after navigating away and back (PROVIDER_DEFAULT limitation)
+  useFocusEffect(
+    useCallback(() => {
+      setMapKey(prev => prev + 1);
+    }, []),
+  );
 
   useEffect(() => {
     if (selectedContactLocation) {
@@ -388,6 +397,14 @@ const handleNominatimPlaceSelect = place => {
     });
   };
 
+  const navigateHealthRoom = () => {
+    if (!mapSelectedContact) return;
+    navigation.navigate('Main', {
+      screen: 'MainTabs',
+      params: { screen: 'Health', params: { selectedHealthRecipentId: mapSelectedContact.receipent_id } },
+    });
+  };
+
   const [isMoving, setIsMoving] = useState(false);
   const movingIntervalRef = useRef(null);
   const movingStepRef = useRef(0);
@@ -453,6 +470,7 @@ const handleNominatimPlaceSelect = place => {
             useGoogleMap OFF → PROVIDER_DEFAULT, OSM UrlTile
             ══════════════════════════════════════════════════════ */}
         <MapView
+          key={mapKey}
           ref={mapRef}
           style={styles.map}
           provider={useGoogleMap ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
@@ -471,7 +489,7 @@ const handleNominatimPlaceSelect = place => {
               urlTemplate={`https://api.maptiler.com/maps/night/{z}/{x}/{y}.png?key=${MAP_TILE_API_KEY}`}
               maximumZ={20}
               tileSize={256}
-              shouldReplaceMapContent={true}
+              shouldReplaceMapContent={true} 
             />
           )}
 
@@ -576,8 +594,6 @@ const handleNominatimPlaceSelect = place => {
           )}
         </MapView>
 
-        
-
         {/* ROUTE INFO BADGE */}
         {routeInfo && (
           <View style={styles.routeInfoBadge}>
@@ -649,6 +665,17 @@ const handleNominatimPlaceSelect = place => {
                   <Icon name="mic" size={20} color="#ffffff" />
                 </View>
                 <Text style={styles.fabActionLabel}>Audio</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={navigateHealthRoom}
+                style={styles.fabAction}
+                activeOpacity={0.8}
+              >
+                <View style={styles.fabActionBtn}>
+                  <Icon name="favorite" size={20} color="#ffffff" />
+                </View>
+                <Text style={styles.fabActionLabel}>Health</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={startMoving}

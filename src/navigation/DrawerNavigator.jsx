@@ -24,14 +24,17 @@ import { useDispatch } from 'react-redux';
 import { resetAllState } from '../store';
 import { useUserData } from '../hook/useUserData'; 
 import { getProfileImage } from '../config/utility';
+import useUserAuth from '../hook/useUserAuth.jsx';
+import { log } from '@react-native-firebase/app/dist/module/internal/web/firebaseFirestorePipelines';
  
 
 const Drawer = createDrawerNavigator();
 
-const logoutProcess = async (navigation, dispatch) => {
+const logoutProcess = async (navigation, dispatch, callback) => {
   try {
     await UserService.logout();
     dispatch(resetAllState());
+    callback();
     Alert.alert('Logged Out', 'You have been logged out successfully.');
     navigation.reset({
       index: 0,
@@ -48,6 +51,7 @@ const CustomDrawerContent = props => {
   console.log('=====================================================');
 
   const { userData} = useUserData();
+  const { logout } = useUserAuth();
     
   return (
     <DrawerContentScrollView
@@ -71,6 +75,14 @@ const CustomDrawerContent = props => {
           <View style={styles.statusDot} />
           <Text style={styles.statusText}>Online</Text>
         </View>
+
+        <TouchableOpacity
+          style={styles.editProfileBtn}
+          onPress={() => { props.navigation.closeDrawer(); props.navigation.navigate('EditProfile'); }}
+        >
+          <Icon name="edit" size={14} color="#5352ED" />
+          <Text style={styles.editProfileText}>Edit Profile</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Divider */}
@@ -87,16 +99,6 @@ const CustomDrawerContent = props => {
       {/* Extra Options */}
       <View style={styles.extraSection}>
         <TouchableOpacity style={styles.extraItem}>
-          <Icon name="share" size={22} color="#A4B0BE" />
-          <Text style={styles.extraItemText}>Share App</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.extraItem}>
-          <Icon name="star" size={22} color="#A4B0BE" />
-          <Text style={styles.extraItemText}>Rate Us</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.extraItem}>
           <Icon name="privacy-tip" size={22} color="#A4B0BE" />
           <Text style={styles.extraItemText}>Privacy Policy</Text>
         </TouchableOpacity>
@@ -105,7 +107,9 @@ const CustomDrawerContent = props => {
       {/* Logout */}
       <View style={styles.bottomSection}>
         <TouchableOpacity
-          onPress={() => logoutProcess(props.navigation, dispatch)}
+          onPress={() => logoutProcess(props.navigation, dispatch, ()=>{
+            logout();
+          })}
           style={styles.logoutBtn}
         >
           <Icon name="logout" size={22} color="#FF4757" />
@@ -275,6 +279,24 @@ const styles = StyleSheet.create({
   statusText: {
     color: '#2ED573',
     fontSize: 12,
+    fontWeight: '600',
+  },
+
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#5352ED',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    gap: 6,
+  },
+
+  editProfileText: {
+    color: '#5352ED',
+    fontSize: 13,
     fontWeight: '600',
   },
 
