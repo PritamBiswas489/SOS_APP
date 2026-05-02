@@ -5,10 +5,11 @@ import { useNavigation } from '@react-navigation/native';
 
 const SplashScreen = () => {
   const navigation = useNavigation();
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace('Process', { action: 'retrieveDataAfterLogin' });
-    }, 200);
+      navigation.replace('AuthLoading');
+    }, 1200);
     return () => clearTimeout(timer);
   }, [navigation]);
   return (

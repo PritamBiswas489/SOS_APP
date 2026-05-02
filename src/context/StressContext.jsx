@@ -24,6 +24,7 @@ import {useBle} from './BleContext';
 import {StressDataService} from '../services/stressData.service';
 import { useSocket } from './SocketContext';
 import { buildStressRecord } from '../models/stressRecord.model';
+import useUserAuth from '../hook/useUserAuth';
 
 // ── Stress States ─────────────────────────────
 export const STRESS_STATE = {
@@ -185,6 +186,8 @@ export function StressProvider({
   const gf  = useGoogleFit();
   const ble = useBle();
 
+  const { isAuthenticated } = useUserAuth();
+
   const [sosArmed, setSosArmed] = useState(false);
   const [lastRecordedFallback, setLastRecordedFallback] = useState(null);
   const [contactsLastHealthData, setContactsLastHealthData] = useState(null);
@@ -274,6 +277,10 @@ export function StressProvider({
       setLastRecordedFallback(null);
       return;
     }
+    if (!isAuthenticated) {
+      setLastRecordedFallback(null);
+      return;
+    }
 
     StressDataService.getLatest(result => {
       if (!result?.success) return;
@@ -304,7 +311,7 @@ export function StressProvider({
       
       });
     });
-  }, [hasLiveData]);
+  }, [hasLiveData, isAuthenticated]);
 
   const resolvedStress = hasLiveData
     ? stress
@@ -465,8 +472,11 @@ export function StressProvider({
   },[]);
   useEffect(() => {
     // Fetch contacts' last health data on mount
-    getContactLastHealthData();
-  }, [getContactLastHealthData]);
+    if(isAuthenticated){
+        getContactLastHealthData();
+    }
+   
+  }, [getContactLastHealthData, isAuthenticated]);
 
   useEffect(() => {
     if(!isConnected) return;

@@ -22,6 +22,7 @@ import NoInternetScreen from './src/components/noInternetScreen/index.jsx';
 import NoPermissionsScreen from './src/components/noPermissionsScreen/index.jsx';
 import { checkRequiredPermissions, requestLocationPermissions, requestMicrophonePermission } from './src/services/permissions.service';
 import CompleteProfileScreen from './src/screens/completeProfileScreen/index.jsx';
+import AuthLoadingScreen from './src/screens/authLoadingScreen/index.jsx';
 import {
   createNotificationChannels,
   requestNotificationPermissions,
@@ -405,6 +406,7 @@ const App = () => {
             initialRouteName="Splash"
             screenOptions={{ headerShown: false }}
           >
+            <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
             <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="Process" component={ProcessScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />

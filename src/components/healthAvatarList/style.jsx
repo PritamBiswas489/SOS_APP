@@ -277,4 +277,49 @@ export default StyleSheet.create({
     borderRadius: SW(2.5),
     backgroundColor: 'rgba(255,255,255,0.9)',
   },
+
+  /* ME BUTTON — avatar wrapper (for badge positioning) */
+  meBtnAvatarWrap: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  meBtnCritical: {
+    borderRadius: SW(16),
+    borderWidth: 1,
+    borderColor: 'rgba(255,51,102,0.65)',
+    backgroundColor: 'rgba(255,51,102,0.07)',
+  },
+
+  /* STRESS EMOJI BADGE */
+  emojiBadge: {
+    position: 'absolute',
+    top: SW(-6),
+    right: SW(-6),
+    width: SW(20),
+    height: SW(20),
+    borderRadius: SW(10),
+    backgroundColor: '#0D1F3C',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    elevation: 5,
+  },
+  emojiBadgeCritical: {
+    borderColor: '#FF3366',
+    backgroundColor: 'rgba(255,51,102,0.2)',
+    shadowColor: '#FF3366',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 5,
+    elevation: 7,
+  },
+
+  /* CRITICAL ITEM BORDER */
+  avatarItemCritical: {
+    borderColor: 'rgba(255,51,102,0.65)',
+    backgroundColor: 'rgba(255,51,102,0.07)',
+  },
 });

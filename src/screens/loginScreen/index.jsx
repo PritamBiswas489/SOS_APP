@@ -16,6 +16,7 @@ import { LoginService } from '../../services/login.service';
 import useToast from '../../hook/useToast';
 import { countries } from '../../config/countries';
 import { setAuthTokens } from '../../config/auth'; 
+import useUserAuth from '../../hook/useUserAuth';
 
 export const getFlagEmoji = countryCode => {
   const codePoints = countryCode
@@ -43,6 +44,7 @@ const LoginScreen = () => {
     dial_code: '+234',
   });
   const [userPhone, setUserPhone] = useState('');
+  const uAuth = useUserAuth();
   const [deviceCountryCode, setDeviceCountryCode] = useState(
     getDeviceCountryCode() || 'NG',
   ); // Default to 'NG' if detection fails
@@ -196,7 +198,7 @@ const LoginScreen = () => {
         'SUCCESS',
         'OTP verified successfully and login processed',
       );
-      //navigation.replace('CompleteProfile', { userData });
+       uAuth.login(true);
        navigation.replace('Process',{action: 'retrieveDataAfterLogin'});
     } catch (error) {
       setIsLoading(false);

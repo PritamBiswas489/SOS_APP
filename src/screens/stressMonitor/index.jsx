@@ -14,6 +14,7 @@ import { formatDateSeparator, formatMessageTime } from '../../config/utility';
 
 export default function StressMonitorScreen({ route }) {
   const { userData } = useUserData();
+  const { contactsLastHealthData } = useStress();
   const selectedMapRecipentId = route?.params?.selectedMapRecipentId;
   const [normalizedSelectedMapRecipentId, setNormalizedSelectedMapRecipentId] =
     useState(null);
@@ -47,11 +48,15 @@ export default function StressMonitorScreen({ route }) {
           contact.trusted_contact.name ||
           contact.relationship ||
           '?';
+
+        const stressData = contactsLastHealthData?.[contact.trusted_user_id] ?? null;  
+        const stressLevel = stressData?.stress?.state?.level ?? 0;
         trustedContacts.push({
           id: contact.id,
           name: displayName,
           initial: displayName?.charAt(0).toUpperCase(),
           isOnline: onlineUsers[contact.trusted_user_id] || false,
+          stressLevel,
           receipent_id: contact.trusted_user_id,
           phone_number: contact.trusted_contact.phone_number,
           roomId: roomid,
@@ -60,6 +65,8 @@ export default function StressMonitorScreen({ route }) {
             : null,
         });
       } else if (contact.trusted_user_id === usrId) {
+        const stressData = contactsLastHealthData?.[contact.user_id] ?? null;
+        const stressLevel = stressData?.stress?.state?.level ?? 0;
         const displayName =
           contact?.inviter?.name || contact?.inviter?.phone_number || 'Unknown';
         otherContacts.push({
@@ -68,6 +75,7 @@ export default function StressMonitorScreen({ route }) {
           initial: displayName.charAt(0).toUpperCase(),
           phone_number: contact?.inviter?.phone_number,
           isOnline: onlineUsers[contact.user_id] || false,
+          stressLevel,
           receipent_id: contact.user_id,
           roomId: roomid,
           profile_image: contact?.inviter?.profile_photo
@@ -80,10 +88,11 @@ export default function StressMonitorScreen({ route }) {
       oc => !trustedContacts.some(tc => tc.roomId === oc.roomId),
     );
     return [...trustedContacts, ...filteredOtherContacts].sort((a, b) => {
-      if (a.isOnline === b.isOnline) return 0;
-      return a.isOnline ? -1 : 1;
+      if (b.stressLevel !== a.stressLevel) return b.stressLevel - a.stressLevel;
+      if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+      return 0;
     });
-  }, [chatContactList, usrId, onlineUsers]);
+  }, [chatContactList, usrId, onlineUsers, contactsLastHealthData]);
 
   useEffect(() => {
     if (mappedHealthContacts.length === 0) return;
@@ -113,7 +122,7 @@ export default function StressMonitorScreen({ route }) {
         );
       }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [healthSelectedContact, normalizedSelectedMapRecipentId, dispatch]);
+  }, [healthSelectedContact, normalizedSelectedMapRecipentId, dispatch, contactsLastHealthData]);
    
   return (
     <View style={styles.root}>

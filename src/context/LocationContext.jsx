@@ -15,6 +15,7 @@ import { useSocket } from './SocketContext';
 import { useUserData } from '../hook/useUserData';
 import { useContactLocations } from '../hook/useContactLocations';
 import { LocationsService } from '../services/locations.service';
+import useUserAuth from '../hook/useUserAuth';
  
  
 
@@ -93,6 +94,7 @@ export const LocationProvider = ({ children }) => {
   const {   updateContactLocations } = useContactLocations();
  
   const { userData } = useUserData();
+  const { isAuthenticated } = useUserAuth();
 
   // Register the global callback for the background task
   useEffect(() => {
@@ -367,8 +369,10 @@ export const LocationProvider = ({ children }) => {
 
   // Fetch contacts' last locations on mount
   useEffect(() => {
-    getContactsLastLocations();
-  }, [getContactsLastLocations]);
+    if(isAuthenticated){
+        getContactsLastLocations();
+    }
+  }, [getContactsLastLocations, isAuthenticated]);
   
 
    

@@ -7,11 +7,13 @@ import { useUserData } from '../../hook/useUserData';
 import { requestUserPermission, getFCMToken } from '../../services/notification.service';
 import { Platform } from 'react-native';
 import { useChatContacts } from '../../hook/useChatContacts';
+import useUserAuth from '../../hook/useUserAuth';
 
 const ProfessionalLoader = () => {
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(0)).current;
   const shimmerValue = useRef(new Animated.Value(0)).current;
+ 
 
   useEffect(() => {
     const spinAnimation = Animated.loop(
@@ -108,6 +110,7 @@ const ProcessScreen = payload => {
   console.log('=====================================================');
   const navigation = useNavigation();
   const { fetchUserData } = useUserData();
+  const { isAuthenticated } = useUserAuth();
   
 
   const saveFcmTokenData = async fcmToken => {
@@ -141,6 +144,10 @@ const ProcessScreen = payload => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!isAuthenticated) {
+        navigation.replace('Login');
+        return;
+      }
       if (action === 'retrieveDataAfterLogin') {
         
         console.log('=====================================================');
@@ -186,7 +193,7 @@ const ProcessScreen = payload => {
       }
     };
     fetchData();
-  }, [action, dispatch, fetchChatContacts, navigation]);
+  }, [action, dispatch, fetchChatContacts, navigation,isAuthenticated]);
   return (
     <View style={styles.container}>
       <ProfessionalLoader />

@@ -14,6 +14,7 @@ import audioSelectedContactSlice from './redux/audioSelectedContact.redux';
 import incomingSosNotificationSlice from './redux/incomingSosNotification.redux';
 import mySosSessionsSlice from './redux/mySosSessions.redux';
 import healthSelectedContactSlice from './redux/healthSelectedContact.redux';
+import authSlice from './redux/useAuth.redux';
 
 export const resetAllState = createAction('store/resetAll');
 
@@ -33,6 +34,7 @@ const appReducer = combineReducers({
   incomingSosNotification: incomingSosNotificationSlice.reducer,
   mySosSessions: mySosSessionsSlice.reducer,
   healthSelectedContact: healthSelectedContactSlice.reducer,
+  auth: authSlice.reducer,
 });
 
 const rootReducer = (state, action) => {

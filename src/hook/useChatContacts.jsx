@@ -2,14 +2,18 @@ import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { chatContactActions } from '../store/redux/chatContactList.redux';
 import { TrustedContactService } from '../services/trustedContact.service';
-
+import useUserAuth from './useUserAuth';
 let inFlightChatContactsRequest = null;
 
 export const useChatContacts = () => {
     const dispatch = useDispatch();
     const chatContactList = useSelector(state => state.chatContactList);
+    const { isAuthenticated } = useUserAuth();
     const contactList = chatContactList?.contact_list || [];
     const fetchChatContacts = useCallback(() => {
+      if (!isAuthenticated) {
+        return;
+      }
       if (inFlightChatContactsRequest) {
         return inFlightChatContactsRequest;
       }
@@ -38,7 +42,7 @@ export const useChatContacts = () => {
           });
 
           return inFlightChatContactsRequest;
-    }, [dispatch]);
+    }, [dispatch, isAuthenticated]);
 
     return {
         contactList,

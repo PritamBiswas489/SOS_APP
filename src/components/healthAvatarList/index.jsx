@@ -7,6 +7,8 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -18,6 +20,262 @@ import { useChatPresence } from '../../context/ChatContext';
 import { useChatContacts } from '../../hook/useChatContacts';
 import { useUserData } from '../../hook/useUserData';
 import { getProfileImage } from '../../config/utility';
+import { STRESS_STATE, useStress } from '../../context/StressContext';
+
+const AVATAR_COLORS = [
+  '#2F6BFF', '#FF3B5C', '#2ED573', '#FFA726',
+  '#6A4CFF', '#00BCD4', '#8BC34A', '#E91E63',
+];
+
+const getAvatarColor = item => {
+  const key = `${item?.id ?? ''}-${item?.name ?? ''}`;
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+
+const ContactItem = React.memo(({ item, isSelected, selectContact }) => {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const stressLevel = item?.stressLevel ?? 0;
+  const stressState = Object.values(STRESS_STATE).find(s => s.level === stressLevel) ?? null;
+  const isCritical = stressLevel >= 4;
+
+  useEffect(() => {
+    if (!isCritical) {
+      pulseAnim.setValue(1);
+      shakeAnim.setValue(0);
+      glowAnim.setValue(0);
+      return;
+    }
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 550, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 550, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+
+    const shake = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: 4, duration: 65, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -4, duration: 65, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 3, duration: 65, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -3, duration: 65, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 65, useNativeDriver: true }),
+        Animated.delay(2400),
+      ]),
+    );
+
+    const glow = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 700, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 700, useNativeDriver: false }),
+      ]),
+    );
+
+    pulse.start();
+    shake.start();
+    glow.start();
+
+    return () => {
+      pulse.stop();
+      shake.stop();
+      glow.stop();
+    };
+  }, [isCritical, glowAnim, pulseAnim, shakeAnim]);
+
+  const avatarColor = getAvatarColor(item);
+
+  const criticalBorderColor = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#FF3366', '#FF8C42'],
+  });
+
+  const circleBorderColor = isCritical
+    ? criticalBorderColor
+    : isSelected
+    ? appColors.primary
+    : 'rgba(255,255,255,0.35)';
+
+  return (
+    <Animated.View style={{ transform: [{ scale: pulseAnim }, { translateX: shakeAnim }] }}>
+      <TouchableOpacity
+        style={[
+          styles.avatarItem,
+          isSelected && styles.avatarItemSelected,
+          isCritical && styles.avatarItemCritical,
+        ]}
+        activeOpacity={0.7}
+        onPress={() => selectContact(item)}
+      >
+        <View style={styles.avatarCircleWrap}>
+          <Animated.View
+            style={[
+              styles.avatarCircle,
+              { borderColor: circleBorderColor, backgroundColor: avatarColor },
+            ]}
+          >
+            {item.profile_image ? (
+              <Image
+                source={{ uri: item.profile_image }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={[styles.avatarText, isSelected && { fontWeight: 'bold' }]}>
+                {item.initial}
+              </Text>
+            )}
+          </Animated.View>
+
+          {stressState && (
+            <View style={[styles.emojiBadge, isCritical && styles.emojiBadgeCritical]}>
+              <Icon name="favorite" size={11} color={stressState.color} />
+            </View>
+          )}
+
+          {item.isOnline && <View style={styles.onlineDot} />}
+          {item.isStreaming && (
+            <View style={styles.streamingBadge}>
+              <Icon name="graphic-eq" size={9} color="#fff" />
+            </View>
+          )}
+        </View>
+
+        <View style={styles.avatarMeta}>
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[styles.avatarLabel, isSelected && styles.avatarLabelSelected]}
+          >
+            {item.name}
+          </Text>
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[styles.avatarPhoneNumber, isSelected && styles.avatarPhoneSelected]}
+          >
+            {item.phone_number || 'No phone'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
+
+const MeButton = React.memo(({ currentUser, isMe, onPress, stressState }) => {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim  = useRef(new Animated.Value(0)).current;
+
+  const isCritical = (stressState?.level ?? -1) >= 4;
+
+  useEffect(() => {
+    if (!isCritical) {
+      pulseAnim.setValue(1);
+      shakeAnim.setValue(0);
+      glowAnim.setValue(0);
+      return;
+    }
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 550, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,    duration: 550, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    const shake = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue:  4, duration: 65, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -4, duration: 65, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue:  3, duration: 65, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -3, duration: 65, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue:  0, duration: 65, useNativeDriver: true }),
+        Animated.delay(2400),
+      ]),
+    );
+    const glow = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 700, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 700, useNativeDriver: false }),
+      ]),
+    );
+
+    pulse.start(); shake.start(); glow.start();
+    return () => { pulse.stop(); shake.stop(); glow.stop(); };
+  }, [isCritical, glowAnim, pulseAnim, shakeAnim]);
+
+  const criticalBorder = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#FF3366', '#FF8C42'],
+  });
+
+  const initial = currentUser?.name?.[0]?.toUpperCase() ?? 'M';
+
+  return (
+    <Animated.View style={[
+      styles.meBtnWrap,
+      isMe && styles.meBtnWrapSelected,
+      { transform: [{ scale: pulseAnim }, { translateX: shakeAnim }] },
+    ]}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.8}
+        style={[isCritical && styles.meBtnCritical]}
+      >
+        {isMe ? (
+          <LinearGradient
+            colors={['#1A6EFF', '#00C2FF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.meBtnGradient}
+          >
+            <View style={styles.meBtnAvatarWrap}>
+              <View style={styles.meBtnAvatar}>
+                {currentUser?.profile_photo ? (
+                  <Image source={{ uri: getProfileImage(currentUser.profile_photo) }} style={styles.meBtnAvatarImg} />
+                ) : (
+                  <Text style={styles.meBtnAvatarInitial}>{initial}</Text>
+                )}
+              </View>
+              {stressState && (
+                <View style={[styles.emojiBadge, isCritical && styles.emojiBadgeCritical]}>
+                  <Icon name="favorite" size={11} color={stressState.color} />
+                </View>
+              )}
+            </View>
+            <Text style={styles.meBtnTextActive}>Me</Text>
+          </LinearGradient>
+        ) : (
+          <View style={styles.meBtnIdle}>
+            <View style={styles.meBtnAvatarWrap}>
+              <Animated.View style={[
+                styles.meBtnAvatarIdle,
+                isCritical && { borderColor: criticalBorder },
+              ]}>
+                {currentUser?.profile_photo ? (
+                  <Image source={{ uri: getProfileImage(currentUser.profile_photo) }} style={styles.meBtnAvatarImg} />
+                ) : (
+                  <Text style={styles.meBtnAvatarInitialIdle}>{initial}</Text>
+                )}
+              </Animated.View>
+              {stressState && (
+                <View style={[styles.emojiBadge, isCritical && styles.emojiBadgeCritical]}>
+                  <Icon name="favorite" size={11} color={stressState.color} />
+                </View>
+              )}
+            </View>
+            <Text style={styles.meBtnTextIdle}>Me</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
 
 const HealthAvatarList = ({ chatContacts, fetchChatContacts }) => {
     const ONLINE_COLOR = '#2ED573';
@@ -44,92 +302,20 @@ const HealthAvatarList = ({ chatContacts, fetchChatContacts }) => {
       console.log('Selected contact:', item);
      dispatch(healthSelectedContactActions.setHealthSelectedContact({isMe: false, item}));
     }, [dispatch]);
- 
 
-    const avatarColors = [
-      '#2F6BFF',
-      '#FF3B5C',
-      '#2ED573',
-      '#FFA726',
-      '#6A4CFF',
-      '#00BCD4',
-      '#8BC34A',
-      '#E91E63',
-];
-
-const getAvatarColor = item => {
-  const key = `${item?.id ?? ''}-${item?.name ?? ''}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i += 1) {
-    hash = key.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-};
+    const { contactsLastHealthData, stress } = useStress();
 
     const renderContactItem = useCallback(({ item }) => {
-      console.log('Rendering contact item:', item);
-      console.log('Current healthSelectedContact:', healthSelectedContact);
-      console.log('Current selected contact ID:', healthSelectedContact?.item?.id);
-      const isSelected = healthSelectedContact?.item?.id === item.id;
-      const avatarColor = getAvatarColor(item);
-
+      
       return (
-        <TouchableOpacity
-          key={item.id}
-          style={[styles.avatarItem, isSelected && styles.avatarItemSelected]}
-          activeOpacity={0.7}
-          onPress={() => selectContact(item)}
-        >
-          <View style={styles.avatarCircleWrap}>
-            <View
-              style={[
-                styles.avatarCircle,
-                {
-                  borderColor: isSelected ? appColors.primary : 'rgba(255,255,255,0.35)',
-                  backgroundColor: avatarColor,
-                },
-              ]} 
-            >
-              {item.profile_image ? (
-                <Image
-                  source={{ uri: item.profile_image }}
-                  style={styles.avatarImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Text style={[styles.avatarText, isSelected && { fontWeight: 'bold' }]}> 
-                  {item.initial}
-                </Text>
-              )}
-            </View>
-
-            {item.isOnline && <View style={styles.onlineDot} />}
-            {item.isStreaming && (
-              <View style={styles.streamingBadge}>
-                <Icon name="graphic-eq" size={9} color="#fff" />
-              </View>
-            )}
-          </View>
-
-          <View style={styles.avatarMeta}>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={[styles.avatarLabel, isSelected && styles.avatarLabelSelected]}
-            >
-              {item.name}
-            </Text>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={[styles.avatarPhoneNumber, isSelected && styles.avatarPhoneSelected]}
-            >
-              {item.phone_number || 'No phone'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <ContactItem
+          item={item}
+          isSelected={healthSelectedContact?.item?.id === item.id}
+          selectContact={selectContact}
+          
+        />
       );
-    }, [healthSelectedContact?.item?.id, selectContact]);
+    }, [healthSelectedContact?.item?.id, selectContact, contactsLastHealthData]);
     const handleRefresh = useCallback(async () => {
       if (refreshing) return;
       console.log('Refreshing contact list...');
@@ -196,43 +382,12 @@ const getAvatarColor = item => {
   return (
     <View style={styles.avatarRowContainer}>
       {/* ── Me button ── */}
-      <TouchableOpacity
+      <MeButton
+        currentUser={currentUser}
+        isMe={isMe}
         onPress={selectMe}
-        activeOpacity={0.8}
-        style={[styles.meBtnWrap, isMe && styles.meBtnWrapSelected]}>
-        {isMe ? (
-          <LinearGradient
-            colors={['#1A6EFF', '#00C2FF']}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 1}}
-            style={styles.meBtnGradient}>
-            <View style={styles.meBtnAvatar}>
-              {currentUser?.profile_photo ? (
-                <Image source={{uri: getProfileImage(currentUser.profile_photo)}} style={styles.meBtnAvatarImg} />
-              ) : (
-                <Text style={styles.meBtnAvatarInitial}>
-                  {currentUser?.name?.[0]?.toUpperCase() ?? 'M'}
-                </Text>
-              )}
-            </View>
-            <Text style={styles.meBtnTextActive}>Me</Text>
-          
-          </LinearGradient>
-        ) : (
-          <View style={styles.meBtnIdle}>
-            <View style={styles.meBtnAvatarIdle}>
-              {currentUser?.profile_photo ? (
-                <Image source={{uri: getProfileImage(currentUser.profile_photo)}} style={styles.meBtnAvatarImg} />
-              ) : (
-                <Text style={styles.meBtnAvatarInitialIdle}>
-                  {currentUser?.name?.[0]?.toUpperCase() ?? 'M'}
-                </Text>
-              )}
-            </View>
-            <Text style={styles.meBtnTextIdle}>Me</Text>
-          </View>
-        )}
-      </TouchableOpacity>
+        stressState={stress?.state ?? null}
+      />
 
       <FlatList
         ref={flatListRef}
