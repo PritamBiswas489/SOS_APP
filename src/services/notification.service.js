@@ -12,6 +12,7 @@ import {
   getToken,
 } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
+import { set } from '@react-native-firebase/app/dist/module/internal/web/firebaseDatabase';
 
 // Modular API: get the messaging instance once
 const getMsg = () => getMessaging(getApp());
@@ -195,12 +196,17 @@ export const subscribeNotificationPress = handler => {
   });
 
   getInitialNotification(getMsg()).then(remoteMessage => {
+    console.log('App opened from quit state by notification:', remoteMessage);
     if (remoteMessage) {
-      triggerPressCallback({
-        source: 'messaging.initial',
-        remoteMessage,
-        data: remoteMessage?.data,
-      });
+      (async () => {
+        if (remoteMessage?.data) {
+          await AsyncStorage.setItem(PENDING_NOTIFICATION_PRESS_KEY, JSON.stringify({
+            source: 'messaging.initial',
+            remoteMessage,
+            data: remoteMessage?.data,
+          }));
+        }
+      })(); 
     }
   });
 
@@ -208,6 +214,7 @@ export const subscribeNotificationPress = handler => {
     .getInitialNotification()
     .then(initialNotification => {
       if (initialNotification?.notification) {
+        console.log('App opened from quit state by Notifee notification:', initialNotification);
         triggerPressCallback({
           source: 'notifee.initial',
           notification: initialNotification.notification,
@@ -215,29 +222,6 @@ export const subscribeNotificationPress = handler => {
           pressAction: initialNotification.pressAction,
         });
       }
-    });
-
-  AsyncStorage.getItem(PENDING_NOTIFICATION_PRESS_KEY)
-    .then(storedPayload => {
-      if (!storedPayload) {
-        return;
-      }
-
-      let parsedPayload = null;
-      try {
-        parsedPayload = JSON.parse(storedPayload);
-      } catch (error) {
-        console.log('Failed to parse pending background notification payload:', error);
-      }
-
-      if (parsedPayload) {
-        triggerPressCallback(parsedPayload);
-      }
-
-      return AsyncStorage.removeItem(PENDING_NOTIFICATION_PRESS_KEY);
-    })
-    .catch(error => {
-      console.log('Failed to read pending background notification payload:', error);
     });
 
   return () => {
@@ -250,14 +234,47 @@ export const subscribeNotificationPress = handler => {
 export const consumePendingNotificationPress = async () => {
   try {
     const storedPayload = await AsyncStorage.getItem(PENDING_NOTIFICATION_PRESS_KEY);
+    console.log('Checking for pending background notification press payload:', storedPayload);
     if (!storedPayload) {
       return null;
     }
 
-    await AsyncStorage.removeItem(PENDING_NOTIFICATION_PRESS_KEY);
+   await AsyncStorage.removeItem(PENDING_NOTIFICATION_PRESS_KEY);
     return JSON.parse(storedPayload);
   } catch (error) {
     console.log('Failed to consume pending background notification payload:', error);
+    return null;
+  }
+};
+
+// Checks if the app was cold-started by tapping a notification (quit state).
+// notifee.onBackgroundEvent does NOT fire in quit state — use getInitialNotification instead.
+export const getQuitStateNotification = async () => {
+  try {
+    // Check Notifee quit-state tap
+    const notifeeInitial = await notifee.getInitialNotification();
+    if (notifeeInitial?.notification) {
+      return {
+        source: 'notifee.initial',
+        notification: notifeeInitial.notification,
+        data: notifeeInitial.notification?.data,
+        pressAction: notifeeInitial.pressAction,
+      };
+    }
+
+    // Check FCM quit-state tap
+    const fcmInitial = await getInitialNotification(getMsg());
+    if (fcmInitial) {
+      return {
+        source: 'messaging.initial',
+        remoteMessage: fcmInitial,
+        data: fcmInitial?.data,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.log('Failed to get quit-state notification:', error);
     return null;
   }
 };

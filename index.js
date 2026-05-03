@@ -31,7 +31,9 @@ const PENDING_NOTIFICATION_PRESS_KEY = '@pending_notification_press_payload';
 
 // Required for Notifee to handle background/quit-state notification events
 notifee.onBackgroundEvent(async ({ type, detail }) => {
+  console.log('Received background notification press event:', { type, detail });
   if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
+    
     const payload = {
       source: 'notifee.background',
       notification: detail?.notification,

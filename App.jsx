@@ -45,6 +45,7 @@ import SosFab from './src/components/sosFab/index.jsx';
 import { useIncomingSosNotifications } from './src/hook/useIncomingSosNotifications.jsx';
 import { useMySosSessions } from './src/hook/useMySosSessions.jsx';
 import { initCrashLogger, logError } from './src/middleware/nativeCrashLogger.js';
+import useUserAuth from './src/hook/useUserAuth.jsx';
 // initCrashLogger();
 // logError(new Error('Test error from App.jsx to verify crash logging is working correctly')); 
 // Isolated so that opening from FAB only re-renders this component logic
@@ -123,6 +124,7 @@ const App = () => {
   const [outgoingVictims, setOutgoingVictims] = useState(DUMMY_OUTGOING_SOS);
   const { fetchSosNotifications } = useIncomingSosNotifications();
   const { fetchMySosSessions } = useMySosSessions();
+  const { isAuthenticated } = useUserAuth();
 
   const openSosModalFromNotification = useCallback(() => {
     if (AppState.currentState === 'active') {
@@ -206,6 +208,16 @@ const App = () => {
     };
   }, []);
 
+  const navigateToMain = useCallback(() => {
+    if (navigationRef.isReady()) {
+      navigationRef.navigate('Main');
+      return;
+    }
+    pendingNavigationRef.current = () => {
+      navigationRef.navigate('Main');
+      };
+    }, []);
+
   const navigateToChat = useCallback((senderId) => {
     if (!navigationRef.isReady()) {
       console.log('Navigating to chat screen for senderId2:', senderId);
@@ -251,17 +263,21 @@ const App = () => {
 
     if (refreshMessageTypes.includes(messageType)) {
       navigateToContacts();
+      return
     }
     if (payloadData?.fetchSOS) {
         fetchSosNotifications();
+        return;
       }
 
     if (messageType === 'SOS') {
       
       openSosModalFromNotification();
+      return
     }
     if (payloadData?.fetchVictimSOS) {
         fetchMySosSessions();
+        return;
     }
     if (messageType === 'VICTIM') {
      
@@ -270,28 +286,30 @@ const App = () => {
     if (messageType === 'CHAT') {
       console.log('Navigating to chat screen for senderId:', payloadData?.senderId);
       navigateToChat(payloadData?.senderId);
+      return;
     }
-  }, [fetchMySosSessions, fetchSosNotifications, navigateToContacts, navigateToChat, openSosModalFromNotification]);
+    navigateToMain();
+  }, [fetchMySosSessions, fetchSosNotifications, navigateToContacts, navigateToChat, navigateToMain, openSosModalFromNotification]);
 
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', async nextState => {
-      if (nextState !== 'active') {
-        return;
-      }
+  // useEffect(() => {
+  //   const subscription = AppState.addEventListener('change', async nextState => {
+  //     if (nextState !== 'active') {
+  //       return;
+  //     }
 
-      const pendingPressPayload = await consumePendingNotificationPress();
-      if (pendingPressPayload) {
-        console.log('Consumed pending background notification press:', pendingPressPayload);
-        notificationAction(pendingPressPayload);
-      }
-    });
+  //     const pendingPressPayload = await consumePendingNotificationPress();
+  //     if (pendingPressPayload) {
+  //       console.log('Consumed pending background notification press:', pendingPressPayload);
+  //       notificationAction(pendingPressPayload);
+  //     }
+  //   });
 
-    return () => subscription.remove();
-  }, [notificationAction]);
+  //   return () => subscription.remove();
+  // }, [notificationAction]);
 
-  const showBanner = (title, body) => {
+  const showBanner = useCallback((title, body) => {
     setBanner({ visible: true, title, body });
-  };
+  }, []);
 
   const closeBanner = () => {
     setBanner(prev => ({ ...prev, visible: false }));
@@ -313,7 +331,29 @@ const App = () => {
     };
   }, []);
 
+  const handleNotificationPress = useCallback(payload => {
+    console.log('Notification clicked:', payload);
+    notificationAction(payload);
+  }, [notificationAction]);
+
+  const handleForegroundNotification = useCallback(payload => {
+    console.log('Foreground notification received:', payload);
+    const title =
+      payload?.remoteMessage?.notification?.title ||
+      payload?.data?.title ||
+      'SOS App';
+    const body =
+      payload?.remoteMessage?.notification?.body ||
+      payload?.data?.body ||
+      '';
+    showBanner(title, body);
+    notificationAction(payload);
+  }, [notificationAction, showBanner]);
+
   useEffect(() => {
+      if (!isAuthenticated) {
+        return;
+      }
     const setupNotifications = async () => {
       await createNotificationChannels();
       
@@ -329,35 +369,25 @@ const App = () => {
       },
     );
 
-    const handleNotificationPress = payload => {
-      console.log('Notification clicked:', payload);
-      notificationAction(payload);
-    };
-
-    const handleForegroundNotification = payload => {
-      console.log('Foreground notification received:', payload);
-      const title =
-        payload?.remoteMessage?.notification?.title ||
-        payload?.data?.title ||
-        'SOS App';
-      const body =
-        payload?.remoteMessage?.notification?.body ||
-        payload?.data?.body ||
-        '';
-      showBanner(title, body);
-      notificationAction(payload);
-    };
+    const pendingPressSubscription = DeviceEventEmitter.addListener(
+      'notification:pending-press',
+      payload => {
+        console.log('Received pending notification press event via DeviceEventEmitter:', payload);
+       notificationAction(payload);
+      },
+    );
 
     setupNotifications();
     const unsubscribe = subscribeForegroundNotifications(handleForegroundNotification);
-    const unsubscribePress = subscribeNotificationPress(handleNotificationPress);
+   const unsubscribePress = subscribeNotificationPress(handleNotificationPress);
 
     return () => {
       unsubscribe();
       unsubscribePress();
       bannerSubscription.remove();
+      pendingPressSubscription.remove();
     };
-  }, [navigateToContacts, notificationAction]);
+  }, [handleNotificationPress, handleForegroundNotification, showBanner, notificationAction, isAuthenticated]);
 
   const handleRetryConnection = () => {
     NetInfo.fetch().then(state => {

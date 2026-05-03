@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Easing, Text } from 'react-native';
+import { View, StyleSheet, Animated, Easing, Text, DeviceEventEmitter } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { UserService } from '../../services/user.service';
 import { useDispatch } from 'react-redux';
 import { useUserData } from '../../hook/useUserData';
-import { requestUserPermission, getFCMToken } from '../../services/notification.service';
+import { requestUserPermission, getFCMToken, consumePendingNotificationPress, getQuitStateNotification } from '../../services/notification.service';
 import { Platform } from 'react-native';
 import { useChatContacts } from '../../hook/useChatContacts';
 import useUserAuth from '../../hook/useUserAuth';
@@ -189,7 +189,17 @@ const ProcessScreen = payload => {
             navigation.replace('CompleteProfile');
             return;
         }
-        navigation.replace('Main');
+        const pendingNotification = await consumePendingNotificationPress()
+          ?? await getQuitStateNotification();
+          console.log('=====================================================');
+          console.log('Pending notification press payload after login:', pendingNotification);
+          console.log('=====================================================');
+        if (pendingNotification) {
+          DeviceEventEmitter.emit('notification:pending-press', pendingNotification);
+        }else{
+             navigation.replace('Main');
+        }
+        
       }
     };
     fetchData();
