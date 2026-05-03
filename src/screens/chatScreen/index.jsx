@@ -6,6 +6,7 @@ import {
   Keyboard,
   Platform,
   TouchableOpacity,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -36,7 +37,7 @@ const ChatScreen = ({ route }) => {
   const hasAutoSelectedFromParamRef = useRef(false);
 
   useEffect(() => {
-    // Reset gate before applying next route param so auto-select can run for each param change.
+    console.log('ChatScreen selectedReceipentId changed:', selectedReceipentId);
     hasAutoSelectedFromParamRef.current = false;
     setNormalizedSelectedReceipentId(
       selectedReceipentId === null || selectedReceipentId === undefined
@@ -44,6 +45,23 @@ const ChatScreen = ({ route }) => {
         : String(selectedReceipentId),
     );
   }, [selectedReceipentId]);
+
+  // Pending recipient set by the DeviceEventEmitter path (push notification while on Chat).
+  // Kept separate from the route-param path to avoid batching/ordering issues.
+  const eventRecipientRef = useRef(null);
+  const [eventTrigger, setEventTrigger] = useState(0);
+
+  // When already on Chat screen, App.jsx emits this instead of updating route params
+  // (setParams targets the wrong navigator level for nested tabs).
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('chat:switch-recipient', ({ senderId }) => {
+      if (!senderId) return;
+      eventRecipientRef.current = String(senderId);
+      // Increment so the consume-effect always fires, even for the same senderId
+      setEventTrigger(t => t + 1);
+    });
+    return () => sub.remove();
+  }, []);
 
   const mappedChatContacts = useMemo(() => {
     const list = chatContacts;
@@ -90,7 +108,26 @@ const ChatScreen = ({ route }) => {
     });
   }, [chatContacts, usrId, onlineUsers]);
 
+  // Keep a ref of the latest contacts for use inside the event listener closure
+  const mappedChatContactsRef = useRef([]);
   useEffect(() => {
+    mappedChatContactsRef.current = mappedChatContacts;
+  }, [mappedChatContacts]);
+
+  // Consume pending event recipient — runs on every trigger increment or when contacts reload
+  useEffect(() => {
+    if (!eventRecipientRef.current || mappedChatContacts.length === 0) return;
+    const contact = mappedChatContacts.find(
+      c => String(c.receipent_id) === eventRecipientRef.current,
+    );
+    if (contact) {
+      dispatch(chatSelectedTrustedContactActions.setSelectedTrustedContact(contact));
+      eventRecipientRef.current = null;
+    }
+  }, [eventTrigger, mappedChatContacts, dispatch]);
+
+  useEffect(() => {
+    console.log('Mapped chat contacts updated:', mappedChatContacts);
     if (mappedChatContacts.length === 0) return;
 
     if (normalizedSelectedReceipentId && !hasAutoSelectedFromParamRef.current) {
@@ -98,6 +135,7 @@ const ChatScreen = ({ route }) => {
       const contactToSelect = mappedChatContacts.find(
         c => String(c.receipent_id) === normalizedSelectedReceipentId,
       );
+      console.log('Auto-selecting contact from route param:', contactToSelect);
       dispatch(
         chatSelectedTrustedContactActions.setSelectedTrustedContact(
           contactToSelect ?? mappedChatContacts[0],

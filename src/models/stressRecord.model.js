@@ -4,17 +4,17 @@ export function buildStressRecord({
   bleData,
   googleFitData,
 }) {
-  const hasBleData =
-    activeSource === 'ble' &&
-    Array.isArray(bleData?.hrBuffer) &&
-    bleData.hrBuffer.length > 0;
+  // const hasBleData =
+  //   activeSource === 'ble' &&
+  //   Array.isArray(bleData?.hrBuffer) &&
+  //   bleData.hrBuffer.length > 0;
 
-  const hasGoogleFitData =
-    activeSource === 'googlefit' &&
-    Array.isArray(googleFitData?.hrReadings) &&
-    googleFitData.hrReadings.length > 0;
+  // const hasGoogleFitData =
+  //   activeSource === 'googlefit' &&
+  //   Array.isArray(googleFitData?.hrReadings) &&
+  //   googleFitData.hrReadings.length > 0;
 
-  if ((!hasBleData && !hasGoogleFitData) || stress?.currentHR == null) {
+  if (stress?.currentHR == null) {
     return null;
   }
 

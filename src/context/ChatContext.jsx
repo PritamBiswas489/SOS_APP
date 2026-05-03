@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
+import { AppState } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useSocket } from './SocketContext';
 import { useChatContacts } from '../hook/useChatContacts';
@@ -162,11 +163,26 @@ export const ChatProvider = ({ children }) => {
     state => state.chatSelectedTrustedContact,
   );
   const currentScreenRef = useRef(currentScreenName);
+  const lastKnownScreenRef = useRef(currentScreenName);
   const chatSelectedTrustedContactRef = useRef(chatSelectedTrustedContact);
 
   useEffect(() => {
     currentScreenRef.current = currentScreenName;
+    lastKnownScreenRef.current = currentScreenName;
   }, [currentScreenName]);
+
+  useEffect(() => {
+    const handleAppStateChange = nextState => {
+      if (nextState === 'active') {
+        currentScreenRef.current = lastKnownScreenRef.current;
+      } else {
+        console.log('App going to background, clearing current screen ref');
+        currentScreenRef.current = null;
+      }
+    };
+    const sub = AppState.addEventListener('change', handleAppStateChange);
+    return () => sub.remove();
+  }, []);
   useEffect(() => {
     chatSelectedTrustedContactRef.current = chatSelectedTrustedContact;
   }, [chatSelectedTrustedContact]);
@@ -176,6 +192,7 @@ export const ChatProvider = ({ children }) => {
       return;
     }
     const handleNewMessage = async message => {
+      console.log('New Message:', message);
       if (
         !message?.isSelf &&
         (currentScreenRef.current !== 'Chat' ||
@@ -189,9 +206,10 @@ export const ChatProvider = ({ children }) => {
         await displayRemoteNotification({
           data: {
             type: 'chat',
-            messageType: 'CHAT_MESSAGE',
+            messageType: 'CHAT',
             title: senderName,
             body: messageText,
+            senderId: message?.senderId,
           },
         }).catch(() => {});
       }

@@ -646,37 +646,8 @@ const handleNominatimPlaceSelect = place => {
         <View style={styles.fabContainer}>
           {menuOpen && (
             <>
-              <TouchableOpacity
-                onPress={navigateToChatRoom}
-                style={styles.fabAction}
-                activeOpacity={0.8}
-              >
-                <View style={styles.fabActionBtn}>
-                  <Icon name="chat" size={20} color="#ffffff" />
-                </View>
-                <Text style={styles.fabActionLabel}>Chat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={navigateAudioRoom}
-                style={styles.fabAction}
-                activeOpacity={0.8}
-              >
-                <View style={styles.fabActionBtn}>
-                  <Icon name="mic" size={20} color="#ffffff" />
-                </View>
-                <Text style={styles.fabActionLabel}>Audio</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={navigateHealthRoom}
-                style={styles.fabAction}
-                activeOpacity={0.8}
-              >
-                <View style={styles.fabActionBtn}>
-                  <Icon name="favorite" size={20} color="#ffffff" />
-                </View>
-                <Text style={styles.fabActionLabel}>Health</Text>
-              </TouchableOpacity>
+             
+ 
               <TouchableOpacity
                 onPress={startMoving}
                 style={styles.fabAction}
@@ -827,6 +798,80 @@ const handleNominatimPlaceSelect = place => {
             </>
           )}
         </View>
+
+        {/* CONTACT QUICK ACTIONS BAR */}
+        {mapSelectedContact?.receipent_id && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 120,
+              left: 20,
+              zIndex: 9,
+              alignItems: 'flex-start',
+              pointerEvents: 'box-none',
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'column',
+                alignItems: 'center',
+                backgroundColor: 'rgba(15, 20, 35, 0.82)',
+                borderRadius: 28,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.08)',
+                paddingHorizontal: 4,
+                paddingVertical: 4,
+                gap: 2,
+              }}
+            >
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={navigateToChatRoom}
+                style={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 6,
+                  paddingVertical: 10,
+                  borderRadius: 22,
+                }}
+              >
+                <Icon name="chat" size={16} color="#60A6FF" />
+              </TouchableOpacity>
+
+              <View style={{ height: 1, width: 28, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={navigateAudioRoom}
+                style={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 6,
+                  paddingVertical: 10,
+                  borderRadius: 22,
+                }}
+              >
+                <Icon name="mic" size={16} color="#60A6FF" />
+              </TouchableOpacity>
+
+              <View style={{ height: 1, width: 28, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={navigateHealthRoom}
+                style={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 6,
+                  paddingVertical: 10,
+                  borderRadius: 22,
+                }}
+              >
+                <Icon name="favorite" size={16} color="#AA3CFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* LOCATION CARD */}
         <View style={styles.locationCard}>

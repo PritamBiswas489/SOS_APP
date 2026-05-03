@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {Alert, StatusBar, DeviceEventEmitter, Platform, AppState} from 'react-native';
-import {NavigationContainer, createNavigationContainerRef} from '@react-navigation/native';
+import {NavigationContainer, createNavigationContainerRef, CommonActions} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -206,21 +206,31 @@ const App = () => {
     };
   }, []);
 
-  const navigateToChat = useCallback(() => {
-    if (navigationRef.isReady()) {
-      navigationRef.navigate('Main', {
-        screen: 'MainTabs',
-        params: { screen: 'Chat' },
-      });
+  const navigateToChat = useCallback((senderId) => {
+    if (!navigationRef.isReady()) {
+      console.log('Navigating to chat screen for senderId2:', senderId);
+      pendingNavigationRef.current = () => {
+        navigationRef.navigate('Main', {
+          screen: 'MainTabs',
+          params: { screen: 'Chat', params: { selectedReceipentId: senderId } },
+        });
+      };
       return;
     }
 
-    pendingNavigationRef.current = () => {
-      navigationRef.navigate('Main', {
-        screen: 'MainTabs',
-        params: { screen: 'Chat' },
-      });
-    };
+    // If already on Chat screen, signal the screen directly via DeviceEventEmitter.
+    // CommonActions.setParams dispatches to the root-focused route (Drawer/Stack),
+    // not the nested Chat screen, so route.params never updates there.
+    const currentRoute = navigationRef.getCurrentRoute();
+    if (currentRoute?.name === 'Chat') {
+      DeviceEventEmitter.emit('chat:switch-recipient', { senderId });
+      return;
+    }
+
+    navigationRef.navigate('Main', {
+      screen: 'MainTabs',
+      params: { screen: 'Chat', params: { selectedReceipentId: senderId } },
+    });
   }, []);
 
   const notificationAction = useCallback((payload) => {
@@ -231,6 +241,7 @@ const App = () => {
       payload?.notification?.data ||
       {};
     const messageType = String(payloadData?.messageType || payloadData?.type || '').toUpperCase();
+    console.log({messageType:messageType});
     const refreshMessageTypes = [
       'ACCEPTED_TRUSTED_CONTACT',
       'DELETED_TRUSTED_CONTACT',
@@ -256,8 +267,9 @@ const App = () => {
      
     }
 
-    if (messageType === 'CHAT_MESSAGE') {
-      navigateToChat();
+    if (messageType === 'CHAT') {
+      console.log('Navigating to chat screen for senderId:', payloadData?.senderId);
+      navigateToChat(payloadData?.senderId);
     }
   }, [fetchMySosSessions, fetchSosNotifications, navigateToContacts, navigateToChat, openSosModalFromNotification]);
 
@@ -435,7 +447,7 @@ const App = () => {
             <HealthProvider
               userAge={28}              // user's age → used for max HR calculation
               criticalThreshold={80}   // stress score that triggers SOS alert
-              gfRefreshMs={100_000}     // Google Fit polling interval
+              gfRefreshMs={10_000}     // Google Fit polling interval
               onSos={() => {}}         // called when user confirms SOS
 
             >

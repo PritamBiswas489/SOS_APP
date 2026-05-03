@@ -191,6 +191,7 @@ export function StressProvider({
   const [sosArmed, setSosArmed] = useState(false);
   const [lastRecordedFallback, setLastRecordedFallback] = useState(null);
   const [contactsLastHealthData, setContactsLastHealthData] = useState(null);
+  const [manualHROverride, setManualHROverride] = useState(null); // DEV: manual HR injection
   const prevScoreRef = useRef(0);
   const lastSavedAtRef = useRef(0);
   const lastSavedFingerprintRef = useRef('');
@@ -256,9 +257,11 @@ export function StressProvider({
     ? 'ble'
     : 'googlefit';
 
-  const mergedHRValues = activeSource === 'ble'
-    ? ble.hrBuffer
-    : gf.hrReadings.map(r => r.value);
+  const mergedHRValues = manualHROverride !== null
+    ? Array(15).fill(manualHROverride)   // DEV: spread over 15 slots so trend/variability computes
+    : activeSource === 'ble'
+      ? ble.hrBuffer
+      : gf.hrReadings.map(r => r.value);
 
   // ────────────────────────────────────────────
   // STRESS CALCULATION
@@ -326,11 +329,12 @@ export function StressProvider({
   // Save only when a valid source has data
   // ────────────────────────────────────────────
   useEffect(() => {
-    const hasBleData = ble.connected && ble.hrBuffer.length > 0;
-    const hasGfData = gf.hrReadings.length > 0;
+    const hasBleData    = ble.connected && ble.hrBuffer.length > 0;
+    const hasGfData     = gf.hrReadings.length > 0;
+    const hasManualData = manualHROverride !== null;
 
-    // Skip insert if both sources are empty.
-    if (!hasBleData && !hasGfData) return;
+    // Skip insert if no data source is active.
+    if (!hasBleData && !hasGfData && !hasManualData) return;
 
     // Skip insert if stress was computed without a current HR value.
     if (stress.currentHR == null) return;
@@ -339,8 +343,10 @@ export function StressProvider({
     const saveThrottleMs = 10_000;
     if (now - lastSavedAtRef.current < saveThrottleMs) return;
 
+    const effectiveSource = hasManualData ? 'manual' : activeSource;
+
     const fingerprint = [
-      activeSource,
+      effectiveSource,
       stress.currentHR,
       stress.score,
       stress.rmssd,
@@ -351,14 +357,21 @@ export function StressProvider({
 
     lastSavedAtRef.current = now;
     lastSavedFingerprintRef.current = fingerprint;
-    const insertData = buildStressRecord( {
-        stress,
-        activeSource,
-        bleData,
-        googleFitData,
-      });
-    // Emit to trusted contacts before saving, so they get the update faster (no API roundtrip)  
-    emitNoAck('contact:healthdata:update', JSON.stringify(insertData)); 
+    console.log({
+      stress,
+      activeSource: effectiveSource,
+      bleData,
+      googleFitData,
+    });
+    const insertData = buildStressRecord({
+      stress,
+      activeSource: effectiveSource,
+      bleData,
+      googleFitData,
+    });
+    console.log('Inserting stress record:', insertData);
+    // Emit to trusted contacts before saving, so they get the update faster (no API roundtrip)
+    emitNoAck('contact:healthdata:update', JSON.stringify(insertData));
     StressDataService.insertFromContext(
       insertData,
       result => {
@@ -374,8 +387,9 @@ export function StressProvider({
     bleData,
     gf.hrReadings.length,
     googleFitData,
+    manualHROverride,
     stress,
-    emitNoAck
+    emitNoAck,
   ]);
 
   // ────────────────────────────────────────────
@@ -552,7 +566,10 @@ export function StressProvider({
     sosArmed,
     sendSos,
     dismissSos,
-    contactsLastHealthData, // ← Contacts' last health data for fallback in map/list  
+    contactsLastHealthData, // ← Contacts' last health data for fallback in map/list
+    manualHROverride,
+    setManualHR: setManualHROverride,
+    clearManualHR: () => setManualHROverride(null),
   }), [
     resolvedStress,
     googleFitData,
@@ -563,7 +580,8 @@ export function StressProvider({
     sosArmed,
     sendSos,
     dismissSos,
-    contactsLastHealthData
+    contactsLastHealthData,
+    manualHROverride,
   ]);
 
   return (

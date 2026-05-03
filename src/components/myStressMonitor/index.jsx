@@ -5,7 +5,8 @@
 import React, {useRef, useEffect, useState} from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  Animated, Easing,
+  Animated, Easing, Modal, TextInput,
+  KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
 import styles from './style';
 import {useStress, STRESS_STATE} from '../../context/StressContext';
@@ -237,7 +238,134 @@ const TIPS = {
   High:     'Step away. Hydrate, breathe deeply, and rest for at least 10 minutes.',
   Critical: 'Critical level — if emergency, use SOS. Sit down, breathe slowly, call someone.',
 };
+// ── Manual HR Test Modal ──────────────────
+const HR_PRESETS = [
+  {label: 'Relaxed',  hr: 65,  color: '#00E5A0'},
+  {label: 'Low',      hr: 80,  color: '#7EE8A2'},
+  {label: 'Moderate', hr: 100, color: '#FFD166'},
+  {label: 'High',     hr: 135, color: '#FF8C42'},
+  {label: 'Critical', hr: 170, color: '#FF3366'},
+];
 
+function ManualHRModal({visible, currentOverride, onApply, onClear, onClose}) {
+  const [inputVal, setInputVal] = useState(
+    currentOverride != null ? String(currentOverride) : '72',
+  );
+
+  // Sync input when modal opens
+  useEffect(() => {
+    if (visible) {
+      setInputVal(currentOverride != null ? String(currentOverride) : '72');
+    }
+  }, [visible, currentOverride]);
+
+  const parsed  = parseInt(inputVal, 10);
+  const isValid = !isNaN(parsed) && parsed >= 30 && parsed <= 220;
+
+  const hrColor = !isValid ? '#3D4E6A'
+    : parsed >= 160 ? '#FF3366'
+    : parsed >= 130 ? '#FF8C42'
+    : parsed >= 100 ? '#FFD166'
+    : '#00E5A0';
+
+  const step = delta => {
+    const next = Math.max(30, Math.min(220, (parsed || 72) + delta));
+    setInputVal(String(next));
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalBackdrop}>
+        <TouchableOpacity style={{flex: 1}} activeOpacity={1} onPress={() => { Keyboard.dismiss(); onClose(); }} />
+        <View style={styles.manualHRSheet}>
+          {/* Header */}
+          <View style={styles.manualHRHeader}>
+            <View>
+              <Text style={styles.manualHRTitle}>Manual HR Override</Text>
+              <Text style={styles.manualHRSub}>Injects HR directly into the stress algorithm</Text>
+            </View>
+            {currentOverride != null && (
+              <View style={styles.manualHRActiveBadge}>
+                <View style={styles.manualHRActiveDot} />
+                <Text style={styles.manualHRActiveText}>ACTIVE</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Big HR Input */}
+          <View style={styles.manualHRInputRow}>
+            <TouchableOpacity style={styles.manualHRStepBtn} onPress={() => step(-5)}>
+              <Text style={styles.manualHRStepText}>−</Text>
+            </TouchableOpacity>
+            <View style={[styles.manualHRInputWrap, {borderColor: hrColor + '80'}]}>
+              <TextInput
+                style={[styles.manualHRInput, {color: isValid ? hrColor : '#FF3366'}]}
+                value={inputVal}
+                onChangeText={setInputVal}
+                keyboardType="number-pad"
+                maxLength={3}
+                selectTextOnFocus
+              />
+              <Text style={styles.manualHRBpmLabel}>bpm</Text>
+            </View>
+            <TouchableOpacity style={styles.manualHRStepBtn} onPress={() => step(5)}>
+              <Text style={styles.manualHRStepText}>+</Text>
+            </TouchableOpacity>
+          </View>
+
+          {!isValid && (
+            <Text style={styles.manualHRValidationError}>Enter a value between 30 and 220</Text>
+          )}
+
+          {/* Presets */}
+          <Text style={styles.manualHRPresetsLabel}>QUICK PRESETS</Text>
+          <View style={styles.manualHRPresets}>
+            {HR_PRESETS.map(p => (
+              <TouchableOpacity
+                key={p.label}
+                style={[
+                  styles.manualHRPresetBtn,
+                  {borderColor: p.color + '60', backgroundColor: p.color + '10'},
+                  String(parsed) === String(p.hr) && {backgroundColor: p.color + '25', borderColor: p.color},
+                ]}
+                onPress={() => setInputVal(String(p.hr))}
+                activeOpacity={0.7}>
+                <Text style={[styles.manualHRPresetLabel, {color: p.color}]}>{p.label}</Text>
+                <Text style={[styles.manualHRPresetHR, {color: p.color}]}>{p.hr}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Actions */}
+          <View style={styles.manualHRActions}>
+            {currentOverride != null && (
+              <TouchableOpacity
+                style={styles.manualHRClearBtn}
+                onPress={() => { onClear(); onClose(); }}
+                activeOpacity={0.8}>
+                <Text style={styles.manualHRClearText}>Clear Override</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.manualHRApplyBtn, !isValid && {opacity: 0.4}]}
+              onPress={() => { if (isValid) { onApply(parsed); onClose(); } }}
+              disabled={!isValid}
+              activeOpacity={0.8}>
+              <Text style={styles.manualHRApplyText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
 // ── BLE Device Panel ─────────────────────────
 function ScanDots() {
   const dot1 = useRef(new Animated.Value(0.3)).current;
@@ -268,7 +396,7 @@ function ScanDots() {
   );
 }
 
-function BleDevicePanel({ble}) {
+function DevicesPanel({ble, gf}) {
   const ringAnim = useRef(new Animated.Value(0)).current;
   const ringLoop = useRef(null);
 
@@ -284,15 +412,30 @@ function BleDevicePanel({ble}) {
     return () => ringLoop.current?.stop();
   }, [ble.scanning]);
 
-  const ringScale  = ringAnim.interpolate({inputRange: [0, 1], outputRange: [1, 1.9]});
+  const ringScale   = ringAnim.interpolate({inputRange: [0, 1], outputRange: [1, 1.9]});
   const ringOpacity = ringAnim.interpolate({inputRange: [0, 0.6, 1], outputRange: [0.5, 0.15, 0]});
 
-  const statusColor = ble.connected ? '#00E5A0' : ble.scanning ? '#7EB8F7' : '#3D4E6A';
+  const bleColor    = ble.connected ? '#00E5A0' : ble.scanning ? '#7EB8F7' : '#3D4E6A';
+  const hcColor     = gf.authorized ? '#AA3CFF' : gf.loading   ? '#7EB8F7' : '#3D4E6A';
+  const activeCount = (ble.connected ? 1 : 0) + (gf.authorized ? 1 : 0);
+  const hcLatestHR  = gf.hrReadings?.[gf.hrReadings.length - 1]?.value;
 
   return (
-    <View style={styles.blePanel}>
-      <View style={styles.blePanelRow}>
-        {/* Icon with scan ring */}
+    <View style={styles.devicesPanel}>
+      {/* ── Header ── */}
+      <View style={styles.devicesPanelHeader}>
+        <Text style={styles.devicesPanelTitle}>Data Sources</Text>
+        <View style={styles.devicesPanelMeta}>
+          <View style={[styles.devicesPanelDot, {backgroundColor: bleColor}]} />
+          <View style={[styles.devicesPanelDot, {backgroundColor: hcColor}]} />
+          <Text style={styles.devicesPanelCount}>
+            {activeCount === 0 ? 'None active' : `${activeCount}/2 active`}
+          </Text>
+        </View>
+      </View>
+
+      {/* ── BLE row ── */}
+      <View style={styles.deviceRow}>
         <View style={styles.bleIconWrap}>
           {ble.scanning && (
             <Animated.View style={[styles.bleScanRing, {
@@ -302,21 +445,20 @@ function BleDevicePanel({ble}) {
             }]} />
           )}
           <View style={[styles.bleIconCircle, {
-            borderColor: statusColor + '60',
-            backgroundColor: statusColor + '10',
+            borderColor:     bleColor + '60',
+            backgroundColor: bleColor + '10',
           }]}>
             <Text style={styles.bleIconText}>📡</Text>
           </View>
-          <View style={[styles.bleStatusDot, {backgroundColor: statusColor}]} />
+          <View style={[styles.bleStatusDot, {backgroundColor: bleColor}]} />
         </View>
 
-        {/* Info */}
         <View style={styles.bleInfo}>
           <Text style={styles.bleDeviceName} numberOfLines={1}>
             {ble.connected
               ? (ble.deviceName || 'HR Device')
               : ble.scanning ? 'Scanning for devices…'
-              : 'Bluetooth HR Device'}
+              : 'BLE Heart Rate'}
           </Text>
           {ble.connected && ble.currentHR ? (
             <View style={styles.bleHrRow}>
@@ -331,23 +473,19 @@ function BleDevicePanel({ble}) {
             <Text style={styles.bleDeviceSub}>
               {ble.connected
                 ? 'Waiting for HR data…'
-                : ble.scanning
-                ? 'HR Service · 0x180D'
-                : 'Tap to pair a smartwatch or chest strap'}
+                : ble.scanning ? 'HR Service · 0x180D'
+                : 'Pair a smartwatch or chest strap'}
             </Text>
           )}
         </View>
 
-        {/* Action */}
         {!ble.connected ? (
           <TouchableOpacity
             style={[styles.bleActionBtn, ble.scanning && styles.bleActionBtnMuted]}
             onPress={ble.startScan}
             disabled={ble.scanning}
             activeOpacity={0.75}>
-            {ble.scanning
-              ? <ScanDots />
-              : <Text style={styles.bleActionBtnText}>Scan</Text>}
+            {ble.scanning ? <ScanDots /> : <Text style={styles.bleActionBtnText}>Scan</Text>}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -359,10 +497,75 @@ function BleDevicePanel({ble}) {
         )}
       </View>
 
+      {/* ── Divider ── */}
+      <View style={styles.devicesDivider} />
+
+      {/* ── Health Connect row ── */}
+      <View style={styles.deviceRow}>
+        <View style={styles.bleIconWrap}>
+          <View style={[styles.bleIconCircle, {
+            borderColor:     hcColor + '60',
+            backgroundColor: hcColor + '10',
+          }]}>
+            <Text style={styles.bleIconText}>❤️</Text>
+          </View>
+          <View style={[styles.bleStatusDot, {backgroundColor: hcColor}]} />
+        </View>
+
+        <View style={styles.bleInfo}>
+          <Text style={styles.bleDeviceName} numberOfLines={1}>
+            {gf.authorized ? 'Health Connect'
+              : gf.loading  ? 'Connecting…'
+              : 'Health Connect'}
+          </Text>
+          {gf.authorized && hcLatestHR ? (
+            <View style={styles.bleHrRow}>
+              <Text style={[styles.bleHrVal, {color: '#AA3CFF'}]}>{hcLatestHR}</Text>
+              <Text style={styles.bleHrUnit}> bpm</Text>
+              <View style={[styles.bleLiveBadge, {backgroundColor: '#AA3CFF12', borderColor: '#AA3CFF30'}]}>
+                <View style={[styles.bleLiveDot, {backgroundColor: '#AA3CFF'}]} />
+                <Text style={[styles.bleLiveText, {color: '#AA3CFF'}]}>LIVE</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.bleDeviceSub}>
+              {gf.authorized
+                ? 'Waiting for HR data…'
+                : gf.loading ? 'Requesting permissions…'
+                : 'Tap to connect heart rate data'}
+            </Text>
+          )}
+        </View>
+
+        {!gf.authorized ? (
+          <TouchableOpacity
+            style={[styles.bleActionBtn, gf.loading && styles.bleActionBtnMuted]}
+            onPress={gf.authorize}
+            disabled={gf.loading}
+            activeOpacity={0.75}>
+            {gf.loading ? <ScanDots /> : <Text style={styles.bleActionBtnText}>Connect</Text>}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.bleActionBtnDisconnect}
+            onPress={gf.disconnect}
+            activeOpacity={0.75}>
+            <Text style={styles.bleActionBtnDisconnectText}>Disconnect</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* ── Errors ── */}
       {ble.error ? (
         <View style={styles.bleErrorBox}>
           <Text style={styles.bleErrorIcon}>⚠</Text>
-          <Text style={styles.bleErrorText}>{ble.error}</Text>
+          <Text style={styles.bleErrorText}>BLE: {ble.error}</Text>
+        </View>
+      ) : null}
+      {gf.error ? (
+        <View style={[styles.bleErrorBox, {marginTop: ble.error ? 4 : 8}]}>
+          <Text style={styles.bleErrorIcon}>⚠</Text>
+          <Text style={styles.bleErrorText}>Health Connect: {gf.error}</Text>
         </View>
       ) : null}
     </View>
@@ -379,9 +582,14 @@ export default function MyStressMonitor() {
     isUsingLastRecord,
     lastRecordedAt,
     activeSource,
+    manualHROverride,
+    setManualHR,
+    clearManualHR,
   } = useStress();
   const gf  = useGoogleFit();
   const ble = useBle();
+
+  const [hrModalVisible, setHrModalVisible] = useState(false);
 
   const displayHR = ble.connected && ble.currentHR ? ble.currentHR : stress.currentHR;
   const hrSource = isUsingLastRecord
@@ -402,8 +610,8 @@ export default function MyStressMonitor() {
       {/* ── Header ── */}
      
 
-      {/* ── BLE Device (top, always visible) ── */}
-      <BleDevicePanel ble={ble} />
+      {/* ── Data Sources (BLE + Health Connect) ── */}
+      <DevicesPanel ble={ble} gf={gf} />
 
       <ScrollView
         style={styles.scroll}
@@ -491,31 +699,6 @@ export default function MyStressMonitor() {
           <BreakdownBar icon="💓" label="HRV Quality" score={stress.rmssdScore} max={30} color="#5352ED" />
         </View>
 
-        {/* ── Health Connect auth prompt ── */}
-        {!gf.authorized && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Health Connect</Text>
-              <View style={[styles.connectedPill, {backgroundColor: '#FF336618', borderColor: '#FF336640'}]}>
-                <View style={[styles.connectedDot, {backgroundColor: '#FF3366'}]} />
-                <Text style={[styles.connectedText, {color: '#FF3366'}]}>Not connected</Text>
-              </View>
-            </View>
-            <Text style={styles.sectionDesc}>
-              Grant access to read heart rate from Android Health Connect.
-            </Text>
-            {gf.error ? <Text style={styles.errorText}>{gf.error}</Text> : null}
-            <TouchableOpacity
-              style={[styles.btnPrimary, gf.loading && styles.btnMuted]}
-              onPress={gf.authorize}
-              disabled={gf.loading}>
-              <Text style={styles.btnText}>
-                {gf.loading ? 'Connecting…' : '🔗  Connect Health Connect'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* ── Tip ── */}
         <View style={styles.tipCard}>
           <Text style={styles.tipIcon}>💡</Text>
@@ -527,6 +710,31 @@ export default function MyStressMonitor() {
 
         <View style={{height: 32}} />
       </ScrollView>
+
+      {/* ── Manual HR FAB ── */}
+      <TouchableOpacity
+        style={[
+          styles.manualHRFab,
+          manualHROverride != null && styles.manualHRFabActive,
+        ]}
+        onPress={() => setHrModalVisible(true)}
+        activeOpacity={0.85}>
+        <Text style={styles.manualHRFabIcon}>♥</Text>
+        {manualHROverride != null && (
+          <View style={styles.manualHRFabBadge}>
+            <Text style={styles.manualHRFabBadgeText}>{manualHROverride}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      {/* ── Manual HR Modal ── */}
+      <ManualHRModal
+        visible={hrModalVisible}
+        currentOverride={manualHROverride}
+        onApply={setManualHR}
+        onClear={clearManualHR}
+        onClose={() => setHrModalVisible(false)}
+      />
     </View>
   );
 }

@@ -6,9 +6,10 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import {Platform, PermissionsAndroid} from 'react-native';
+import {Platform, PermissionsAndroid, AppState} from 'react-native';
 import {getBleManager, destroyBleManager} from './bleManagerSingleton';
 import {atob} from 'react-native-quick-base64';
+import BackgroundService from 'react-native-background-actions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─────────────────────────────────────────────
@@ -53,6 +54,31 @@ function waitForPoweredOn(mgr) {
 }
 
 // ─────────────────────────────────────────────
+// Background service helpers
+// ─────────────────────────────────────────────
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Keep-alive task — BLE notifications already flow through monitorCharacteristicForService.
+// This task just keeps the process alive so Android doesn't kill the BLE connection.
+const bgBleKeepAliveTask = async _taskData => {
+  await new Promise(async resolve => {
+    for (; BackgroundService.isRunning();) {
+      await sleep(10_000);
+    }
+    resolve();
+  });
+};
+
+const BLE_BG_OPTIONS = {
+  taskName:   'BLEHeartRate',
+  taskTitle:  'Heart Rate Monitor Active',
+  taskDesc:   'Receiving heart rate data via Bluetooth',
+  taskIcon:   {name: 'ic_launcher', type: 'mipmap'},
+  color:      '#60A6FF',
+  parameters: {},
+};
+
+// ─────────────────────────────────────────────
 // Context
 // ─────────────────────────────────────────────
 const BleContext = createContext(null);
@@ -65,6 +91,7 @@ export function BleProvider({children}) {
   const connectDeviceRef = useRef(null);
   // FIX: store HR subscription so it can be removed on disconnect / reconnect
   const hrSubscription = useRef(null);
+  const appStateRef    = useRef(AppState.currentState);
 
   const [state, setState] = useState({
     currentHR:  null,
@@ -79,6 +106,25 @@ export function BleProvider({children}) {
     partial => setState(prev => ({...prev, ...partial})),
     [],
   );
+
+  // ── Background service start / stop ──────────────────────────────────────
+  const startBgService = useCallback(async () => {
+    if (BackgroundService.isRunning()) return;
+    try {
+      await BackgroundService.start(bgBleKeepAliveTask, BLE_BG_OPTIONS);
+    } catch (e) {
+      console.warn('[BLE BG] Failed to start background service:', e.message);
+    }
+  }, []);
+
+  const stopBgService = useCallback(async () => {
+    if (!BackgroundService.isRunning()) return;
+    try {
+      await BackgroundService.stop();
+    } catch (e) {
+      console.warn('[BLE BG] Failed to stop background service:', e.message);
+    }
+  }, []);
 
   // ── 1. Manager Initialization & Auto-Reconnect ──────────────────────────
   useEffect(() => {
@@ -122,6 +168,10 @@ export function BleProvider({children}) {
       // The native BleManager survives hot reload and stays ready for the next mount.
       try { manager.current?.stopDeviceScan().catch(() => {}); } catch (_) {}
       manager.current = null;
+      // Stop background service on unmount
+      if (BackgroundService.isRunning()) {
+        BackgroundService.stop().catch(() => {});
+      }
     };
   }, []);
  
@@ -250,6 +300,32 @@ export function BleProvider({children}) {
   // Keep ref in sync so the init useEffect always calls the latest version
   connectDeviceRef.current = connectDevice;
 
+  // ── AppState — start/stop foreground service to keep BLE connection alive in background
+  useEffect(() => {
+    if (!state.connected) {
+      // If disconnected while backgrounded, stop any running service
+      stopBgService();
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      const wasActive = appStateRef.current === 'active';
+      const isActive  = nextAppState === 'active';
+
+      if (wasActive && !isActive) {
+        // App going to background — start foreground service to keep process alive
+        startBgService();
+      } else if (!wasActive && isActive) {
+        // App coming to foreground — foreground service no longer needed
+        stopBgService();
+      }
+
+      appStateRef.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [state.connected, startBgService, stopBgService]);
+
   // ── 4. Scan ──────────────────────────────────────────────────────────────
   const startScan = useCallback(async () => {
     if (state.scanning) return;
@@ -339,6 +415,11 @@ export function BleProvider({children}) {
     // FIX: remove HR subscription before cancelling the connection
     hrSubscription.current?.remove();
     hrSubscription.current = null;
+
+    // Stop background service if running
+    if (BackgroundService.isRunning()) {
+      BackgroundService.stop().catch(() => {});
+    }
 
     // Clear saved device so auto-reconnect doesn't fire next launch
     AsyncStorage.removeItem(SAVED_DEVICE_KEY).catch(() => {});

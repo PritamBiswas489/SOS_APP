@@ -30,8 +30,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 300,
-    height: 200,
+    width: '70%',
+    height: undefined,
+    aspectRatio: 1.5,
   },
 });
 

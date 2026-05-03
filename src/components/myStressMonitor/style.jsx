@@ -177,7 +177,17 @@ const styles = StyleSheet.create({
   btnText:    {color: '#E8EDF5', fontWeight: '700', fontSize: 13, letterSpacing: 0.3},
   errorText:  {color: '#FF3366', fontSize: 11, marginBottom: 8, textAlign: 'center'},
 
-  // BLE Panel — compact fixed strip above scroll
+  // Unified Devices Panel
+  devicesPanel:               {marginHorizontal: 14, marginTop: 8, marginBottom: 4, backgroundColor: '#0C0F1A', borderRadius: 16, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, borderWidth: 1, borderColor: '#1C2333'},
+  devicesPanelHeader:         {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10},
+  devicesPanelTitle:          {fontSize: 10, fontWeight: '800', color: '#3D4E6A', letterSpacing: 1.2, textTransform: 'uppercase'},
+  devicesPanelMeta:           {flexDirection: 'row', alignItems: 'center', gap: 5},
+  devicesPanelDot:            {width: 6, height: 6, borderRadius: 3},
+  devicesPanelCount:          {fontSize: 9, fontWeight: '700', color: '#3D4E6A', letterSpacing: 0.5},
+  deviceRow:                  {flexDirection: 'row', alignItems: 'center', gap: 10},
+  devicesDivider:             {height: 1, backgroundColor: '#1C2333', marginVertical: 9, marginLeft: 54},
+
+  // BLE Panel — kept for legacy references
   blePanel:                   {marginHorizontal: 14, marginTop: 8, marginBottom: 4, backgroundColor: '#0C0F1A', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: '#111827'},
   blePanelRow:                {flexDirection: 'row', alignItems: 'center', gap: 10},
   bleIconWrap:                {width: 44, height: 44, alignItems: 'center', justifyContent: 'center'},
@@ -204,6 +214,40 @@ const styles = StyleSheet.create({
   bleErrorBox:                {flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF336610', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#FF336630', marginTop: 8, gap: 6},
   bleErrorIcon:               {fontSize: 11, color: '#FF3366'},
   bleErrorText:               {flex: 1, color: '#FF3366', fontSize: 10, lineHeight: 15},
+
+  // Manual HR FAB
+  manualHRFab:           {position: 'absolute', bottom: 24, right: 18, width: 52, height: 52, borderRadius: 26, backgroundColor: '#0C0F1A', borderWidth: 1.5, borderColor: '#3D4E6A', alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.4, shadowRadius: 6},
+  manualHRFabActive:     {borderColor: '#FF3366', backgroundColor: '#1A0A0F'},
+  manualHRFabIcon:       {fontSize: 20, color: '#3D4E6A'},
+  manualHRFabBadge:      {position: 'absolute', top: -6, right: -6, backgroundColor: '#FF3366', borderRadius: 10, paddingHorizontal: 5, paddingVertical: 1, minWidth: 20, alignItems: 'center', borderWidth: 1.5, borderColor: '#0C0F1A'},
+  manualHRFabBadgeText:  {color: '#fff', fontSize: 9, fontWeight: '800'},
+
+  // Manual HR Modal sheet
+  modalBackdrop:          {flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end'},
+  manualHRSheet:          {backgroundColor: '#0C0F1A', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 36, borderWidth: 1, borderColor: '#1C2333'},
+  manualHRHeader:         {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20},
+  manualHRTitle:          {fontSize: 16, fontWeight: '800', color: '#E8EDF5'},
+  manualHRSub:            {fontSize: 11, color: '#3D4E6A', marginTop: 2},
+  manualHRActiveBadge:    {flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF336618', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: '#FF336650', gap: 5},
+  manualHRActiveDot:      {width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF3366'},
+  manualHRActiveText:     {fontSize: 9, fontWeight: '800', color: '#FF3366', letterSpacing: 1},
+  manualHRInputRow:       {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 8},
+  manualHRStepBtn:        {width: 44, height: 44, borderRadius: 22, backgroundColor: '#141928', borderWidth: 1, borderColor: '#1C2333', alignItems: 'center', justifyContent: 'center'},
+  manualHRStepText:       {fontSize: 22, color: '#7EB8F7', fontWeight: '300', lineHeight: 28},
+  manualHRInputWrap:      {flexDirection: 'row', alignItems: 'baseline', backgroundColor: '#141928', borderRadius: 16, borderWidth: 1.5, paddingHorizontal: 18, paddingVertical: 8, gap: 4},
+  manualHRInput:          {fontSize: 48, fontWeight: '900', textAlign: 'center', minWidth: 90, padding: 0},
+  manualHRBpmLabel:       {fontSize: 14, color: '#3D4E6A', fontWeight: '600', alignSelf: 'flex-end', paddingBottom: 8},
+  manualHRValidationError:{fontSize: 11, color: '#FF3366', textAlign: 'center', marginBottom: 8},
+  manualHRPresetsLabel:   {fontSize: 9, fontWeight: '800', color: '#3D4E6A', letterSpacing: 1.2, marginBottom: 10, marginTop: 12},
+  manualHRPresets:        {flexDirection: 'row', gap: 8, marginBottom: 20},
+  manualHRPresetBtn:      {flex: 1, borderRadius: 10, borderWidth: 1, paddingVertical: 8, alignItems: 'center'},
+  manualHRPresetLabel:    {fontSize: 9, fontWeight: '700', letterSpacing: 0.3},
+  manualHRPresetHR:       {fontSize: 14, fontWeight: '900', marginTop: 2},
+  manualHRActions:        {flexDirection: 'row', gap: 10},
+  manualHRClearBtn:       {flex: 1, backgroundColor: '#1A0A0F', borderRadius: 12, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#FF336640'},
+  manualHRClearText:      {color: '#FF3366', fontWeight: '700', fontSize: 13},
+  manualHRApplyBtn:       {flex: 1, backgroundColor: '#122040', borderRadius: 12, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: '#2D55CC'},
+  manualHRApplyText:      {color: '#7EB8F7', fontWeight: '700', fontSize: 13},
 
   // Tip
   tipCard: {flexDirection: 'row', backgroundColor: '#0C0F1A', borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#111827', gap: 12, alignItems: 'flex-start'},
