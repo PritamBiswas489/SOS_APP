@@ -411,7 +411,7 @@ export function StressProvider({
       setSosArmed(true);
       // Vibration.vibrate([0, 500, 200, 500, 200, 500]);
       console.log(`SOS API triggered at score: ${stress.score}`);
-      SOSService.triggerStressSos({ hr: stress.currentHR, stress_score: stress.score}, result => {
+        SOSService.triggerStressSos({ hr: stress.currentHR, stress_score: stress.score}, result => {
         if (result.success) {
            fetchOutgoingRequests();
         }

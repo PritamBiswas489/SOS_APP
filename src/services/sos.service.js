@@ -68,7 +68,6 @@ export class SOSService {
   }
   static async triggerStressSos({hr, stress_score}, callback) {
     console.log(`Triggering stress SOS with HR: ${hr} and Stress Score: ${stress_score}`);
-    return;
     try {
       const response = await api.post('/sos/trigger-stress-sos', {
         hr,

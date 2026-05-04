@@ -468,9 +468,7 @@ export default function ContactStressMonitor() {
           <Text style={styles.contactName} numberOfLines={1}>
             {contact.name}
           </Text>
-          {contact.phone_number ? (
-            <Text style={styles.contactPhone}>{contact.phone_number}</Text>
-          ) : null}
+          
           <View
             style={[
               styles.stressLevelPill,

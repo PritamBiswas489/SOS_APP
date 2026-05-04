@@ -325,7 +325,7 @@ const AudioStreamScreen = ({route}) => {
                 )}
                 <View style={ls.heroInfo}>
                   <Text style={ls.heroName}>{selectedContact.name}</Text>
-                  <Text style={ls.heroPhone}>{selectedContact.phone_number ?? ''}</Text>
+                  
                   <View style={ls.heroStatusRow}>
                     <View style={[ls.heroDot, { backgroundColor: selectedContact.isOnline ? C.green : C.muted }]} />
                     <Text style={[ls.heroOnlineText, { color: selectedContact.isOnline ? C.green : C.muted }]}>
