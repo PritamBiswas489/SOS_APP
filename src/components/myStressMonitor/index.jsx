@@ -73,22 +73,7 @@ function StressGauge({score, state}) {
       </View>
 
       {/* Stats strip */}
-      <View style={styles.gaugeStatsStrip}>
-        <View style={styles.gaugeStatItem}>
-          <Text style={styles.gaugeStatVal}>{scorePct}</Text>
-          <Text style={styles.gaugeStatKey}>Score</Text>
-        </View>
-        <View style={styles.gaugeStatSep} />
-        <View style={styles.gaugeStatItem}>
-          <Text style={[styles.gaugeStatVal, {color: state.color}]}>{state.label}</Text>
-          <Text style={styles.gaugeStatKey}>State</Text>
-        </View>
-        <View style={styles.gaugeStatSep} />
-        <View style={styles.gaugeStatItem}>
-          <Text style={[styles.gaugeStatVal, {color: activeZone.color}]}>{activeZone.label}</Text>
-          <Text style={styles.gaugeStatKey}>Zone</Text>
-        </View>
-      </View>
+   
 
       {/* Segmented zone bar */}
       <View style={styles.gaugeZoneWrap}>
@@ -624,17 +609,7 @@ export default function MyStressMonitor() {
         {/* ── Alert Banner ── */}
         <SosBanner visible={stress.state.level >= 3} stressState={stress.state} />
 
-        {/* ── SOS Actions ── */}
-        {sosArmed && (
-          <View style={styles.sosActions}>
-            <TouchableOpacity style={styles.sosBtn} onPress={sendSos}>
-              <Text style={styles.sosBtnText}>🆘  Send SOS Now</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dismissBtn} onPress={dismissSos}>
-              <Text style={styles.dismissBtnText}>Dismiss</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        
 
         {/* ── Source Status ── */}
         <View style={styles.badgeRow}>

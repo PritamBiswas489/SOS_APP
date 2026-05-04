@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  DeviceEventEmitter,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import IncomingCard from './IncomingCard';
@@ -65,6 +66,7 @@ const IncomingSOSList = ({ navigationRef, onAccept, onDecline, onClose }) => {
     setPage(1);
   }, [page, resetNotifications, fetchSosNotifications, setPage]);
 
+   
   const handleStatusChange = useCallback(
     newStatus => {
       if (newStatus === status || isLoading) return;
@@ -163,6 +165,7 @@ const IncomingSOSList = ({ navigationRef, onAccept, onDecline, onClose }) => {
       </View>
       <FlatList
         data={sos_notification_list}
+        extraData={sos_notification_list}
         keyExtractor={item => item.id?.toString()}
         renderItem={({ item }) => (
           <IncomingCard item={item} navigationRef={navigationRef} onAccept={onAccept} onDecline={onDecline} onClose={onClose} />

@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   gaugeStatKey:   { fontSize: 8, color: '#3D4E6A', letterSpacing: 1.3, textTransform: 'uppercase', marginTop: 2 },
   gaugeStatSep:   { width: 1, backgroundColor: '#111827', marginVertical: 8 },
   // Zone bar
-  gaugeZoneWrap:        { padding: 14, paddingTop: 12 },
+  gaugeZoneWrap:        { padding: 14  },
   gaugeZoneHeaderRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 },
   gaugeZoneHeaderLabel: { fontSize: 10, color: '#3D4E6A', letterSpacing: 1.3, textTransform: 'uppercase', fontWeight: '700' },
   gaugeZoneHeaderPct:   { fontSize: 13, fontWeight: '800' },

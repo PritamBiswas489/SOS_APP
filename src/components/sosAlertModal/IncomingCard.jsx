@@ -71,14 +71,19 @@ const UserAvatar = ({ user, size = 52 }) => {
 // Incoming SOS card
 // ---------------------------------------------------------------------------
 const IncomingCard = ({ item:incomingItem, navigationRef, onAccept, onDecline, onClose }) => {
+  console.log('Rendering IncomingCard with item:', incomingItem);
   const [item, setItem] = useState(incomingItem);
   const [activeAudioUrl, setActiveAudioUrl] = useState('');
   const [isAudioModalVisible, setIsAudioModalVisible] = useState(false);
-  const session       = item.sos_session ?? {};
-  const sender        = session.user ?? {};
-  const audioRecords = session.audio_records ?? [];
-  const sessionStatus = (session.status ?? 'active').toLowerCase();
+  const session        = item.sos_session ?? {};
+  const sender         = session.user ?? {};
+  const audioRecords   = session.audio_records ?? [];
+  const sessionStatus  = (session.status ?? 'active').toLowerCase();
   const responseStatus = (item.response_status ?? 'pending').toLowerCase();
+  const stressData     = session.stress_data ?? null;
+  const stressHR       = stressData?.hr ?? null;
+  const stressScore    = stressData?.stress_score ?? null;
+  const hasStressData  = stressHR !== null || stressScore !== null;
   
    
   const sCfg =
@@ -190,10 +195,6 @@ const IncomingCard = ({ item:incomingItem, navigationRef, onAccept, onDecline, o
           <Text style={styles.senderName} numberOfLines={1}>
             {sender.name ?? 'Unknown'}
           </Text>
-          <View style={styles.phoneRow}>
-            <Icon name="phone-outline" size={12} color="#6B7C99" />
-            <Text style={styles.phoneText}>{sender.phone_number ?? '—'}</Text>
-          </View>
           <View
             style={[
               styles.responseBadge,
@@ -212,6 +213,38 @@ const IncomingCard = ({ item:incomingItem, navigationRef, onAccept, onDecline, o
       </View>
 
       <View style={styles.divider} />
+
+      {/* ── Stress / Vitals snapshot ── */}
+      {hasStressData && (
+        <>
+          <View style={styles.stressRow}>
+            {stressHR !== null && (
+              <View style={styles.stressCard}>
+                <View style={styles.stressIconWrap}>
+                  <Icon name="heart-pulse" size={18} color="#FF3B5C" />
+                </View>
+                <Text style={styles.stressValue}>{stressHR}</Text>
+                <Text style={styles.stressUnit}>bpm</Text>
+                <Text style={styles.stressLabel}>Heart Rate</Text>
+              </View>
+            )}
+            {stressScore !== null && (
+              <View style={[styles.stressCard, styles.stressScoreCard]}>
+                <View style={[styles.stressIconWrap, styles.stressScoreIcon]}>
+                  <Icon name="brain" size={18} color="#818CF8" />
+                </View>
+                <Text style={[styles.stressValue, styles.stressScoreValue]}>
+                  {stressScore}
+                  <Text style={styles.stressScorePercent}>%</Text>
+                </Text>
+                <Text style={styles.stressUnit}>/ 100</Text>
+                <Text style={styles.stressLabel}>Stress Index</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.divider} />
+        </>
+      )}
 
       {/* ── Accept / Decline (pending only) ── */}
       {responseStatus === 'pending' && (
@@ -649,6 +682,65 @@ const styles = StyleSheet.create({
     color: '#4ADE80',
     fontSize: 13,
     fontWeight: '700',
+  },
+  // stress vitals
+  stressRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  stressCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,92,0.25)',
+    backgroundColor: 'rgba(255,59,92,0.07)',
+  },
+  stressScoreCard: {
+    borderColor: 'rgba(129,140,248,0.25)',
+    backgroundColor: 'rgba(129,140,248,0.07)',
+  },
+  stressIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,59,92,0.15)',
+    marginBottom: 2,
+  },
+  stressScoreIcon: {
+    backgroundColor: 'rgba(129,140,248,0.15)',
+  },
+  stressValue: {
+    color: '#FF3B5C',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  stressScoreValue: {
+    color: '#818CF8',
+  },
+  stressScorePercent: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  stressUnit: {
+    color: '#6B7C99',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: -2,
+  },
+  stressLabel: {
+    color: '#8AA2C6',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginTop: 2,
   },
 });
 

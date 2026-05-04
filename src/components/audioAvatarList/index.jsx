@@ -103,13 +103,7 @@ const getAvatarColor = item => {
             >
               {item.name}
             </Text>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={[styles.avatarPhoneNumber, isSelected && styles.avatarPhoneSelected]}
-            >
-              {item.phone_number || 'No phone'}
-            </Text>
+           
           </View>
         </TouchableOpacity>
       );

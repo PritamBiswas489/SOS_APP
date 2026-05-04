@@ -73,6 +73,9 @@ const OutgoingCard = ({ item:outgoingItem, onCancel, onResolve }) => {
   const [activeAudioUrl, setActiveAudioUrl] = useState('');
   const [isAudioModalVisible, setIsAudioModalVisible] = useState(false);
   const status = item.status ?? 'active';
+  const stressData = item.stress_data ?? null;
+  const stressHR = stressData?.hr ?? null;
+  const stressScore = stressData?.stress_score ?? null;
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.active;
   const isActive = status === 'active';
   const [isLoading, setLoading] = useState(false);
@@ -173,7 +176,47 @@ const OutgoingCard = ({ item:outgoingItem, onCancel, onResolve }) => {
 
       <View style={styles.divider} />
 
-      {/* ── Response stats ── */}
+      {/* ── Stress / Vitals snapshot ── */}
+      {(stressHR !== null || stressScore !== null) && (
+        <>
+          <View style={styles.stressPanel}>
+            <View style={styles.stressPanelHeader}>
+              <Icon name="heart-pulse" size={13} color="#FF3B5C" />
+              <Text style={styles.stressPanelTitle}>VITALS AT TRIGGER</Text>
+            </View>
+            <View style={styles.stressMetrics}>
+              {stressHR !== null && (
+                <View style={styles.stressMetricCard}>
+                  <View style={[styles.stressMetricIcon, { backgroundColor: 'rgba(255,59,92,0.15)' }]}>
+                    <Icon name="heart-pulse" size={18} color="#FF3B5C" />
+                  </View>
+                  <Text style={[styles.stressMetricValue, { color: '#FF3B5C' }]}>{stressHR}</Text>
+                  <Text style={styles.stressMetricUnit}>bpm</Text>
+                  <Text style={styles.stressMetricLabel}>Heart Rate</Text>
+                </View>
+              )}
+              {stressHR !== null && stressScore !== null && (
+                <View style={styles.stressMetricSep} />
+              )}
+              {stressScore !== null && (
+                <View style={styles.stressMetricCard}>
+                  <View style={[styles.stressMetricIcon, { backgroundColor: 'rgba(129,140,248,0.15)' }]}>
+                    <Icon name="brain" size={18} color="#818CF8" />
+                  </View>
+                  <Text style={[styles.stressMetricValue, { color: '#818CF8' }]}>
+                    {stressScore}<Text style={styles.stressMetricPercent}>%</Text>
+                  </Text>
+                  <Text style={styles.stressMetricUnit}>/ 100</Text>
+                  <Text style={styles.stressMetricLabel}>Stress Index</Text>
+                </View>
+              )}
+            </View>
+          </View>
+          <View style={styles.divider} />
+        </>
+      )}
+
+       
       <View style={styles.statsSection}>
         <Text style={styles.statsHeading}>Response summary</Text>
         <View style={styles.statsGrid}>
@@ -204,7 +247,7 @@ const OutgoingCard = ({ item:outgoingItem, onCancel, onResolve }) => {
                 <ContactAvatar user={n.to_user} size={34} />
                 <View style={styles.contactInfo}>
                   <Text style={styles.contactName} numberOfLines={1}>{n.to_user?.name ?? 'Unknown'}</Text>
-                  <Text style={styles.contactPhone}>{n.to_user?.phone_number ?? ''}</Text>
+                 
                 </View>
                 <View style={[styles.responseBadge, { backgroundColor: rCfg.color + '18', borderColor: rCfg.color + '40' }]}>
                   <Icon name={rCfg.icon} size={11} color={rCfg.color} />
@@ -553,6 +596,72 @@ const styles = StyleSheet.create({
     color: '#4ADE80',
     fontSize: 13,
     fontWeight: '700',
+  },
+  // stress vitals panel
+  stressPanel: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,92,0.20)',
+    backgroundColor: 'rgba(255,59,92,0.05)',
+    borderRadius: 14,
+    padding: 12,
+    gap: 12,
+  },
+  stressPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stressPanelTitle: {
+    color: '#FF3B5C',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  stressMetrics: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stressMetricCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  stressMetricSep: {
+    width: 1,
+    height: 52,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginHorizontal: 8,
+  },
+  stressMetricIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  stressMetricValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  stressMetricPercent: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  stressMetricUnit: {
+    color: '#6B7C99',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: -2,
+  },
+  stressMetricLabel: {
+    color: '#8AA2C6',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginTop: 2,
   },
 });
 

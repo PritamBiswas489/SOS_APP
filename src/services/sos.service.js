@@ -66,4 +66,20 @@ export class SOSService {
       callback({ success: false, error: error.message });
     }
   }
+  static async triggerStressSos({hr, stress_score}, callback) {
+    console.log(`Triggering stress SOS with HR: ${hr} and Stress Score: ${stress_score}`);
+    return;
+    try {
+      const response = await api.post('/sos/trigger-stress-sos', {
+        hr,
+        stress_score,
+      });
+      callback({ success: true, data: response.data });
+    } catch (error) {
+      console.log('❌ Error triggering stress SOS:', error?.message);
+      callback({ success: false, error: error.message });
+    }
+  }
+  
+   
 }

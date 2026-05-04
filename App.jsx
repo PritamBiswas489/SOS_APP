@@ -46,6 +46,7 @@ import { useIncomingSosNotifications } from './src/hook/useIncomingSosNotificati
 import { useMySosSessions } from './src/hook/useMySosSessions.jsx';
 import { initCrashLogger, logError } from './src/middleware/nativeCrashLogger.js';
 import useUserAuth from './src/hook/useUserAuth.jsx';
+import { Device } from 'mediasoup-client';
 // initCrashLogger();
 // logError(new Error('Test error from App.jsx to verify crash logging is working correctly')); 
 // Isolated so that opening from FAB only re-renders this component logic
@@ -125,11 +126,15 @@ const App = () => {
   const { fetchSosNotifications } = useIncomingSosNotifications();
   const { fetchMySosSessions } = useMySosSessions();
   const { isAuthenticated } = useUserAuth();
+  const [emittedSOS, setEmittedSOS] = useState(null);
+
+   
 
   const openSosModalFromNotification = useCallback(() => {
     if (AppState.currentState === 'active') {
       pendingSosRef.current = false;
       setSosModalVisible(true);
+       
       return;
     }
 
@@ -139,6 +144,9 @@ const App = () => {
       if (pendingSosRef.current && AppState.currentState === 'active') {
         pendingSosRef.current = false;
         setSosModalVisible(true);
+        if (fetchSOS) {
+          fetchSosNotifications();
+        }
       }
     }, 450);
   }, []);
@@ -263,21 +271,21 @@ const App = () => {
 
     if (refreshMessageTypes.includes(messageType)) {
       navigateToContacts();
-      return
+      
     }
-    if (payloadData?.fetchSOS) {
+    if(payloadData?.fetchSOS){
         fetchSosNotifications();
-        return;
-      }
+    }
+    
 
     if (messageType === 'SOS') {
-      
+      console.log('Opening SOS modal from notification with payloadData:', payloadData); 
       openSosModalFromNotification();
-      return
+      
     }
     if (payloadData?.fetchVictimSOS) {
         fetchMySosSessions();
-        return;
+      
     }
     if (messageType === 'VICTIM') {
      
@@ -286,9 +294,12 @@ const App = () => {
     if (messageType === 'CHAT') {
       console.log('Navigating to chat screen for senderId:', payloadData?.senderId);
       navigateToChat(payloadData?.senderId);
-      return;
+      
     }
-    navigateToMain();
+    if(!messageType) {
+       navigateToMain();
+    }
+   
   }, [fetchMySosSessions, fetchSosNotifications, navigateToContacts, navigateToChat, navigateToMain, openSosModalFromNotification]);
 
   // useEffect(() => {
@@ -351,9 +362,7 @@ const App = () => {
   }, [notificationAction, showBanner]);
 
   useEffect(() => {
-      if (!isAuthenticated) {
-        return;
-      }
+     
     const setupNotifications = async () => {
       await createNotificationChannels();
       
@@ -387,7 +396,7 @@ const App = () => {
       bannerSubscription.remove();
       pendingPressSubscription.remove();
     };
-  }, [handleNotificationPress, handleForegroundNotification, showBanner, notificationAction, isAuthenticated]);
+  }, [handleNotificationPress, handleForegroundNotification, showBanner, notificationAction ]);
 
   const handleRetryConnection = () => {
     NetInfo.fetch().then(state => {
@@ -476,9 +485,9 @@ const App = () => {
           <LocationProvider>
             <HealthProvider
               userAge={28}              // user's age → used for max HR calculation
-              criticalThreshold={80}   // stress score that triggers SOS alert
+              criticalThreshold={76}   // stress score that triggers SOS alert
               gfRefreshMs={10_000}     // Google Fit polling interval
-              onSos={() => {}}         // called when user confirms SOS
+                 // called when user confirms SOS
 
             >
             <GestureHandlerRootView style={{ flex: 1 }}>

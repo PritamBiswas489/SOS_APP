@@ -18,13 +18,15 @@ import React, {
   useMemo, useCallback, useRef,
   use,
 } from 'react';
-import {Vibration, Alert} from 'react-native';
+import {Vibration} from 'react-native';
 import {useGoogleFit} from './GoogleFitContext';
 import {useBle} from './BleContext';
 import {StressDataService} from '../services/stressData.service';
 import { useSocket } from './SocketContext';
 import { buildStressRecord } from '../models/stressRecord.model';
 import useUserAuth from '../hook/useUserAuth';
+import { SOSService } from '../services/sos.service';
+import { useOutgoingRequests } from '../hook/useOutgoingRequests';
 
 // ── Stress States ─────────────────────────────
 export const STRESS_STATE = {
@@ -180,8 +182,8 @@ const StressContext = createContext(null);
 // ── Provider ──────────────────────────────────
 export function StressProvider({
   children,
-  criticalThreshold=40,
-  onSosTriggered=null,
+  criticalThreshold=76,
+   
 }) {
   const gf  = useGoogleFit();
   const ble = useBle();
@@ -193,9 +195,11 @@ export function StressProvider({
   const [contactsLastHealthData, setContactsLastHealthData] = useState(null);
   const [manualHROverride, setManualHROverride] = useState(null); // DEV: manual HR injection
   const prevScoreRef = useRef(0);
+  const lastSosTriggerScoreRef = useRef(0);
   const lastSavedAtRef = useRef(0);
   const lastSavedFingerprintRef = useRef('');
   const { on, emitNoAck, emit, isConnected } = useSocket();
+  const {fetchOutgoingRequests} = useOutgoingRequests();
 
   // ────────────────────────────────────────────
   // GOOGLE FIT DATA BLOCK
@@ -398,45 +402,32 @@ export function StressProvider({
   // ────────────────────────────────────────────
   useEffect(() => {
     console.log(`Stress score updated: ${stress.score} (${stress.state.label}) — Source: ${activeSource}`);
-    console.log({criticalThreshold})
-    const isCritical  = stress.score >= criticalThreshold;
-    const wasCritical = prevScoreRef.current >= criticalThreshold;
-    prevScoreRef.current = stress.score;
-    console.log(`isCritical: ${isCritical}, wasCritical: ${wasCritical}, sosArmed: ${sosArmed}`);
-    if (isCritical && !wasCritical && !sosArmed) {
-      setSosArmed(true);
-      Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+    console.log({criticalThreshold});
 
-      Alert.alert(
-        '🆘 Critical Stress Detected',
-        [
-          `Stress Index : ${stress.score}/100`,
-          `Heart Rate   : ${stress.currentHR ?? '–'} bpm`,
-          `HRV (RMSSD)  : ${stress.rmssd} ms`,
-            `Source       : ${activeSource === 'ble'
-              ? `BLE — ${ble.deviceName}`
-              : 'Google Fit'}`,
-        ].join('\n'),
-        [
-          {text: 'Not now', style: 'cancel', onPress: () => setSosArmed(false)},
-          {
-            text: 'Send SOS 🆘',
-            style: 'destructive',
-            onPress: () => {
-              onSosTriggered?.({stress, googleFitData, bleData, activeSource});
-              setSosArmed(false);
-            },
-          },
-        ],
-        {cancelable: false},
-      );
+    const inCriticalRange = stress.score >= criticalThreshold && stress.score <= 100;
+
+    if (inCriticalRange && stress.score > lastSosTriggerScoreRef.current) {
+      lastSosTriggerScoreRef.current = stress.score;
+      setSosArmed(true);
+      // Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+      console.log(`SOS API triggered at score: ${stress.score}`);
+      SOSService.triggerStressSos({ hr: stress.currentHR, stress_score: stress.score}, result => {
+        if (result.success) {
+           fetchOutgoingRequests();
+        }
+      });
+      
     }
-    if (!isCritical && sosArmed) setSosArmed(false);
+
+    if (!inCriticalRange) {
+      lastSosTriggerScoreRef.current = 0;
+      if (sosArmed) setSosArmed(false);
+    }
   }, [stress.score]);
 
   const sendSos = useCallback(() => {
-    onSosTriggered?.({stress, googleFitData, bleData, activeSource});
-    setSosArmed(false);
+    console.log('SOS manually triggered by user');
+    // setSosArmed(false);
   }, [stress, googleFitData, bleData, activeSource]);
 
   const dismissSos = useCallback(() => setSosArmed(false), []);
