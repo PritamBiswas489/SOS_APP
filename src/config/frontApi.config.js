@@ -1,11 +1,11 @@
 import axios from 'axios';
 import { getAppUrl } from './utility';
+import { getDeviceIdAsync } from '../utils/deviceId';
 const app_url =  getAppUrl();
 const api = axios.create({
 	baseURL: app_url + '/api-mobile/front',
 	timeout: 15000,
 });
-
 
 api.interceptors.request.use(async (config) => {
 	const fullRequestUrl = `${config.baseURL}${config.url}`;
@@ -16,6 +16,15 @@ api.interceptors.request.use(async (config) => {
 	// 		'Content-Type': 'multipart/form-data',
 	// 	};
 	// }
+
+	const deviceId = await getDeviceIdAsync();
+    console.log('Adding device ID to headers:', deviceId);
+	if (deviceId) {
+		config.headers = {
+			...config.headers,
+			'x-device-id': deviceId,
+		};
+	}
 	 
 	console.log('Request URL:', fullRequestUrl);
 	return config;

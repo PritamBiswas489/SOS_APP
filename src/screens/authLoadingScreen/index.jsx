@@ -1,11 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Image , Alert} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useUserAuth from '../../hook/useUserAuth';
-
+import { UserService } from '../../services/user.service';
+import { useDispatch } from 'react-redux';
+import { resetAllState } from '../../store';
 const AuthLoadingScreen = () => {
   const navigation = useNavigation();
   const { checkAuthentication } = useUserAuth();
+  const dispatch = useDispatch();
 
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(0)).current;
@@ -70,6 +73,31 @@ const AuthLoadingScreen = () => {
     const verify = async () => {
       const isAuthenticated = await checkAuthentication();
       if (isAuthenticated) {
+        const checkLastDeviceId = await new Promise(resolve => {
+          UserService.checkDeviceidLastLogin(response => {
+            if (response.success) {
+              resolve({ is_equal: response.data.data.isDeviceIdEqual });
+            } else {
+              console.error(
+                'Error checking device ID last login:',
+                response?.error,
+              );
+              resolve({ is_equal: true }); // Default to true to avoid blocking login on error
+            }
+          });
+        });
+
+        if (!checkLastDeviceId.is_equal) {
+          Alert.alert(
+            'Device Mismatch',
+            'Your device does not match the last login device. Please login again.',
+            [{ text: 'OK', onPress: () => navigation.replace('Login') }],
+          );
+          UserService.logout(); // Clear any existing session data
+          dispatch(resetAllState()); // Reset Redux state
+          return;
+        }
+
         navigation.replace('Process', { action: 'retrieveDataAfterLogin' });
       } else {
         navigation.replace('Login');
@@ -96,24 +124,32 @@ const AuthLoadingScreen = () => {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity: fadeValue }]}>
-        
         <View style={styles.loaderRoot}>
           <View style={styles.glowAura} />
 
-          <Animated.View style={[styles.outerRing, { transform: [{ rotate: spin }] }]}>
+          <Animated.View
+            style={[styles.outerRing, { transform: [{ rotate: spin }] }]}
+          >
             <View style={styles.ringHighlight} />
           </Animated.View>
 
-          <Animated.View style={[styles.middleRing, { transform: [{ scale: pulseScale }] }]} />
+          <Animated.View
+            style={[styles.middleRing, { transform: [{ scale: pulseScale }] }]}
+          />
           <View style={styles.innerCore} />
         </View>
 
         <Text style={styles.title}>Verifying Session</Text>
-        <Text style={styles.subtitle}>Checking your authentication status...</Text>
+        <Text style={styles.subtitle}>
+          Checking your authentication status...
+        </Text>
 
         <View style={styles.progressTrack}>
           <Animated.View
-            style={[styles.progressShimmer, { transform: [{ translateX: shimmerTranslate }] }]}
+            style={[
+              styles.progressShimmer,
+              { transform: [{ translateX: shimmerTranslate }] },
+            ]}
           />
         </View>
       </Animated.View>

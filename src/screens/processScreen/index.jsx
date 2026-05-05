@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Easing, Text, DeviceEventEmitter } from 'react-native';
+import { View, StyleSheet, Animated, Easing, Text, DeviceEventEmitter, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { UserService } from '../../services/user.service';
 import { useDispatch } from 'react-redux';
@@ -8,6 +8,7 @@ import { requestUserPermission, getFCMToken, consumePendingNotificationPress, ge
 import { Platform } from 'react-native';
 import { useChatContacts } from '../../hook/useChatContacts';
 import useUserAuth from '../../hook/useUserAuth';
+import { resetAllState } from '../../store';
 
 const ProfessionalLoader = () => {
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -136,6 +137,8 @@ const ProcessScreen = payload => {
         console.log('❌ Error saving FCM token:', error?.message);
         if(error?.message === 'UNAUTHORIZED'){
             console.log('Unauthorized error detected while saving FCM token. Logging out user.');
+            UserService.logout(); // Clear any existing session data
+            dispatch(resetAllState()); // Reset Redux state
             navigation.replace('Login');
         }
     }
@@ -149,6 +152,8 @@ const ProcessScreen = payload => {
         return;
       }
       if (action === 'retrieveDataAfterLogin') {
+
+      
         
         console.log('=====================================================');
         console.log('Device token need to be sent to server here');

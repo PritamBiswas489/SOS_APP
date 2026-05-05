@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {Alert, StatusBar, DeviceEventEmitter, Platform, AppState} from 'react-native';
-import {NavigationContainer, createNavigationContainerRef, CommonActions} from '@react-navigation/native';
+import {NavigationContainer, CommonActions} from '@react-navigation/native';
+import { navigationRef } from './src/utils/navigationService';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -47,6 +48,8 @@ import { useMySosSessions } from './src/hook/useMySosSessions.jsx';
 import { initCrashLogger, logError } from './src/middleware/nativeCrashLogger.js';
 import useUserAuth from './src/hook/useUserAuth.jsx';
 import { Device } from 'mediasoup-client';
+import { UserService } from './src/services/user.service.js';
+import { resetAllState } from './src/store/index.jsx';
 // initCrashLogger();
 // logError(new Error('Test error from App.jsx to verify crash logging is working correctly')); 
 // Isolated so that opening from FAB only re-renders this component logic
@@ -76,7 +79,7 @@ const SOSController = React.memo(({ fabVisible, navigationRef, sosModalVisible, 
     </>
   );
 });
-const navigationRef = createNavigationContainerRef();
+// navigationRef is imported from src/utils/navigationService
 const toastConfig = {
   success: (props) => (
     <BaseToast
@@ -290,6 +293,23 @@ const App = () => {
     if (messageType === 'VICTIM') {
      
     }
+    if(messageType === 'ACCOUNT_ACCESSED_FROM_NEW_DEVICE_NOTIFICATION') {
+      Alert.alert(
+        'New Device Login Detected',
+        'Your account was accessed from a new device. If this was not you, please contact support immediately.'
+      );
+     UserService.logout(); 
+      dispatch(resetAllState());
+      if (navigationRef.isReady()) {
+         navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+
+      }
+
+
+    }
 
     if (messageType === 'CHAT') {
       console.log('Navigating to chat screen for senderId:', payloadData?.senderId);
@@ -325,6 +345,38 @@ const App = () => {
   const closeBanner = () => {
     setBanner(prev => ({ ...prev, visible: false }));
   };
+
+  // Poll device ID check every 20s while authenticated and app is active
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let isBusy = false;
+
+    const check = () => {
+      if (isBusy || AppState.currentState !== 'active') return;
+      isBusy = true;
+      UserService.checkDeviceidLastLogin(({ success, data }) => {
+        isBusy = false;
+        if (success && data?.data?.isDeviceIdEqual === false) {
+          clearInterval(interval);
+          Alert.alert(
+            'Session Expired',
+            'Your account is logged in from another device. You have been logged out.',
+            [{ text: 'OK' }],
+          );
+          UserService.logout();
+          dispatch(resetAllState());
+          if (navigationRef.isReady()) {
+            navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
+          }
+        }
+      });
+    };
+
+    const interval = setInterval(check, 40_000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, dispatch]);
 
   useEffect(() => {
     const syncConnectionState = state => {

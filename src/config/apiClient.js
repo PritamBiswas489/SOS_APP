@@ -1,8 +1,21 @@
-import { getAuthTokens, setAuthTokens } from './auth';
+import { getAuthTokens, setAuthTokens, deleteAuthTokens } from './auth';
 import { getAppUrl } from './utility';
 import * as storage from '../utils/localstorage/index.jsx';
-
+import store, { resetAllState } from '../store/index';
+import { Alert } from 'react-native';
+import { navigate } from '../utils/navigationService';
+import { getDeviceIdAsync } from '../utils/deviceId';
 const BASE_URL = `${getAppUrl()}/api-mobile/auth`;
+
+// ---------------------------------------------------------------------------
+// Shared logout helper
+// ---------------------------------------------------------------------------
+
+const resetStateData = async () => {
+  await deleteAuthTokens();
+  store.dispatch(resetAllState());
+  navigate('Login');
+};
 
 // ---------------------------------------------------------------------------
 // Shared auth header builder
@@ -11,12 +24,13 @@ const BASE_URL = `${getAppUrl()}/api-mobile/auth`;
 const buildAuthHeaders = async (extraHeaders = {}) => {
   const { accessToken, refreshToken } = await getAuthTokens();
   const languageCode = (await storage.getValue('languageCode')) || 'en';
-
+  const deviceId = await getDeviceIdAsync();
   return {
     Authorization: `Bearer ${accessToken}`,
     refreshToken: refreshToken,
     'X-localization': languageCode,
     ...extraHeaders,
+    'x-device-id': deviceId,
   };
 };
 
@@ -48,7 +62,14 @@ const parseResponse = async (response, url) => {
   await handleTokenRefresh(data);
 
   if (response.status === 401 || data?.status === 401) {
+    await resetStateData();
     throw new Error('UNAUTHORIZED');
+  }
+
+  if (response.status === 403 || data?.status === 403) {
+    Alert.alert('Access Denied', 'You do not have permission to perform this action.');
+    await resetStateData();
+    throw new Error('FORBIDDEN');
   }
 
   if (!response.ok) {

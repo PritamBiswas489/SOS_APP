@@ -17,6 +17,8 @@ import styles from './style';
 import { getProfileImage } from '../../config/utility';
 import { SOSService } from '../../services/sos.service';
 import { useMySosSessions } from '../../hook/useMySosSessions';
+import { useChatContacts } from '../../hook/useChatContacts';
+import { useStress } from '../../context/StressContext';
  
 
 // ─── Status badge config ──────────────────────────────────────────────────────
@@ -35,6 +37,8 @@ const HomeScreen = () => {
   const spinAnim       = useRef(new Animated.Value(0)).current;
   const holdTimerRef   = useRef(null);
   const { fetchMySosSessions } = useMySosSessions();
+  const {contactList} = useChatContacts();
+  const {stress} = useStress();
 
   const { userData } = useUserData();
   const {
@@ -316,19 +320,19 @@ const HomeScreen = () => {
       <View style={styles.grid}>
         <View style={styles.card}>
           <Icon name="favorite" size={30} color="#FF4757" />
-          <Text style={[styles.cardNumber, { color: appColors.primary }]}>74 bpm</Text>
+          <Text style={[styles.cardNumber, { color: appColors.primary }]}>{stress.currentHR} bpm</Text>
           <Text style={styles.cardLabel}>HEART RATE</Text>
         </View>
 
         <View style={styles.card}>
           <Icon name="psychology" size={30} color="#FFA502" />
-          <Text style={[styles.cardNumber, { color: appColors.yellow }]}>38%</Text>
+          <Text style={[styles.cardNumber, { color: appColors.yellow }]}>{stress.score}%</Text>
           <Text style={styles.cardLabel}>STRESS LEVEL</Text>
         </View>
 
         <View style={styles.card}>
           <Icon name="people" size={30} color="#A4B0BE" />
-          <Text style={[styles.cardNumber, { color: appColors.blue }]}>4</Text>
+          <Text style={[styles.cardNumber, { color: appColors.blue }]}>{contactList.length}</Text>
           <Text style={styles.cardLabel}>CONTACTS</Text>
         </View>
 

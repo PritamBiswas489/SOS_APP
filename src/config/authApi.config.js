@@ -1,11 +1,13 @@
 import axios from 'axios';
-import { getAuthTokens, setAuthTokens } from './auth';
- 
-import { useNavigation } from '@react-navigation/native';
+import { getAuthTokens, setAuthTokens, deleteAuthTokens } from './auth';
 import { Alert } from 'react-native';
-import { useDispatch } from 'react-redux';
 import { getAppUrl } from './utility';
+import store from '../store/index';
+import { resetAllState } from '../store/index';
+import { navigate } from '../utils/navigationService';
+import { getDeviceIdAsync } from '../utils/deviceId';
 import * as storeage from "../utils/localstorage/index.jsx";
+ 
 
 const app_url =  getAppUrl();
 console.log(app_url + '/api-mobile/auth');
@@ -14,24 +16,24 @@ const api = axios.create({
 	timeout: 15000,
 });
 
-const navigateToLogin = () => {
-	const navigation = useNavigation();
-	navigation.navigate('Login'); // Replace 'Login' with the actual name of your login screen
-  };
-const resetStateData = ()=>{
-	// const dispatch = useDispatch();
-	// dispatch(userAccountDataActions.resetState());
-}
+const resetStateData = async () => {
+    
+	await deleteAuthTokens();
+	store.dispatch(resetAllState());
+	navigate('Login');
+};
 
 api.interceptors.request.use(async (config) => {
 	const {accessToken, refreshToken} = await getAuthTokens();
     const languageCode = await storeage.getValue('languageCode');
-	 
+	const deviceId = await getDeviceIdAsync();
+    
 	config.headers = {
     ...config.headers,
     Authorization: 'Bearer ' + accessToken,
     refreshToken: refreshToken,
     'X-localization': languageCode || 'en',
+    'x-device-id': deviceId,
   };
     // console.log(config.headers)
 	const fullRequestUrl = `${config.baseURL}${config.url}`;
@@ -47,10 +49,16 @@ api.interceptors.response.use(async (res) => {
     if (accesstoken && refreshtoken) {
         await setAuthTokens(accesstoken, refreshtoken);
     }
-    if (res?.data?.status === 401) {
-        resetStateData();
+    if (res?.data?.status === 401) {        
+        await resetStateData();
         return Promise.reject(new Error('UNAUTHORIZED'));
-         
+    }
+    if (res?.data?.status === 403) {
+        Alert.alert(
+            'Access Denied',
+            'You do not have permission to perform this action.');
+        await resetStateData();      
+        return Promise.reject(new Error('FORBIDDEN'));
     }
     return res;
 }, error => {

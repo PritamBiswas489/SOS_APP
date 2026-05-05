@@ -26,12 +26,13 @@ import { useUserData } from '../hook/useUserData';
 import { getProfileImage } from '../config/utility';
 import useUserAuth from '../hook/useUserAuth.jsx';
 import { log } from '@react-native-firebase/app/dist/module/internal/web/firebaseFirestorePipelines';
- 
+  
 
 const Drawer = createDrawerNavigator();
 
 const logoutProcess = async (navigation, dispatch, callback) => {
   try {
+    await UserService.deleteFcmToken(() => {}); // Best effort to delete FCM token, ignoring result
     await UserService.logout();
     dispatch(resetAllState());
     callback();
