@@ -39,6 +39,7 @@
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-google-places-autocomplete": "^2.6.4",
+    "react-native-health": "^1.19.0",
     "react-native-health-connect": "^3.5.0",
     "react-native-image-picker": "^8.2.1",
     "react-native-incall-manager": "^4.2.1",

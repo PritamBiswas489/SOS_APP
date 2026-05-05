@@ -400,6 +400,8 @@ function DevicesPanel({ble, gf}) {
   const ringScale   = ringAnim.interpolate({inputRange: [0, 1], outputRange: [1, 1.9]});
   const ringOpacity = ringAnim.interpolate({inputRange: [0, 0.6, 1], outputRange: [0.5, 0.15, 0]});
 
+  const isIOS      = Platform.OS === 'ios';
+  const hcLabel     = isIOS ? 'Apple Health' : 'Health Connect';
   const bleColor    = ble.connected ? '#00E5A0' : ble.scanning ? '#7EB8F7' : '#3D4E6A';
   const hcColor     = gf.authorized ? '#AA3CFF' : gf.loading   ? '#7EB8F7' : '#3D4E6A';
   const activeCount = (ble.connected ? 1 : 0) + (gf.authorized ? 1 : 0);
@@ -485,7 +487,7 @@ function DevicesPanel({ble, gf}) {
       {/* ── Divider ── */}
       <View style={styles.devicesDivider} />
 
-      {/* ── Health Connect row ── */}
+      {/* ── Health row (Health Connect on Android, Apple Health on iOS) ── */}
       <View style={styles.deviceRow}>
         <View style={styles.bleIconWrap}>
           <View style={[styles.bleIconCircle, {
@@ -499,9 +501,9 @@ function DevicesPanel({ble, gf}) {
 
         <View style={styles.bleInfo}>
           <Text style={styles.bleDeviceName} numberOfLines={1}>
-            {gf.authorized ? 'Health Connect'
+            {gf.authorized ? hcLabel
               : gf.loading  ? 'Connecting…'
-              : 'Health Connect'}
+              : hcLabel}
           </Text>
           {gf.authorized && hcLatestHR ? (
             <View style={styles.bleHrRow}>
@@ -550,7 +552,7 @@ function DevicesPanel({ble, gf}) {
       {gf.error ? (
         <View style={[styles.bleErrorBox, {marginTop: ble.error ? 4 : 8}]}>
           <Text style={styles.bleErrorIcon}>⚠</Text>
-          <Text style={styles.bleErrorText}>Health Connect: {gf.error}</Text>
+          <Text style={styles.bleErrorText}>{hcLabel}: {gf.error}</Text>
         </View>
       ) : null}
     </View>
@@ -577,9 +579,11 @@ export default function MyStressMonitor() {
   const [hrModalVisible, setHrModalVisible] = useState(false);
 
   const displayHR = ble.connected && ble.currentHR ? ble.currentHR : stress.currentHR;
+  const isAndroid  = Platform.OS === 'android';
+  const hcName     = isAndroid ? 'Health Connect' : 'Apple Health';
   const hrSource = isUsingLastRecord
-    ? `Last saved (${activeSource === 'ble' ? 'BLE' : 'Health Connect'})`
-    : (ble.connected ? 'Live BLE' : 'Health Connect');
+    ? `Last saved (${activeSource === 'ble' ? 'BLE' : hcName})`
+    : (ble.connected ? 'Live BLE' : hcName);
 
   const fallbackDate = isUsingLastRecord ? formatDateSeparator(lastRecordedAt) : '';
   const fallbackTime = isUsingLastRecord ? formatMessageTime(lastRecordedAt) : '';
@@ -613,7 +617,7 @@ export default function MyStressMonitor() {
 
         {/* ── Source Status ── */}
         <View style={styles.badgeRow}>
-          <SourceBadge active={gf.authorized} label="Health Connect" icon="❤️" />
+          <SourceBadge active={gf.authorized} label={hcName} icon="❤️" />
           <SourceBadge active={ble.connected}  label={ble.connected ? ble.deviceName : 'BLE Device'} icon="📡" />
         </View>
 

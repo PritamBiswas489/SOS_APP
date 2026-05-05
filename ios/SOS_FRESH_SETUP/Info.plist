@@ -26,6 +26,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>SOS App reads your heart rate from Apple Health to monitor stress levels.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>SOS App does not write health data.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
