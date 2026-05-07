@@ -26,6 +26,7 @@ import { useUserData } from '../hook/useUserData';
 import { getProfileImage } from '../config/utility';
 import useUserAuth from '../hook/useUserAuth.jsx';
 import { log } from '@react-native-firebase/app/dist/module/internal/web/firebaseFirestorePipelines';
+
   
 
 const Drawer = createDrawerNavigator();
@@ -51,7 +52,7 @@ const CustomDrawerContent = props => {
   const dispatch = useDispatch();
   console.log('=====================================================');
 
-  const { userData} = useUserData();
+  const { userData, hasLicense} = useUserData();
   const { logout } = useUserAuth();
     
   return (
@@ -124,7 +125,7 @@ const CustomDrawerContent = props => {
 };
 
 const DrawerNavigator = () => {
-  const { userData } = useUserData();
+  const { userData, hasLicense } = useUserData();
   const isDevUser = userData?.phone_number?.includes('+9198309900');
 
   return (
@@ -157,7 +158,8 @@ const DrawerNavigator = () => {
           ),
         }}
       />
-      <Drawer.Screen
+     
+       {hasLicense &&  <Drawer.Screen
         name="Contacts"
         component={ContactsScreen}
         options={{
@@ -166,7 +168,7 @@ const DrawerNavigator = () => {
             <Icon name="chat" size={size} color={color} />
           ),
         }}
-      />
+      />}
       <Drawer.Screen
         name="Settings"
         component={SettingsScreen}
@@ -177,16 +179,17 @@ const DrawerNavigator = () => {
           ),
         }}
       />
-      <Drawer.Screen
+      {hasLicense && <Drawer.Screen
         name="Analysis"
         component={analysisScreen}
         options={{
           drawerLabel: 'Analysis',
           drawerIcon: ({ color, size }) => (
-            <Icon name="settings" size={size} color={color} />
+            <Icon name="analytics" size={size} color={color} />
           ),
         }}
-      />
+      />}
+      
       {isDevUser && (
         <Drawer.Screen
           name="CreatorSoup"
@@ -194,7 +197,7 @@ const DrawerNavigator = () => {
           options={{
             drawerLabel: 'Creator soup',
             drawerIcon: ({ color, size }) => (
-              <Icon name="settings" size={size} color={color} />
+              <Icon name="mic" size={size} color={color} />
             ),
           }}
         />
@@ -206,7 +209,7 @@ const DrawerNavigator = () => {
           options={{
             drawerLabel: 'Listener soup',
             drawerIcon: ({ color, size }) => (
-              <Icon name="settings" size={size} color={color} />
+              <Icon name="mic" size={size} color={color} />
             ),
           }}
         />

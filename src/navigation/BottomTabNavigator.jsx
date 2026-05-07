@@ -11,6 +11,8 @@ import HealthScreen from '../screens/healthScreen';
 import AudioStreamScreen from '../screens/audioStream';
 import ChatScreen from '../screens/chatScreen';
 import StressMonitorScreen from '../screens/stressMonitor';
+import NonLicenseScreen from '../screens/NonLicenseScreen';
+import { useUserData } from '../hook/useUserData';
  
 
 const Tab = createBottomTabNavigator();
@@ -21,13 +23,14 @@ const tabConfig = {
   Health: { icon: 'favorite', label: 'Health' },
   AudioStream: { icon: 'mic', label: 'Audio' },
   Chat: { icon: 'chat', label: 'Chat' },
+  NonLicense: { icon: 'home', label: 'NonLicense' },
 };
 
 const BottomTabNavigator = () => {
   const navigation = useNavigation();
   const { currentStreamingRoomIds } = useListenerMediaSoup();
   const streamingCount = Object.values(currentStreamingRoomIds).filter(Boolean).length;
-
+  const { hasLicense } = useUserData();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -76,7 +79,12 @@ const BottomTabNavigator = () => {
         tabBarLabel: tabConfig[route.name].label,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
+        {!hasLicense ? 
+          <Tab.Screen
+            name="Home"
+            component={NonLicenseScreen}
+            / >  :  <Tab.Screen name="Home" component={HomeScreen} />}
+     
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Health" component={StressMonitorScreen}
        options={{

@@ -47,6 +47,7 @@ import { useIncomingSosNotifications } from './src/hook/useIncomingSosNotificati
 import { useMySosSessions } from './src/hook/useMySosSessions.jsx';
 import { initCrashLogger, logError } from './src/middleware/nativeCrashLogger.js';
 import useUserAuth from './src/hook/useUserAuth.jsx';
+import { useUserData } from './src/hook/useUserData.jsx';
 import { Device } from 'mediasoup-client';
 import { UserService } from './src/services/user.service.js';
 import { resetAllState } from './src/store/index.jsx';
@@ -130,6 +131,7 @@ const App = () => {
   const { fetchMySosSessions } = useMySosSessions();
   const { isAuthenticated } = useUserAuth();
   const [emittedSOS, setEmittedSOS] = useState(null);
+  const { hasLicense } = useUserData();
 
    
 
@@ -547,7 +549,7 @@ const App = () => {
                 {renderContent()}
               </SafeAreaProvider>
               {/* Floating SOS alert button + modal — isolated component so open/close never re-renders App */}
-              <SOSController
+              {hasLicense && <SOSController
                 fabVisible={
                   isConnected &&
                   Array.isArray(missingPermissions) &&
@@ -558,7 +560,8 @@ const App = () => {
                 navigationRef={navigationRef}
                 sosModalVisible={sosModalVisible}
                 setSosModalVisible={setSosModalVisible}
-              />
+              />}
+              
             </GestureHandlerRootView>
             </HealthProvider>
           </LocationProvider>
