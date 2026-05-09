@@ -1,8 +1,8 @@
 import api from '../config/authApi.config';
 export class SOSService {
-  static async createNewSOS(callback) {
+  static async createNewSOS({ latitude, longitude }, callback) {
     try {
-      const response = await api.post('/sos/register-sos', {});
+      const response = await api.post('/sos/register-sos', { latitude, longitude });
       callback({ success: true, data: response.data });
     } catch (error) {
       console.log('❌ Error creating SOS:', error?.message);
@@ -66,12 +66,14 @@ export class SOSService {
       callback({ success: false, error: error.message });
     }
   }
-  static async triggerStressSos({hr, stress_score}, callback) {
+  static async triggerStressSos({hr, stress_score, latitude, longitude}, callback) {
     console.log(`Triggering stress SOS with HR: ${hr} and Stress Score: ${stress_score}`);
     try {
       const response = await api.post('/sos/trigger-stress-sos', {
         hr,
         stress_score,
+        latitude,
+        longitude,
       });
       callback({ success: true, data: response.data });
     } catch (error) {

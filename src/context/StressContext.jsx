@@ -27,6 +27,7 @@ import { buildStressRecord } from '../models/stressRecord.model';
 import useUserAuth from '../hook/useUserAuth';
 import { SOSService } from '../services/sos.service';
 import { useOutgoingRequests } from '../hook/useOutgoingRequests';
+import { useLocation } from './LocationContext';
 
 // ── Stress States ─────────────────────────────
 export const STRESS_STATE = {
@@ -200,6 +201,7 @@ export function StressProvider({
   const lastSavedFingerprintRef = useRef('');
   const { on, emitNoAck, emit, isConnected } = useSocket();
   const {fetchOutgoingRequests} = useOutgoingRequests();
+  const { currentLocation, getCurrentPosition } = useLocation();
 
   // ────────────────────────────────────────────
   // GOOGLE FIT DATA BLOCK
@@ -411,11 +413,20 @@ export function StressProvider({
       setSosArmed(true);
       // Vibration.vibrate([0, 500, 200, 500, 200, 500]);
       console.log(`SOS API triggered at score: ${stress.score}`);
-        SOSService.triggerStressSos({ hr: stress.currentHR, stress_score: stress.score}, result => {
-        if (result.success) {
-           fetchOutgoingRequests();
-        }
-      });
+      (async () => {
+        const location = currentLocation ?? await getCurrentPosition();
+        console.log('Current location for SOS:', location);
+        SOSService.triggerStressSos({
+          hr: stress.currentHR,
+          stress_score: stress.score,
+          latitude: location?.latitude,
+          longitude: location?.longitude,
+        }, result => {
+          if (result.success) {
+            fetchOutgoingRequests();
+          }
+        });
+      })();
       
     }
 
