@@ -13,12 +13,13 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import IconMC from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
-
 import styles from './style';
 import appColors from '../../theme/appColors';
 import { useUserData } from '../../hook/useUserData';
 import { SOSService } from '../../services/sos.service';
 import { StressDataService } from '../../services/stressData.service';
+import { useChatContacts } from '../../hook/useChatContacts';
+
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const STRESS_LEVEL_COLORS = ['#00E5A0', '#7EE8A2', '#FFD166', '#FF8C42', '#FF3366'];
@@ -73,11 +74,8 @@ function SessionRow({ session, isLast }) {
 
   // Resolve location display — try every plausible field name
   const locationName =
-    session.location_name ??
-    session.address ??
-    session.city ??
-    session.location?.name ??
-    session.location?.address ??
+    session.location ??
+   
     null;
 
   const lat = session.latitude ?? session.lat ?? session.location?.latitude ?? session.location?.lat ?? null;
@@ -106,7 +104,7 @@ function SessionRow({ session, isLast }) {
           />
           <Text
             style={[styles.sessionLoc, !hasRealLocation && { fontStyle: 'italic', opacity: 0.5 }]}
-            numberOfLines={1}
+           
           >
             {locationDisplay}
           </Text>
@@ -125,16 +123,7 @@ const AnalysisScreen = () => {
   const navigation = useNavigation();
   const { userData } = useUserData();
 
-  // Redux selectors
-  const trustedContacts = useSelector(
-    state => state.trustedContactList?.contact_list ?? [],
-  );
-  const incomingRequests = useSelector(
-    state => state.trustedContactIncommingRequest?.contact_list ?? [],
-  );
-  const outgoingRequests = useSelector(
-    state => state.trustedContactOutgongRequest?.contact_list ?? [],
-  );
+   
 
   // Local state
   const [sosCounts, setSosCounts] = useState({ active: 0, resolved: 0, cancelled: 0, expired: 0 });
@@ -142,6 +131,7 @@ const AnalysisScreen = () => {
   const [latestStress, setLatestStress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { contactList } = useChatContacts();
 
   const loadData = useCallback(async () => {
     const statuses = ['active', 'resolved', 'cancelled', 'expired'];
@@ -152,10 +142,10 @@ const AnalysisScreen = () => {
       ...statuses.map(
         status =>
           new Promise(res => {
-            SOSService.fetchMySosSessions({ limit: 100, page: 1, status }, result => {
+            SOSService.fetchMySosSessions({ limit: 10, page: 1, status }, result => {
               if (result.success) {
                 const rows = result.data?.data?.sessions ?? [];
-                newCounts[status] = rows.length;
+                newCounts[status] =  result.data?.data?.total;
                 allSessions.push(...rows.map(s => ({ ...s, status })));
               }
               res();
@@ -249,9 +239,7 @@ const AnalysisScreen = () => {
               {userData?.email ?? userData?.phone_number ?? '—'}
             </Text>
             <View style={styles.badgeRow}>
-              <View style={[styles.badge, { backgroundColor: appColors.blue + '22', borderColor: appColors.blue + '44' }]}>
-                <Text style={[styles.badgeText, { color: appColors.blue }]}>{userData?.role ?? 'USER'}</Text>
-              </View>
+              
               <View style={[styles.badge, {
                 backgroundColor: isLicenseActive ? '#00E5A022' : appColors.yellow + '22',
                 borderColor:     isLicenseActive ? '#00E5A044' : appColors.yellow + '44',
@@ -275,9 +263,10 @@ const AnalysisScreen = () => {
             </View>
             <View style={styles.profileStatDivider} />
             <View style={styles.profileStatItem}>
-              <Text style={styles.profileStatNum}>{trustedContacts.length}</Text>
+              <Text style={styles.profileStatNum}>{contactList.length}</Text>
               <Text style={styles.profileStatLbl}>Contacts</Text>
             </View>
+
           </View>
         </LinearGradient>
 
@@ -363,47 +352,7 @@ const AnalysisScreen = () => {
           )}
         </View>
 
-        {/* ── Contacts ─────────────────────────────────────────────────── */}
-        <View style={styles.card}>
-          <SectionHeader
-            title="Contacts"
-            subtitle="Trusted network overview"
-          />
-          <View style={styles.contactStatGrid}>
 
-            {/* Total Contacts */}
-            <View style={styles.contactStatItem}>
-              <View style={[styles.contactStatIconWrap, { backgroundColor: appColors.blue + '1A' }]}>
-                <IconMC name="account-group" size={22} color={appColors.blue} />
-              </View>
-              <Text style={[styles.contactStatNum, { color: appColors.blue }]}>{trustedContacts.length}</Text>
-              <Text style={styles.contactStatLbl}>Contacts</Text>
-            </View>
-
-            <View style={styles.contactStatDivider} />
-
-            {/* Incoming Requests */}
-            <View style={styles.contactStatItem}>
-              <View style={[styles.contactStatIconWrap, { backgroundColor: '#00E5A01A' }]}>
-                <IconMC name="account-arrow-down" size={22} color="#00E5A0" />
-              </View>
-              <Text style={[styles.contactStatNum, { color: '#00E5A0' }]}>{incomingRequests.length}</Text>
-              <Text style={styles.contactStatLbl}>Incoming{'\n'}Requests</Text>
-            </View>
-
-            <View style={styles.contactStatDivider} />
-
-            {/* Outgoing Requests */}
-            <View style={styles.contactStatItem}>
-              <View style={[styles.contactStatIconWrap, { backgroundColor: appColors.yellow + '1A' }]}>
-                <IconMC name="account-arrow-up" size={22} color={appColors.yellow} />
-              </View>
-              <Text style={[styles.contactStatNum, { color: appColors.yellow }]}>{outgoingRequests.length}</Text>
-              <Text style={styles.contactStatLbl}>Outgoing{'\n'}Requests</Text>
-            </View>
-
-          </View>
-        </View>
 
         {/* ── Stress Snapshot ──────────────────────────────────────────── */}
         <View style={styles.card}>
