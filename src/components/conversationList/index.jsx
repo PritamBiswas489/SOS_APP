@@ -111,6 +111,7 @@ const buildConversationItems = (messages, selectedContact, statuses = {}, styles
       mediaUrl: message?.mediaUrl || message?.media_url || null,
       mediaType: message?.mediaType || message?.media_type || null,
       replyTo: message?.replyTo || null,
+      isMov: message?.isMov || false,
       replyTargetId,
       time: formatMessageTime(timestamp),
       status: statuses[message?.id] || message?.status || null,
