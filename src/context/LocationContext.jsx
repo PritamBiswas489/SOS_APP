@@ -25,6 +25,7 @@ const LocationContext = createContext(null);
 // react-native-background-actions runs a JS task; we use the global callback
 // pattern identical to the Expo version so SocketContext wiring is unchanged.
 const backgroundLocationTask = async taskData => {
+  console.log('Background location task started with data:', taskData);
   await new Promise(resolve => {
     const watchId = Geolocation.watchPosition(
       position => {
@@ -68,6 +69,7 @@ const backgroundOptions = {
   color: '#6C63FF',
   linkingURI: undefined, // set to your deep-link scheme if needed
   parameters: {},
+  foregroundServiceType: ['location'],
 };
 
 export const LocationProvider = ({ children }) => {
@@ -128,6 +130,7 @@ export const LocationProvider = ({ children }) => {
   const requestPermissions = useCallback(async () => {
     try {
       const status = await requestLocationPermissions();
+      console.log('Location permission status:', status);
       setPermissionStatus(status);
       return status;
     } catch (err) {
@@ -143,7 +146,14 @@ export const LocationProvider = ({ children }) => {
       onLocationUpdateRef.current = onUpdate;
 
       const granted = await requestPermissions();
-      if (!granted) return;
+        console.log('Starting location tracking with permission status:', granted);
+      // requestPermissions returns 'full' | 'foreground-only' | 'denied'
+      if (granted === 'denied') {
+        // reset the synchronous guard if permission was denied
+        isTrackingRef.current = false;
+        return;
+      }
+    
 
       try {
         // Foreground watch
@@ -167,13 +177,16 @@ export const LocationProvider = ({ children }) => {
             showsBackgroundLocationIndicator: true,
           },
         );
-
+        console.log("permissionStatus", permissionStatus);
         // Background service (only when full background permission is available)
-        if (permissionStatus === 'full' && !BackgroundActions.isRunning()) {
+        // Use the immediate `granted` result instead of state which may be stale
+        if (granted === 'full' && !BackgroundActions.isRunning()) {
+          console.log('BackgroundActions Starting background location task...');
           await BackgroundActions.start(
             backgroundLocationTask,
             backgroundOptions,
           );
+          console.log("BackgroundActions is runninggg:", BackgroundActions.isRunning());
         }
 
         setIsTracking(true);
@@ -184,7 +197,7 @@ export const LocationProvider = ({ children }) => {
         setLocationError(err.message);
       }
     },
-    [permissionStatus, requestPermissions],
+    [requestPermissions],
   );
   startTrackingRef.current = startTracking;
 

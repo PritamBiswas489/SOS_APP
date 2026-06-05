@@ -8,6 +8,7 @@ import {
   Animated,
   StyleSheet,
   Image,
+  Button,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useUserData } from '../../hook/useUserData';
@@ -20,26 +21,51 @@ import { useMySosSessions } from '../../hook/useMySosSessions';
 import { useChatContacts } from '../../hook/useChatContacts';
 import { useStress } from '../../context/StressContext';
 import { useLocation } from '../../context/LocationContext';
- 
+import * as Sentry from '@sentry/react-native';
 
 // ─── Status badge config ──────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-  idle:       { label: 'IDLE',       dotColor: '#2a2a30', badgeColor: '#6b6b7a', badgeBg: '#1f1f24' },
-  connecting: { label: 'CONNECTING', dotColor: '#7c6ff7', badgeColor: '#7c6ff7', badgeBg: 'rgba(124,111,247,0.15)' },
-  streaming:  { label: '● LIVE',     dotColor: '#ef4444', badgeColor: '#ef4444', badgeBg: 'rgba(239,68,68,0.15)' },
-  waiting:    { label: 'WAITING',    dotColor: '#f59e0b', badgeColor: '#f59e0b', badgeBg: 'rgba(245,158,11,0.15)' },
-  error:      { label: 'ERROR',      dotColor: '#ef4444', badgeColor: '#ef4444', badgeBg: 'rgba(239,68,68,0.15)' },
+  idle: {
+    label: 'IDLE',
+    dotColor: '#2a2a30',
+    badgeColor: '#6b6b7a',
+    badgeBg: '#1f1f24',
+  },
+  connecting: {
+    label: 'CONNECTING',
+    dotColor: '#7c6ff7',
+    badgeColor: '#7c6ff7',
+    badgeBg: 'rgba(124,111,247,0.15)',
+  },
+  streaming: {
+    label: '● LIVE',
+    dotColor: '#ef4444',
+    badgeColor: '#ef4444',
+    badgeBg: 'rgba(239,68,68,0.15)',
+  },
+  waiting: {
+    label: 'WAITING',
+    dotColor: '#f59e0b',
+    badgeColor: '#f59e0b',
+    badgeBg: 'rgba(245,158,11,0.15)',
+  },
+  error: {
+    label: 'ERROR',
+    dotColor: '#ef4444',
+    badgeColor: '#ef4444',
+    badgeBg: 'rgba(239,68,68,0.15)',
+  },
 };
 
 const HomeScreen = () => {
-  const pulseAnim      = useRef(new Animated.Value(0)).current;
-  const holdAnim       = useRef(new Animated.Value(0)).current;
-  const panelAnim      = useRef(new Animated.Value(0)).current;
-  const spinAnim       = useRef(new Animated.Value(0)).current;
-  const holdTimerRef   = useRef(null);
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const holdAnim = useRef(new Animated.Value(0)).current;
+  const panelAnim = useRef(new Animated.Value(0)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
+  const holdTimerRef = useRef(null);
   const { fetchMySosSessions } = useMySosSessions();
-  const {contactList} = useChatContacts();
-  const {stress} = useStress();
+  const { contactList } = useChatContacts();
+  const { stress } = useStress();
   const { getCurrentPosition } = useLocation();
   const { userData } = useUserData();
   const {
@@ -49,20 +75,28 @@ const HomeScreen = () => {
     joinRoom,
     leaveRoom,
     toggleMute,
-    connectedListeners
+    connectedListeners,
   } = useCreatorMediaSoup();
 
-  const isInRoom    = status !== 'idle' && status !== 'error';
-  const showPanel   = status !== 'idle';
+  const isInRoom = status !== 'idle' && status !== 'error';
+  const showPanel = status !== 'idle';
   const isStreaming = status === 'streaming';
-  const cfg         = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
 
   // ── Pulse ring animation ───────────────────────────────────────────────────
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1, duration: 3000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0, duration: 0,    useNativeDriver: true }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
       ]),
     );
     loop.start();
@@ -71,17 +105,18 @@ const HomeScreen = () => {
 
   useEffect(() => {
     console.log('Status changed:', status, statusText);
-
-
-  },[status,statusText]);
-
+  }, [status, statusText]);
 
   // ── Connecting spin animation ──────────────────────────────────────────────
   useEffect(() => {
     if (status === 'connecting') {
       spinAnim.setValue(0);
       const spin = Animated.loop(
-        Animated.timing(spinAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
       );
       spin.start();
       return () => spin.stop();
@@ -112,7 +147,11 @@ const HomeScreen = () => {
 
   const handlePressOut = useCallback(() => {
     holdAnim.stopAnimation();
-    Animated.timing(holdAnim, { toValue: 0, duration: 250, useNativeDriver: false }).start();
+    Animated.timing(holdAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: false,
+    }).start();
   }, []);
 
   const handleLongPress = useCallback(async () => {
@@ -122,15 +161,15 @@ const HomeScreen = () => {
       latitude: currentLocation?.latitude,
       longitude: currentLocation?.longitude,
     };
-    const createSOS = await new Promise((resolve) => {
-      SOSService.createNewSOS(args, (result) => {
+    const createSOS = await new Promise(resolve => {
+      SOSService.createNewSOS(args, result => {
         resolve(result.data);
       });
     });
-     
-    console.log('Joining room...'+userData?.id);
+
+    console.log('Joining room...' + userData?.id);
     const sosId = createSOS?.data?.id;
-    if(!sosId){
+    if (!sosId) {
       console.log('❌ Failed to create SOS. Cannot join room.');
       return;
     }
@@ -141,27 +180,55 @@ const HomeScreen = () => {
   const handleStop = useCallback(() => leaveRoom(), [leaveRoom]);
 
   // ── Interpolations ─────────────────────────────────────────────────────────
-  const pulseScale   = pulseAnim.interpolate({ inputRange: [0, 1.2], outputRange: [0, 1.8] });
-  const pulseOpacity = pulseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.3, 0.3, 0] });
+  const pulseScale = pulseAnim.interpolate({
+    inputRange: [0, 1.2],
+    outputRange: [0, 1.8],
+  });
+  const pulseOpacity = pulseAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.3, 0.3, 0],
+  });
 
   const holdRingColor = holdAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['rgba(239,68,68,0.0)', 'rgba(239,68,68,1.0)'],
   });
-  const holdRingScale = holdAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.13] });
+  const holdRingScale = holdAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.0, 1.13],
+  });
 
-  const panelOpacity = panelAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  const panelMaxH    = panelAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 260] });
+  const panelOpacity = panelAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const panelMaxH = panelAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 260],
+  });
 
-  const spinRotate = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const spinRotate = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 20 }}>
-
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 20 }}
+    >
       {/* ── Greeting ── */}
       <View style={styles.greetingContainer}>
         <Text style={styles.goodMorning}>WELCOME,</Text>
-        <Text style={styles.userName}>{userData?.name || userData?.phone_number} 👋</Text>
+        <Text style={styles.userName}>
+          {userData?.name || userData?.phone_number} 👋
+        </Text>
+        {/* <Button
+          title="Try!"
+          onPress={() => {
+            Sentry.captureException(new Error('First error'));
+          }}
+        /> */}
       </View>
 
       {/* ── SOS Button ── */}
@@ -169,8 +236,18 @@ const HomeScreen = () => {
         {/* Idle pulse rings */}
         {!isInRoom && (
           <>
-            <Animated.View style={[styles.glowRing,  { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
-            <Animated.View style={[styles.glowRing2, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
+            <Animated.View
+              style={[
+                styles.glowRing,
+                { transform: [{ scale: pulseScale }], opacity: pulseOpacity },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.glowRing2,
+                { transform: [{ scale: pulseScale }], opacity: pulseOpacity },
+              ]}
+            />
           </>
         )}
 
@@ -178,7 +255,10 @@ const HomeScreen = () => {
         <Animated.View
           style={[
             localStyles.holdRing,
-            { borderColor: holdRingColor, transform: [{ scale: holdRingScale }] },
+            {
+              borderColor: holdRingColor,
+              transform: [{ scale: holdRingScale }],
+            },
           ]}
         />
 
@@ -200,7 +280,9 @@ const HomeScreen = () => {
           delayLongPress={2000}
           disabled={isInRoom}
         >
-          <View style={[styles.sosButton, isStreaming && localStyles.sosButtonLive]}>
+          <View
+            style={[styles.sosButton, isStreaming && localStyles.sosButtonLive]}
+          >
             {isStreaming && (
               <View style={localStyles.liveBadge}>
                 <Text style={localStyles.liveBadgeText}>● LIVE</Text>
@@ -208,22 +290,36 @@ const HomeScreen = () => {
             )}
             <Text style={styles.sosText}>SOS</Text>
             <Text style={styles.sosSubText}>
-              {isInRoom ? (isStreaming ? 'STREAMING' : 'CONNECTING…') : 'HOLD 2s TO STREAM'}
+              {isInRoom
+                ? isStreaming
+                  ? 'STREAMING'
+                  : 'CONNECTING…'
+                : 'HOLD 2s TO STREAM'}
             </Text>
           </View>
         </TouchableOpacity>
       </View>
 
       {/* ── Streaming Panel ── */}
-      <Animated.View style={[localStyles.streamPanel, { opacity: panelOpacity, maxHeight: panelMaxH }]}>
-
+      <Animated.View
+        style={[
+          localStyles.streamPanel,
+          { opacity: panelOpacity, maxHeight: panelMaxH },
+        ]}
+      >
         {/* Status row */}
-        
+
         <View style={localStyles.statusRow}>
-          <View style={[localStyles.statusDot, { backgroundColor: cfg.dotColor }]} />
-          <Text style={localStyles.statusLabel} numberOfLines={1}>{statusText}</Text>
+          <View
+            style={[localStyles.statusDot, { backgroundColor: cfg.dotColor }]}
+          />
+          <Text style={localStyles.statusLabel} numberOfLines={1}>
+            {statusText}
+          </Text>
           <View style={[localStyles.badge, { backgroundColor: cfg.badgeBg }]}>
-            <Text style={[localStyles.badgeText, { color: cfg.badgeColor }]}>{cfg.label}</Text>
+            <Text style={[localStyles.badgeText, { color: cfg.badgeColor }]}>
+              {cfg.label}
+            </Text>
           </View>
         </View>
 
@@ -248,7 +344,6 @@ const HomeScreen = () => {
                 contentContainerStyle={localStyles.listenersScroll}
               >
                 {Object.values(connectedListeners).map(listener => {
-                  
                   const initials = (listener.userName || listener.userId || '?')
                     .split(' ')
                     .map(w => w[0])
@@ -256,17 +351,23 @@ const HomeScreen = () => {
                     .toUpperCase()
                     .slice(0, 2);
                   return (
-                    <View key={listener.userId} style={localStyles.listenerChip}>
+                    <View
+                      key={listener.userId}
+                      style={localStyles.listenerChip}
+                    >
                       <View style={localStyles.listenerAvatarWrap}>
-                        {listener.profilePhoto
- ? (
+                        {listener.profilePhoto ? (
                           <Image
-                            source={{ uri: getProfileImage(listener.profilePhoto) }}
+                            source={{
+                              uri: getProfileImage(listener.profilePhoto),
+                            }}
                             style={localStyles.listenerAvatar}
                           />
                         ) : (
                           <View style={localStyles.listenerAvatarFallback}>
-                            <Text style={localStyles.listenerInitials}>{initials}</Text>
+                            <Text style={localStyles.listenerInitials}>
+                              {initials}
+                            </Text>
                           </View>
                         )}
                         <View style={localStyles.onlineDot} />
@@ -293,13 +394,26 @@ const HomeScreen = () => {
         {/* Action buttons */}
         <View style={localStyles.actionRow}>
           <TouchableOpacity
-            style={[localStyles.actionBtn, localStyles.muteBtn, !isStreaming && localStyles.disabledBtn]}
+            style={[
+              localStyles.actionBtn,
+              localStyles.muteBtn,
+              !isStreaming && localStyles.disabledBtn,
+            ]}
             onPress={toggleMute}
             disabled={!isStreaming}
             activeOpacity={0.8}
           >
-            <Icon name={isMuted ? 'mic-off' : 'mic'} size={16} color={isMuted ? '#f59e0b' : '#fff'} />
-            <Text style={[localStyles.actionBtnText, isMuted && { color: '#f59e0b' }]}>
+            <Icon
+              name={isMuted ? 'mic-off' : 'mic'}
+              size={16}
+              color={isMuted ? '#f59e0b' : '#fff'}
+            />
+            <Text
+              style={[
+                localStyles.actionBtnText,
+                isMuted && { color: '#f59e0b' },
+              ]}
+            >
               {isMuted ? 'UNMUTE' : 'MUTE'}
             </Text>
           </TouchableOpacity>
@@ -313,7 +427,6 @@ const HomeScreen = () => {
             <Text style={localStyles.actionBtnText}>STOP STREAM</Text>
           </TouchableOpacity>
         </View>
-
       </Animated.View>
 
       {/* ── Safe Status ── */}
@@ -326,19 +439,25 @@ const HomeScreen = () => {
       <View style={styles.grid}>
         <View style={styles.card}>
           <Icon name="favorite" size={30} color="#FF4757" />
-          <Text style={[styles.cardNumber, { color: appColors.primary }]}>{stress.currentHR} bpm</Text>
+          <Text style={[styles.cardNumber, { color: appColors.primary }]}>
+            {stress.currentHR} bpm
+          </Text>
           <Text style={styles.cardLabel}>HEART RATE</Text>
         </View>
 
         <View style={styles.card}>
           <Icon name="psychology" size={30} color="#FFA502" />
-          <Text style={[styles.cardNumber, { color: appColors.yellow }]}>{stress.score}%</Text>
+          <Text style={[styles.cardNumber, { color: appColors.yellow }]}>
+            {stress.score}%
+          </Text>
           <Text style={styles.cardLabel}>STRESS LEVEL</Text>
         </View>
 
         <View style={styles.card}>
           <Icon name="people" size={30} color="#A4B0BE" />
-          <Text style={[styles.cardNumber, { color: appColors.blue }]}>{contactList.length}</Text>
+          <Text style={[styles.cardNumber, { color: appColors.blue }]}>
+            {contactList.length}
+          </Text>
           <Text style={styles.cardLabel}>CONTACTS</Text>
         </View>
 
@@ -348,7 +467,6 @@ const HomeScreen = () => {
           <Text style={styles.cardLabel}>GPS TRACK</Text>
         </View>
       </View>
-
     </ScrollView>
   );
 };

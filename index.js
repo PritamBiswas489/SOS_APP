@@ -4,6 +4,7 @@
 
 import 'react-native-gesture-handler';
 import { registerGlobals } from 'react-native-webrtc';
+
 registerGlobals();
 
 // Suppress unhandled rejections from react-native-ble-plx internal promises
@@ -15,26 +16,32 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
     error?.name === 'BleError' ||
     error?.message?.includes('BleManager was destroyed') ||
     error?.message?.includes('This is probably a bug')
-  ) return;
+  )
+    return;
   _globalHandler(error, isFatal);
 });
 import { Alert, AppRegistry } from 'react-native';
 import React from 'react';
 import App from './App';
-import { name as appName } from './app.json'; 
+import { name as appName } from './app.json';
 import { Provider } from 'react-redux';
 import store from './src/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import notifee, { EventType } from '@notifee/react-native';
-import { setBackgroundMessageHandler, createNotificationChannels } from './src/services/notification.service';
+import {
+  setBackgroundMessageHandler,
+  createNotificationChannels,
+} from './src/services/notification.service';
 
 const PENDING_NOTIFICATION_PRESS_KEY = '@pending_notification_press_payload';
 
 // Required for Notifee to handle background/quit-state notification events
 notifee.onBackgroundEvent(async ({ type, detail }) => {
-  console.log('Received background notification press event:', { type, detail });
+  console.log('Received background notification press event:', {
+    type,
+    detail,
+  });
   if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
-    
     const payload = {
       source: 'notifee.background',
       notification: detail?.notification,
@@ -49,7 +56,10 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         JSON.stringify(payload),
       );
     } catch (error) {
-      console.log('Failed to persist background notification press payload:', error);
+      console.log(
+        'Failed to persist background notification press payload:',
+        error,
+      );
     }
   }
 });

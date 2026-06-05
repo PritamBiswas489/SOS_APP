@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity ,  Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
@@ -16,18 +16,16 @@ import ContactsScreen from '../screens/contactsScreen';
 import analysisScreen from '../screens/analysis';
 import CreatorScreen from '../screens/soupCreatorScreen/index.jsx';
 import ListenerScreen from '../screens/soupListenerScreen/index.jsx';
- 
+
 import { Alert } from 'react-native';
- 
+
 import { UserService } from '../services/user.service';
 import { useDispatch } from 'react-redux';
 import { resetAllState } from '../store';
-import { useUserData } from '../hook/useUserData'; 
+import { useUserData } from '../hook/useUserData';
 import { getProfileImage } from '../config/utility';
 import useUserAuth from '../hook/useUserAuth.jsx';
 import { log } from '@react-native-firebase/app/dist/module/internal/web/firebaseFirestorePipelines';
-
-  
 
 const Drawer = createDrawerNavigator();
 
@@ -52,9 +50,9 @@ const CustomDrawerContent = props => {
   const dispatch = useDispatch();
   console.log('=====================================================');
 
-  const { userData, hasLicense} = useUserData();
+  const { userData, hasLicense } = useUserData();
   const { logout } = useUserAuth();
-    
+
   return (
     <DrawerContentScrollView
       {...props}
@@ -64,7 +62,11 @@ const CustomDrawerContent = props => {
       <View style={styles.profileSection}>
         <View style={styles.profileAvatar}>
           {userData?.profile_photo ? (
-            <Image source={{ uri: getProfileImage(userData.profile_photo) }} resizeMode="cover" style={styles.avatarImage} />
+            <Image
+              source={{ uri: getProfileImage(userData.profile_photo) }}
+              resizeMode="cover"
+              style={styles.avatarImage}
+            />
           ) : (
             <Icon name="person" size={40} color="#FFFFFF" />
           )}
@@ -80,7 +82,10 @@ const CustomDrawerContent = props => {
 
         <TouchableOpacity
           style={styles.editProfileBtn}
-          onPress={() => { props.navigation.closeDrawer(); props.navigation.navigate('EditProfile'); }}
+          onPress={() => {
+            props.navigation.closeDrawer();
+            props.navigation.navigate('EditProfile');
+          }}
         >
           <Icon name="edit" size={14} color="#5352ED" />
           <Text style={styles.editProfileText}>Edit Profile</Text>
@@ -109,9 +114,11 @@ const CustomDrawerContent = props => {
       {/* Logout */}
       <View style={styles.bottomSection}>
         <TouchableOpacity
-          onPress={() => logoutProcess(props.navigation, dispatch, ()=>{
-            logout();
-          })}
+          onPress={() =>
+            logoutProcess(props.navigation, dispatch, () => {
+              logout();
+            })
+          }
           style={styles.logoutBtn}
         >
           <Icon name="logout" size={22} color="#FF4757" />
@@ -158,18 +165,20 @@ const DrawerNavigator = () => {
           ),
         }}
       />
-     
-       {hasLicense &&  <Drawer.Screen
-        name="Contacts"
-        component={ContactsScreen}
-        options={{
-          drawerLabel: 'Contacts',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="chat" size={size} color={color} />
-          ),
-        }}
-      />}
-      <Drawer.Screen
+
+      {hasLicense && (
+        <Drawer.Screen
+          name="Contacts"
+          component={ContactsScreen}
+          options={{
+            drawerLabel: 'Contacts',
+            drawerIcon: ({ color, size }) => (
+              <Icon name="chat" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+      {/* <Drawer.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
@@ -178,18 +187,20 @@ const DrawerNavigator = () => {
             <Icon name="settings" size={size} color={color} />
           ),
         }}
-      />
-      {hasLicense && <Drawer.Screen
-        name="Analysis"
-        component={analysisScreen}
-        options={{
-          drawerLabel: 'Analysis',
-          drawerIcon: ({ color, size }) => (
-            <Icon name="analytics" size={size} color={color} />
-          ),
-        }}
-      />}
-      
+      /> */}
+      {hasLicense && (
+        <Drawer.Screen
+          name="Analysis"
+          component={analysisScreen}
+          options={{
+            drawerLabel: 'Analysis',
+            drawerIcon: ({ color, size }) => (
+              <Icon name="analytics" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+
       {isDevUser && (
         <Drawer.Screen
           name="CreatorSoup"
@@ -213,10 +224,7 @@ const DrawerNavigator = () => {
             ),
           }}
         />
-
       )}
-
-      
     </Drawer.Navigator>
   );
 };
