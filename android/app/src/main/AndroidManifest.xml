@@ -1,0 +1,120 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
+    <!-- ✅ Location -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- ✅ Optional -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Required for Android 14+ foreground service type used by Notifee/FCM -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+     <!-- ✅ Add these 5 lines here, inside <manifest> -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE"/>
+    <!-- Required for Health Connect: allows the app to query/communicate with the HC package -->
+
+
+      <!-- Android >= 12 -->
+      <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+      <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+      <!-- Android < 12 -->
+      <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+      <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+ 
+
+      <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
+
+
+
+
+
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+       
+    </queries>
+    <application
+      android:name=".MainApplication"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:allowBackup="false"
+      android:theme="@style/AppTheme"
+      android:usesCleartextTraffic="${usesCleartextTraffic}"
+      android:supportsRtl="true">
+
+      <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="@string/GOOGLE_MAPS_API_KEY"/>
+
+      <!-- Tell FCM which channel to use when auto-displaying notification messages in background -->
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="default_channel"
+        tools:replace="android:value"/>
+
+       <meta-data
+    android:name="androidx.health.connect.client.version"
+    android:value="1" />
+
+    <activity
+    android:name="androidx.health.connect.client.permission.HealthPermissionsActivity"
+    android:exported="true" />
+
+      <activity
+        android:name=".MainActivity"
+        android:label="@string/app_name"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+        android:launchMode="singleTask"
+        android:windowSoftInputMode="adjustResize"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- Required by Health Connect (Android 9–13) to show the permissions rationale screen -->
+        <intent-filter>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent-filter>
+        <!-- Required by Health Connect (Android 14+) to show the permissions rationale screen -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+            <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+        </intent-filter>
+      </activity>
+
+      <!-- Required for Notifee foreground service on Android 14+ -->
+      <service
+        android:name="app.notifee.core.ForegroundService"
+        android:foregroundServiceType="remoteMessaging|dataSync"
+        android:exported="false" />
+
+     <service
+  android:stopWithTask="true"
+  android:name="com.swmansion.audioapi.system.CentralizedForegroundService"
+  android:foregroundServiceType="microphone" />  
+
+  <service
+  android:name="com.asterinet.react.bgactions.RNBackgroundActionsTask"
+  android:foregroundServiceType="location"
+  android:stopWithTask="true"
+  android:exported="false"
+  tools:node="replace" />
+
+    </application>
+</manifest>

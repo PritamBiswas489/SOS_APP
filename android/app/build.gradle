@@ -1,0 +1,74 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+apply plugin: 'com.google.gms.google-services'
+ 
+
+apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+
+react {
+    autolinkLibrariesWithApp()
+}
+
+def enableProguardInReleaseBuilds = true  // ✅ enabled
+
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+
+apply from: new File(["node", "--print", "require.resolve('@sentry/react-native/package.json')"].execute().text.trim(), "../sentry.gradle")
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace "com.sos.kobytech"
+
+    defaultConfig {
+        applicationId "com.sos.kobytech"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 9
+        versionName "3.0.1"
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            storeFile file(MYAPP_RELEASE_STORE_FILE)           // ✅ from gradle.properties
+            storePassword MYAPP_RELEASE_STORE_PASSWORD         // ✅ from gradle.properties
+            keyAlias MYAPP_RELEASE_KEY_ALIAS                   // ✅ from gradle.properties
+            keyPassword MYAPP_RELEASE_KEY_PASSWORD             // ✅ from gradle.properties
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.release               // ✅ fixed
+            minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds      // ✅ added — reduces APK size
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+ 
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    implementation 'com.google.firebase:firebase-messaging:24.1.0'        // ✅ updated
+    implementation 'com.google.android.gms:play-services-location:21.3.0' // ✅ updated
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+}

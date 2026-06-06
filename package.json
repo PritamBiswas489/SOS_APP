@@ -35,6 +35,7 @@
     "react-native-ble-plx": "^3.5.1",
     "react-native-blob-util": "^0.24.7",
     "react-native-circular-progress": "^1.4.1",
+    "react-native-config": "^1.6.1",
     "react-native-contacts": "^8.0.10",
     "react-native-device-info": "^14.1.1",
     "react-native-fs": "^2.20.0",
