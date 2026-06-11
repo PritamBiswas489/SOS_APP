@@ -7,7 +7,7 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import { requestLocationPermissions } from '../services/permissions.service';
 import BackgroundActions from 'react-native-background-actions';
@@ -180,13 +180,17 @@ export const LocationProvider = ({ children }) => {
         console.log("permissionStatus", permissionStatus);
         // Background service (only when full background permission is available)
         // Use the immediate `granted` result instead of state which may be stale
-        if (granted === 'full' && !BackgroundActions.isRunning()) {
+        // CRITICAL: Android 15 forbids starting location-type services from background
+        const isAppInForeground = AppState.currentState === 'active';
+        if (granted === 'full' && !BackgroundActions.isRunning() && isAppInForeground) {
           console.log('BackgroundActions Starting background location task...');
           await BackgroundActions.start(
             backgroundLocationTask,
             backgroundOptions,
           );
           console.log("BackgroundActions is runninggg:", BackgroundActions.isRunning());
+        } else if (granted === 'full' && !isAppInForeground) {
+          console.log('BackgroundActions: Skipped start - app is in background. Will start when app returns to foreground.');
         }
 
         setIsTracking(true);
@@ -287,6 +291,25 @@ export const LocationProvider = ({ children }) => {
       stopTracking();
     };
   }, []);
+
+  // Android 15: Start background service when app comes to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async nextAppState => {
+      if (nextAppState === 'active' && isTrackingRef.current && permissionStatus === 'full' && !BackgroundActions.isRunning()) {
+        console.log('App returned to foreground - starting background location service');
+        try {
+          await BackgroundActions.start(backgroundLocationTask, backgroundOptions);
+          console.log('Background service started successfully');
+        } catch (err) {
+          console.error('Failed to start background service on foreground return:', err);
+        }
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [permissionStatus]);
 
   useEffect(() => {
     if (!isConnected) {

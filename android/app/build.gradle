@@ -2,7 +2,6 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: 'com.google.gms.google-services'
- 
 
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
 
@@ -10,12 +9,13 @@ react {
     autolinkLibrariesWithApp()
 }
 
-def enableProguardInReleaseBuilds = true  // ✅ enabled
+def enableProguardInReleaseBuilds = true
 
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 apply from: new File(["node", "--print", "require.resolve('@sentry/react-native/package.json')"].execute().text.trim(), "../sentry.gradle")
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -27,8 +27,8 @@ android {
         applicationId "com.sos.kobytech"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
-        versionName "3.0.1"
+        versionCode 10
+        versionName "4.0.0"
     }
 
     signingConfigs {
@@ -39,10 +39,10 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file(MYAPP_RELEASE_STORE_FILE)           // ✅ from gradle.properties
-            storePassword MYAPP_RELEASE_STORE_PASSWORD         // ✅ from gradle.properties
-            keyAlias MYAPP_RELEASE_KEY_ALIAS                   // ✅ from gradle.properties
-            keyPassword MYAPP_RELEASE_KEY_PASSWORD             // ✅ from gradle.properties
+            storeFile file(MYAPP_RELEASE_STORE_FILE)
+            storePassword MYAPP_RELEASE_STORE_PASSWORD
+            keyAlias MYAPP_RELEASE_KEY_ALIAS
+            keyPassword MYAPP_RELEASE_KEY_PASSWORD
         }
     }
 
@@ -51,20 +51,23 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.release               // ✅ fixed
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
-            shrinkResources enableProguardInReleaseBuilds      // ✅ added — reduces APK size
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            shrinkResources false  // ✅ disabled — prevents stripping res/raw/ sound files
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"  // ✅ optimize version
         }
+    }
+
+    // ✅ Ensures custom notification sounds are never stripped
+    androidResources {
+        noCompress 'mp3', 'wav', 'ogg'
     }
 }
 
- 
-
 dependencies {
     implementation("com.facebook.react:react-android")
-    implementation 'com.google.firebase:firebase-messaging:24.1.0'        // ✅ updated
-    implementation 'com.google.android.gms:play-services-location:21.3.0' // ✅ updated
+    implementation 'com.google.firebase:firebase-messaging:24.1.0'
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

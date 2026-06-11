@@ -376,9 +376,12 @@ const App = () => {
         );
         navigateToChat(payloadData?.senderId);
       }
-      if (!messageType) {
+      console.log('=========================== payloadData==========================' , payloadData);
+      if (!messageType || payloadData?.fromProcessScreen) {
         navigateToMain();
       }
+       
+       
     },
     [
       fetchMySosSessions,

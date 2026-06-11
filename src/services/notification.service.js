@@ -44,51 +44,69 @@ const getChannelByMessage = remoteMessage => {
   
 };
 
+
+
+const CHANNEL_VERSION_KEY = '@notification_channel_version';
+const CHANNEL_VERSION = '2'; // ⬆️ Bump this whenever channel config changes
+
 export const createNotificationChannels = async () => {
-  if (Platform.OS !== 'android') {
-    return;
+  if (Platform.OS !== 'android') return;
+
+  const channelConfigs = [
+    {
+      id: NOTIFICATION_CHANNELS.CHAT,
+      name: 'Chat Notifications',
+      importance: AndroidImportance.HIGH,
+      sound: 'chat_tone',
+      vibration: true,
+    },
+    {
+      id: NOTIFICATION_CHANNELS.SOS,
+      name: 'SOS Notifications',
+      importance: AndroidImportance.HIGH,
+      sound: 'sos_alert',
+      vibration: true,
+    },
+    {
+      id: NOTIFICATION_CHANNELS.VICTIM,
+      name: 'Victim Notifications',
+      importance: AndroidImportance.HIGH,
+      sound: 'victim_tone',
+      vibration: true,
+    },
+    {
+      id: NOTIFICATION_CHANNELS.DEFAULT,
+      name: 'Default Notifications',
+      importance: AndroidImportance.HIGH,
+      sound: 'default_tone',
+      vibration: true,
+    },
+  ];
+
+  try {
+    const savedVersion = await AsyncStorage.getItem(CHANNEL_VERSION_KEY);
+    const needsUpdate = savedVersion !== CHANNEL_VERSION;
+
+    if (needsUpdate) {
+      // Delete old channels so Android unlocks their settings
+      const existingChannels = await notifee.getChannels();
+      for (const ch of existingChannels) {
+        await notifee.deleteChannel(ch.id);
+      }
+    }
+
+    // Always recreate all channels
+    for (const config of channelConfigs) {
+      await notifee.createChannel(config);
+    }
+
+    if (needsUpdate) {
+      await AsyncStorage.setItem(CHANNEL_VERSION_KEY, CHANNEL_VERSION);
+    }
+
+  } catch (error) {
+    console.log('❌ Error creating notification channels:', error);
   }
-
-
-  await notifee.deleteChannel(NOTIFICATION_CHANNELS.CHAT);
-  await notifee.deleteChannel(NOTIFICATION_CHANNELS.SOS);
-  await notifee.deleteChannel(NOTIFICATION_CHANNELS.VICTIM);
-  await notifee.deleteChannel(NOTIFICATION_CHANNELS.DEFAULT);
-
-  // Create channels with appropriate settings
-  await notifee.createChannel({
-    id: NOTIFICATION_CHANNELS.CHAT,
-    name: 'Chat Notifications',
-    importance: AndroidImportance.HIGH,
-    sound: 'chat_tone',
-    vibration: true,
-  });
-
-  // Create SOS channel with custom sound and high importance
-  await notifee.createChannel({
-    id: NOTIFICATION_CHANNELS.SOS,
-    name: 'SOS Notifications',
-    importance: AndroidImportance.HIGH,
-    sound: 'sos_alert',
-    vibration: true,
-  });
-
-  // Create Victim channel with custom sound and high importance
-  await notifee.createChannel({
-    id: NOTIFICATION_CHANNELS.VICTIM,
-    name: 'Victim Notifications',
-    importance: AndroidImportance.HIGH,
-    sound: 'victim_tone',
-    vibration: true,
-  });
-   
-   await notifee.createChannel({
-    id: NOTIFICATION_CHANNELS.DEFAULT,
-    name: 'Default Notifications',
-    importance: AndroidImportance.HIGH,
-    sound: 'default_tone',
-    vibration: true,
-  });
 };
 
 export const requestNotificationPermissions = async () => {
@@ -124,6 +142,10 @@ export const getFCMToken = async () => {
 };
 
 export const displayRemoteNotification = async remoteMessage => {
+
+  const existingChannels = await notifee.getChannels();
+  console.log('Existing notification channels:', existingChannels);
+
   const channelId = getChannelByMessage(remoteMessage);
   console.log('📩 Displaying notification for message:', {
     channelId,
@@ -162,7 +184,6 @@ export const subscribeForegroundNotifications = onForegroundMessage => {
 
 export const setBackgroundMessageHandler = () => {
   setFCMBackgroundHandler(getMsg(), async remoteMessage => {
-    await createNotificationChannels();
     await displayRemoteNotification(remoteMessage);
   });
 };

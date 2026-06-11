@@ -8,3 +8,15 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# Firebase Messaging
+-keep class com.google.firebase.** { *; }
+-keep class io.invertase.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# Notifee
+-keep class io.invertase.notifee.** { *; }
+-dontwarn io.invertase.notifee.**
+
+# React Native AsyncStorage
+-keep class com.reactnativecommunity.asyncstorage.** { *; }

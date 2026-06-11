@@ -147,6 +147,9 @@ const ProcessScreen = payload => {
 
   useEffect(() => {
     const fetchData = async () => {
+      console.log('=====================================================');
+      console.log('Checking authentication status in ProcessScreen');
+      console.log('=====================================================');
       if (!isAuthenticated) {
         navigation.replace('Login');
         return;
@@ -198,10 +201,14 @@ const ProcessScreen = payload => {
           console.log('Pending notification press payload after login:', pendingNotification);
           console.log('=====================================================');
         if (pendingNotification) {
+          pendingNotification.data.fromProcessScreen = true; // Mark the payload to indicate it came from ProcessScreen
           DeviceEventEmitter.emit('notification:pending-press', pendingNotification);
-        }else{
-             navigation.replace('Main');
-        }
+          return;
+            
+        }  
+            navigation.replace('Main');
+            
+         
         
       }
     };

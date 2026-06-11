@@ -204,7 +204,7 @@ const HomeScreen = () => {
   });
   const panelMaxH = panelAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 260],
+    outputRange: [0, 400],
   });
 
   const spinRotate = spinAnim.interpolate({
@@ -307,27 +307,26 @@ const HomeScreen = () => {
           { opacity: panelOpacity, maxHeight: panelMaxH },
         ]}
       >
-        {/* Status row */}
-
-        <View style={localStyles.statusRow}>
-          <View
-            style={[localStyles.statusDot, { backgroundColor: cfg.dotColor }]}
-          />
-          <Text style={localStyles.statusLabel} numberOfLines={1}>
-            {statusText}
-          </Text>
-          <View style={[localStyles.badge, { backgroundColor: cfg.badgeBg }]}>
-            <Text style={[localStyles.badgeText, { color: cfg.badgeColor }]}>
-              {cfg.label}
+        {/* Header */}
+        <View style={localStyles.headerRow}>
+          <View style={localStyles.headerLeft}>
+            <View style={localStyles.liveDot} />
+            <Text style={localStyles.headerTitle}>
+              Live — streaming audio
             </Text>
           </View>
+          {isStreaming && (
+            <View style={localStyles.liveBadgeTop}>
+              <Text style={localStyles.liveBadgeTopText}>LIVE</Text>
+            </View>
+          )}
         </View>
 
-        {/* Listeners row */}
+        {/* Listeners section */}
         {isStreaming && (
           <View style={localStyles.listenersSection}>
             <View style={localStyles.listenersHeader}>
-              <Icon name="headset" size={13} color="#a0a0b0" />
+              <Icon name="headset" size={14} color="#9ca3af" />
               <Text style={localStyles.listenersTitle}>LISTENERS</Text>
               <View style={localStyles.listenerCountBadge}>
                 <Text style={localStyles.listenerCountText}>
@@ -336,7 +335,11 @@ const HomeScreen = () => {
               </View>
             </View>
             {Object.keys(connectedListeners).length === 0 ? (
-              <Text style={localStyles.noListenersText}>No listeners yet…</Text>
+              <View style={localStyles.noListenersContainer}>
+                <Text style={localStyles.noListenersText}>
+                  Waiting for listeners…
+                </Text>
+              </View>
             ) : (
               <ScrollView
                 horizontal
@@ -384,12 +387,14 @@ const HomeScreen = () => {
         )}
 
         {/* Visualizer */}
-        <AudioVisualizer
-          active={isStreaming && !isMuted}
-          color="#ef4444"
-          label="Microphone Input"
-          height={52}
-        />
+        <View style={localStyles.visualizerSection}>
+          <AudioVisualizer
+            active={isStreaming && !isMuted}
+            color="#ef4444"
+            label="MICROPHONE INPUT"
+            height={55}
+          />
+        </View>
 
         {/* Action buttons */}
         <View style={localStyles.actionRow}>
@@ -519,14 +524,52 @@ const localStyles = StyleSheet.create({
   streamPanel: {
     marginHorizontal: 18,
     marginBottom: 12,
-    backgroundColor: '#17171a',
-    borderRadius: 16,
+    backgroundColor: '#1a1b26',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#2a2a30',
+    borderColor: '#2a2d3a',
     overflow: 'hidden',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
+  },
+
+  // Header
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 4,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+  },
+  headerTitle: {
+    fontSize: 14,
+    color: '#e5e7eb',
+    fontWeight: '500',
+    letterSpacing: 0.2,
+  },
+  liveBadgeTop: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  liveBadgeTopText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 
   statusRow: {
@@ -557,6 +600,15 @@ const localStyles = StyleSheet.create({
     letterSpacing: 0.7,
   },
 
+  // Visualizer section
+  visualizerSection: {
+    backgroundColor: '#16171f',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#252732',
+  },
+
   actionRow: {
     flexDirection: 'row',
     gap: 10,
@@ -567,13 +619,13 @@ const localStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   muteBtn: {
-    backgroundColor: '#1f1f2e',
+    backgroundColor: '#1f2028',
     borderWidth: 1,
-    borderColor: '#2a2a40',
+    borderColor: '#2a2d3a',
   },
   stopBtn: {
     backgroundColor: '#ef4444',
@@ -590,89 +642,96 @@ const localStyles = StyleSheet.create({
 
   // Listeners section
   listenersSection: {
-    gap: 8,
+    gap: 10,
+    paddingTop: 4,
+    maxHeight: 120,
   },
   listenersHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   listenersTitle: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#a0a0b0',
-    letterSpacing: 0.8,
+    color: '#9ca3af',
+    letterSpacing: 1,
     flex: 1,
   },
   listenerCountBadge: {
-    backgroundColor: 'rgba(239,68,68,0.2)',
-    borderRadius: 10,
-    minWidth: 20,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    backgroundColor: '#ef444420',
+    borderRadius: 12,
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 7,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   listenerCountText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: '#ef4444',
   },
+  noListenersContainer: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
   noListenersText: {
-    fontSize: 11,
-    color: '#505060',
+    fontSize: 12,
+    color: '#6b7280',
     fontStyle: 'italic',
-    paddingVertical: 4,
   },
   listenersScroll: {
-    gap: 10,
+    gap: 12,
+    paddingVertical: 6,
     paddingRight: 4,
   },
   listenerChip: {
     alignItems: 'center',
-    gap: 4,
-    width: 54,
+    gap: 6,
+    width: 60,
   },
   listenerAvatarWrap: {
     position: 'relative',
   },
   listenerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#ef4444',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2.5,
+    borderColor: '#3b82f6',
   },
   listenerAvatarFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#2a2a45',
-    borderWidth: 2,
-    borderColor: '#3a3a55',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2a2d3a',
+    borderWidth: 2.5,
+    borderColor: '#3b82f6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   listenerInitials: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#c0b0ff',
+    color: '#93c5fd',
   },
   onlineDot: {
     position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#22c55e',
-    borderWidth: 1.5,
-    borderColor: '#17171a',
+    borderWidth: 2,
+    borderColor: '#1a1b26',
   },
   listenerName: {
-    fontSize: 9,
-    color: '#a0a0b0',
+    fontSize: 11,
+    color: '#d1d5db',
     fontWeight: '500',
     textAlign: 'center',
-    width: 54,
+    width: 60,
   },
 });
