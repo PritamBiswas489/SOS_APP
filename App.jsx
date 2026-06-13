@@ -69,6 +69,7 @@ import { UserService } from './src/services/user.service.js';
 import { resetAllState } from './src/store/index.jsx';
 import * as Sentry from '@sentry/react-native';
 import { SENTRY_DSN_URL } from './environment.jsx';
+ 
 
 Sentry.init({
   dsn: SENTRY_DSN_URL,
@@ -186,6 +187,8 @@ const App = () => {
   const { isAuthenticated } = useUserAuth();
   const [emittedSOS, setEmittedSOS] = useState(null);
   const { hasLicense } = useUserData();
+
+     
 
   const openSosModalFromNotification = useCallback(() => {
     if (AppState.currentState === 'active') {
@@ -310,11 +313,47 @@ const App = () => {
       DeviceEventEmitter.emit('chat:switch-recipient', { senderId });
       return;
     }
+    
 
     navigationRef.navigate('Main', {
       screen: 'MainTabs',
       params: { screen: 'Chat', params: { selectedReceipentId: senderId } },
     });
+  }, []);
+
+  const redirectToStressScreen = useCallback(victimId => {
+    const currentRoute = navigationRef.getCurrentRoute();
+    if (currentRoute?.name === 'Health') {
+      console.log('Already on Health screen, skipping stress redirect');
+      return;
+    }
+     
+    if (!navigationRef.isReady()) {
+      pendingNavigationRef.current = () => {
+        navigationRef.navigate('Process',{action: 'redirectToStressScreen', userId: victimId });
+      };
+      return;
+    }
+
+    navigationRef.navigate('Process',{action: 'redirectToStressScreen', userId: victimId });
+  }, []);
+
+  const redirectToAudioScreen = useCallback(victimId => {
+    const currentRoute = navigationRef.getCurrentRoute();
+    if (currentRoute?.name === 'AudioStream') {
+      console.log('Already on Health screen, skipping stress redirect');
+      return;
+    }
+     if (!navigationRef.isReady()) {
+      pendingNavigationRef.current = () => {
+        navigationRef.navigate('Process',{action: 'redirectToAudioScreen', userId: victimId });
+      };
+      return;
+    }
+     
+    navigationRef.navigate('Process',{action: 'redirectToAudioScreen', userId: victimId });
+
+
   }, []);
 
   const notificationAction = useCallback(
@@ -325,9 +364,9 @@ const App = () => {
         payload?.notification?.data ||
         {};
       const messageType = String(
-        payloadData?.messageType || payloadData?.type || '',
+        payloadData?.messageType || '',
       ).toUpperCase();
-      console.log({ messageType: messageType });
+      console.log("payloadData",{ payloadData: payloadData });
       const refreshMessageTypes = [
         'ACCEPTED_TRUSTED_CONTACT',
         'DELETED_TRUSTED_CONTACT',
@@ -348,6 +387,18 @@ const App = () => {
           payloadData,
         );
         openSosModalFromNotification();
+        const victimId = payloadData?.fromUserId;
+        if(payloadData?.type === 'stress'){
+          if(victimId){
+            console.log('Redirecting to stress screen for victimId:', victimId);
+            redirectToStressScreen(victimId);
+          }
+        }else{
+          if(victimId){
+            console.log('Redirecting to audio screen for victimId:', victimId);
+            redirectToAudioScreen(victimId);
+          }
+        }
       }
       if (payloadData?.fetchVictimSOS) {
         fetchMySosSessions();

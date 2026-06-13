@@ -20,10 +20,10 @@ import { MAP_TILE_API_KEY, ORS_KEY, USE_GOOGLE_MAPS } from '../../../environment
 
 // ─── OpenRouteService free API key ────────────────────────────────────────────
 // Get yours free at: https://openrouteservice.org/dev/#/signup
- 
+
 
 // ─── OSM Tile URL (completely free, no key needed) ────────────────────────────
- 
+
 
 // ─── Dark map style (only applied when Google Maps is enabled) ────────────────
 const darkMapStyle = [
@@ -66,6 +66,16 @@ const decodePolyline = encoded => {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatDistance = meters => meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
+const haversineMeters = (a, b) => {
+  const R = 6371000;
+  const toRad = v => (v * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLon = toRad(b.longitude - a.longitude);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+};
 const formatDuration = seconds => {
   if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
   const h = Math.floor(seconds / 3600);
@@ -92,22 +102,21 @@ const MapScreen = ({ route }) => {
   // ║  true  → PROVIDER_GOOGLE + Google Directions + Places   ║
   // ║  false → PROVIDER_DEFAULT + OSM tiles + ORS directions  ║
   // ╚══════════════════════════════════════════════════════════╝
- 
-  const [useGoogleMap, setUseGoogleMap] = useState(USE_GOOGLE_MAPS);
 
- 
- useEffect(() => {
-    console.log('Google Maps Enabled:', USE_GOOGLE_MAPS);
-  }, [USE_GOOGLE_MAPS]);
+  const [useGoogleMap, setUseGoogleMap] = useState(USE_GOOGLE_MAPS);
 
   // ─── Nominatim search state (used only when useGoogleMap = false) ─────────
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const searchDebounceRef = useRef(null);
+  const searchAbortRef = useRef(null);
+  const lastRouteRef = useRef('');
+  const routeRequestRef = useRef(null);
 
   // Clear route + search whenever provider is switched
   useEffect(() => {
+    lastRouteRef.current = '';
     setRouteCoords([]);
     setRouteInfo(null);
     setSearchQuery('');
@@ -174,10 +183,9 @@ const MapScreen = ({ route }) => {
     if (!stillExists) {
       dispatch(mapSelectedContactActions.setMapSelectedContact(mappedMapContacts[0]));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mappedMapContacts, normalizedSelectedMapRecipentId, dispatch]);
 
-  const [mapKey, setMapKey] = useState(0);
   const [CONTACT_MARKER, setContactMarkers] = useState(null);
   const [routeCoords, setRouteCoords] = useState([]);
   const [routeInfo, setRouteInfo] = useState(null);
@@ -197,20 +205,17 @@ const MapScreen = ({ route }) => {
     return contactLocations[mapSelectedContact.receipent_id] ?? null;
   }, [contactLocations, mapSelectedContact?.receipent_id]);
 
-  useEffect(() => {
-    console.log('Map Selected Contact:', mapSelectedContact);
-  }, [mapSelectedContact]);
-
-  useEffect(() => {
-    if (!userData?.latitude || !userData?.longitude) return;
-    mapRef.current?.animateToRegion({ ...userLocation, latitudeDelta: 0.012, longitudeDelta: 0.012 }, 600);
-  }, [userLocation]);
-
-  // Force MapView remount on every focus — the only reliable fix for blank
-  // UrlTile tiles after navigating away and back (PROVIDER_DEFAULT limitation)
+  // Release route + search memory when screen loses focus
   useFocusEffect(
     useCallback(() => {
-      setMapKey(prev => prev + 1);
+      return () => {
+        lastRouteRef.current = '';
+        setRouteCoords([]);
+        setRouteInfo(null);
+        setSearchResults([]);
+        setShowResults(false);
+        if (routeRequestRef.current) routeRequestRef.current.abort();
+      };
     }, []),
   );
 
@@ -231,20 +236,55 @@ const MapScreen = ({ route }) => {
   // ║     ROUTE FETCHING — switches API based on toggle       ║
   // ╚══════════════════════════════════════════════════════════╝
   const fetchRoute = useCallback(async () => {
-    if (!userLocation.latitude || !userLocation.longitude) return;
+    console.log('Fetching route with Google Directions API...');
+    if (!userLocation?.latitude || !userLocation?.longitude) return;
     if (!selectedContactLocation?.latitude || !selectedContactLocation?.longitude) return;
 
+    // Skip if contact is more than 200 km away
+    const distanceM = haversineMeters(
+      { latitude: userLocation.latitude, longitude: userLocation.longitude },
+      { latitude: selectedContactLocation.latitude, longitude: selectedContactLocation.longitude },
+    );
+    if (distanceM > 200000) {
+      setRouteCoords([]);
+      setRouteInfo(null);
+      lastRouteRef.current = '';
+      mapRef.current?.fitToCoordinates(
+        [
+          userLocation,
+          {
+            latitude: selectedContactLocation.latitude,
+            longitude: selectedContactLocation.longitude,
+          },
+        ],
+        { edgePadding: { top: 120, right: 80, bottom: 220, left: 80 }, animated: true },
+      );
+      return;
+    }
+    const routeKey =
+      `${userLocation.latitude},${userLocation.longitude}-` +
+      `${selectedContactLocation.latitude},${selectedContactLocation.longitude}-` +
+      `${travelMode}`;
+    if (lastRouteRef.current === routeKey) return;
+    lastRouteRef.current = routeKey;
+
     try {
+      if (routeRequestRef.current) routeRequestRef.current.abort();
+      routeRequestRef.current = new AbortController();
+
       if (useGoogleMap) {
         // ── Google Directions API ──────────────────────────────────────────
         const origin = `${userLocation.latitude},${userLocation.longitude}`;
         const destination = `${selectedContactLocation.latitude},${selectedContactLocation.longitude}`;
         const res = await axios.get(
           `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=${travelMode}&key=${GOOGLE_MAPS_API_KEY}`,
+          { signal: routeRequestRef.current.signal },
         );
         const route = res.data?.routes?.[0];
         if (!route) return;
-        const points = decodePolyline(route.overview_polyline.points);
+        const decoded = decodePolyline(route.overview_polyline.points);
+        // Keep every 3rd point — reduces memory 60-70% with negligible visual loss
+        const points = decoded.filter((_, i) => i % 3 === 0);
         const leg = route.legs?.[0];
         setRouteCoords(points);
         setRouteInfo({
@@ -253,12 +293,10 @@ const MapScreen = ({ route }) => {
         });
       } else {
         // ── OpenRouteService API ───────────────────────────────────────────
-        // ORS profile: driving-car | foot-walking
         const orsProfile = travelMode === 'walking' ? 'foot-walking' : 'driving-car';
         const res = await axios.post(
           `https://api.openrouteservice.org/v2/directions/${orsProfile}`,
           {
-            // ⚠️ ORS uses [longitude, latitude] order (opposite of Google)
             coordinates: [
               [userLocation.longitude, userLocation.latitude],
               [selectedContactLocation.longitude, selectedContactLocation.latitude],
@@ -269,11 +307,13 @@ const MapScreen = ({ route }) => {
               Authorization: ORS_KEY,
               'Content-Type': 'application/json',
             },
+            signal: routeRequestRef.current.signal,
           },
         );
         const route = res.data?.routes?.[0];
         if (!route) return;
-        const points = decodePolyline(route.geometry);
+        const decoded = decodePolyline(route.geometry);
+        const points = decoded.filter((_, i) => i % 3 === 0);
         const summary = route.summary;
         setRouteCoords(points);
         setRouteInfo({
@@ -282,19 +322,31 @@ const MapScreen = ({ route }) => {
         });
       }
 
-      // Fit map to show both ends (same for both providers)
       mapRef.current?.fitToCoordinates(
         [userLocation, { latitude: selectedContactLocation.latitude, longitude: selectedContactLocation.longitude }],
         { edgePadding: { top: 120, right: 60, bottom: 220, left: 60 }, animated: true },
       );
     } catch (err) {
-      console.warn(`fetchRoute [${useGoogleMap ? 'Google' : 'ORS'}] error:`, err?.response?.data ?? err?.message);
+      if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') {
+        console.warn(`fetchRoute [${useGoogleMap ? 'Google' : 'ORS'}] error:`, err?.response?.data ?? err?.message);
+      }
     }
   }, [userLocation, selectedContactLocation, travelMode, useGoogleMap]);
 
   useEffect(() => {
     if (selectedContactLocation) fetchRoute();
   }, [fetchRoute]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (selectedContactLocation) fetchRoute();
+    }, [fetchRoute, selectedContactLocation]),
+  );
+
+  // Cancel any in-flight route request on unmount
+  useEffect(() => {
+    return () => { if (routeRequestRef.current) routeRequestRef.current.abort(); };
+  }, []);
 
   // ─── Map pan / zoom helpers ───────────────────────────────────────────────
   const [isOffCenter, setIsOffCenter] = useState(false);
@@ -336,38 +388,43 @@ const MapScreen = ({ route }) => {
   };
 
   // ─── Nominatim search handlers ────────────────────────────────────────────
-const handleSearchChange = text => {
-  setSearchQuery(text);
-  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-  if (text.length < 2) { setSearchResults([]); setShowResults(false); return; }
+  const handleSearchChange = text => {
+    setSearchQuery(text);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (text.length < 2) { setSearchResults([]); setShowResults(false); return; }
 
-  searchDebounceRef.current = setTimeout(async () => {
-    try {
-      const res = await axios.get(
-        `https://api.maptiler.com/geocoding/${encodeURIComponent(text)}.json?key=${MAP_TILE_API_KEY}`
-      );
-      const features = res.data?.features ?? [];
-      setSearchResults(features);
-      setShowResults(true);
-    } catch (err) {
-      console.warn('Maptiler geocoding error:', err?.message);
-    }
-  }, 350);
-};
-const handleNominatimPlaceSelect = place => {
-  // Maptiler returns [longitude, latitude] in coordinates
-  const lng = place.geometry.coordinates[0];
-  const lat = place.geometry.coordinates[1];
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        if (searchAbortRef.current) searchAbortRef.current.abort();
+        searchAbortRef.current = new AbortController();
+        const res = await axios.get(
+          `https://api.maptiler.com/geocoding/${encodeURIComponent(text)}.json?key=${MAP_TILE_API_KEY}`,
+          { signal: searchAbortRef.current.signal },
+        );
+        const features = res.data?.features ?? [];
+        setSearchResults(features);
+        setShowResults(true);
+      } catch (err) {
+        if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') {
+          console.warn('Maptiler geocoding error:', err?.message);
+        }
+      }
+    }, 350);
+  };
+  const handleNominatimPlaceSelect = place => {
+    // Maptiler returns [longitude, latitude] in coordinates
+    const lng = place.geometry.coordinates[0];
+    const lat = place.geometry.coordinates[1];
 
-  updateCurrentLocation({ latitude: lat, longitude: lng });
-  // mapRef.current?.animateToRegion(
-  //   { latitude: lat, longitude: lng, latitudeDelta: 0.012, longitudeDelta: 0.012 },
-  //   600,
-  // );
-  setSearchQuery(place.place_name);  // ← place_name not display_name
-  setShowResults(false);
-  setSearchResults([]);
-};
+    updateCurrentLocation({ latitude: lat, longitude: lng });
+    // mapRef.current?.animateToRegion(
+    //   { latitude: lat, longitude: lng, latitudeDelta: 0.012, longitudeDelta: 0.012 },
+    //   600,
+    // );
+    setSearchQuery(place.place_name);  // ← place_name not display_name
+    setShowResults(false);
+    setSearchResults([]);
+  };
   const chooseCurrentLocation = () => {
     updateMyGprsLocation();
     setSearchQuery('');
@@ -405,60 +462,9 @@ const handleNominatimPlaceSelect = place => {
     });
   };
 
-  const [isMoving, setIsMoving] = useState(false);
-  const movingIntervalRef = useRef(null);
-  const movingStepRef = useRef(0);
 
-  const moveByDistance = useCallback((from, to, distanceKm) => {
-    const R = 6371;
-    const toRad = v => (v * Math.PI) / 180;
-    const toDeg = v => (v * 180) / Math.PI;
-    const lat1 = toRad(from.lat), lon1 = toRad(from.lng);
-    const lat2 = toRad(to.lat), lon2 = toRad(to.lng);
-    const d = distanceKm / R;
-    const bearing = Math.atan2(
-      Math.sin(lon2 - lon1) * Math.cos(lat2),
-      Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1),
-    );
-    const newLat = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(bearing));
-    const newLon = lon1 + Math.atan2(Math.sin(bearing) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(newLat));
-    return { lat: toDeg(newLat), lng: toDeg(newLon) };
-  }, []);
 
-  const stopMoving = useCallback(() => {
-    if (movingIntervalRef.current) { clearInterval(movingIntervalRef.current); movingIntervalRef.current = null; }
-    movingStepRef.current = 0;
-    setIsMoving(false);
-  }, []);
 
-  const startMoving = useCallback(() => {
-    if (!selectedContactLocation?.latitude || !selectedContactLocation?.longitude) return;
-    if (isMoving) { stopMoving(); return; }
-    const waypoints = routeCoords.length > 0 ? routeCoords : null;
-    setIsMoving(true);
-    movingStepRef.current = 0;
-    movingIntervalRef.current = setInterval(() => {
-      if (waypoints) {
-        const step = movingStepRef.current;
-        if (step >= waypoints.length - 1) { stopMoving(); return; }
-        updateCurrentLocation({ latitude: waypoints[step + 1].latitude, longitude: waypoints[step + 1].longitude });
-        movingStepRef.current = step + 1;
-      } else {
-        updateCurrentLocation(prev => {
-          if (!prev) return prev;
-          const from = { lat: prev.latitude, lng: prev.longitude };
-          const to = { lat: selectedContactLocation.latitude, lng: selectedContactLocation.longitude };
-          const dist = Math.sqrt(Math.pow(to.lat - from.lat, 2) + Math.pow(to.lng - from.lng, 2));
-          if (dist < 0.0001) { stopMoving(); return prev; }
-          const newPos = moveByDistance(from, to, 5);
-          return { latitude: newPos.lat, longitude: newPos.lng };
-        });
-      }
-    }, 800);
-  }, [isMoving, selectedContactLocation, routeCoords, moveByDistance, stopMoving, updateCurrentLocation]);
-
-  useEffect(() => { return () => stopMoving(); }, [stopMoving]);
-  useEffect(() => { if (!selectedContactLocation) stopMoving(); }, [selectedContactLocation, stopMoving]);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -470,7 +476,6 @@ const handleNominatimPlaceSelect = place => {
             useGoogleMap OFF → PROVIDER_DEFAULT, OSM UrlTile
             ══════════════════════════════════════════════════════ */}
         <MapView
-          key={mapKey}
           ref={mapRef}
           style={styles.map}
           provider={useGoogleMap ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
@@ -481,6 +486,8 @@ const handleNominatimPlaceSelect = place => {
           showsMyLocationButton={false}
           showsCompass={false}
           toolbarEnabled={false}
+          cacheEnabled={true}
+          moveOnMarkerPress={false}
           onRegionChangeComplete={handleRegionChangeComplete}
         >
           {/* OSM tile layer — only when Google is OFF */}
@@ -489,7 +496,7 @@ const handleNominatimPlaceSelect = place => {
               urlTemplate={`https://api.maptiler.com/maps/night/{z}/{x}/{y}.png?key=${MAP_TILE_API_KEY}`}
               maximumZ={20}
               tileSize={256}
-              shouldReplaceMapContent={true} 
+              shouldReplaceMapContent={true}
             />
           )}
 
@@ -642,47 +649,7 @@ const handleNominatimPlaceSelect = place => {
           />
         </TouchableOpacity>
 
-        {/* FLOATING ACTION MENU */}
-        <View style={styles.fabContainer}>
-          {menuOpen && (
-            <>
-             
- 
-              <TouchableOpacity
-                onPress={startMoving}
-                style={styles.fabAction}
-                activeOpacity={0.8}
-              >
-                <View
-                  style={[
-                    styles.fabActionBtn,
-                    isMoving && styles.fabActionBtnActive,
-                  ]}
-                >
-                  <Icon
-                    name={isMoving ? 'stop' : 'open-with'}
-                    size={20}
-                    color="#ffffff"
-                  />
-                </View>
-                <Text style={styles.fabActionLabel}>
-                  {isMoving ? 'Stop' : 'Move'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-          <TouchableOpacity
-            style={[styles.fabMain, menuOpen && styles.fabMainOpen]}
-            onPress={() => setMenuOpen(prev => !prev)}
-            activeOpacity={0.8}
-          >
-            <Icon
-              name={menuOpen ? 'close' : 'more-vert'}
-              size={24}
-              color="#ffffff"
-            />
-          </TouchableOpacity>
-        </View>
+
 
         {/* ZOOM CONTROLS */}
         <View style={styles.zoomControls}>

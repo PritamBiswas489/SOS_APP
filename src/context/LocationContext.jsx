@@ -61,7 +61,7 @@ const backgroundLocationTask = async taskData => {
 const backgroundOptions = {
   taskName: 'LocationSharing',
   taskTitle: 'Location Sharing Active',
-  taskDesc: 'Your location is being shared with your room.',
+  taskDesc: 'Your location is being shared with your Trusted contacts',
   taskIcon: {
     name: 'ic_launcher', // must exist in android/app/src/main/res/mipmap-*
     type: 'mipmap',
