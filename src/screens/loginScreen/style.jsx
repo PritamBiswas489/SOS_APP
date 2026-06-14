@@ -66,23 +66,35 @@ export default StyleSheet.create({
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 0.7,
-    borderColor: appColors.primary,
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,92,0.75)',
     backgroundColor: appColors.primaryAA,
-    borderRadius: 14,
-    paddingHorizontal: SW(10),
-    marginTop: 8,
+    borderRadius: 16,
+    paddingHorizontal: SW(12),
+    height: SH(50),
+    marginTop: SH(8),
   },
 
   country: {
     color: appColors.white,
-    marginRight: SW(8),
+    fontFamily: appFonts.NunitoBold,
+    fontSize: SF(14),
+  },
+
+  phoneDivider: {
+    width: 1,
+    height: SH(22),
+    backgroundColor: '#445775',
+    marginLeft: SW(10),
+    marginRight: SW(10),
   },
 
   input: {
     flex: 1,
     color: appColors.white,
-    height: SH(41),
+    height: '100%',
+    fontSize: SF(15),
+    paddingVertical: 0,
   },
 
   inputBoxDark: {
@@ -124,19 +136,24 @@ export default StyleSheet.create({
   },
 
   otpBox: {
-    width: SW(50),
-    height: SH(50),
-    borderRadius: 10,
-    backgroundColor: appColors.secondary,
+    width: SW(56),
+    height: SH(54),
+    borderRadius: 12,
+    backgroundColor: '#1A2A4A',
     color: appColors.white,
     textAlign: 'center',
-    fontSize: 18,
+    textAlignVertical: 'center',
+    fontSize: SF(22),
+    fontFamily: appFonts.NunitoBold,
     borderWidth: 1,
-    borderColor: '#1E2A44',
+    borderColor: '#29406A',
+    paddingVertical: 0,
+    includeFontPadding: false,
   },
 
   activeOtp: {
     borderColor: appColors.primary,
+    backgroundColor: 'rgba(255,59,92,0.12)',
   },
 
   termsRow: {

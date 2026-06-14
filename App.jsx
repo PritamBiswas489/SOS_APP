@@ -173,7 +173,7 @@ const App = () => {
 
   const [isConnected, setIsConnected] = useState(true);
   const [sosModalVisible, setSosModalVisible] = useState(false);
-  const [missingPermissions, setMissingPermissions] = useState(null); // null = checking
+  const [missingPermissions, setMissingPermissions] = useState([]); // null = checking
   const appStateRef = useRef(AppState.currentState);
   const pendingNavigationRef = useRef(null);
   const pendingSosRef = useRef(false);
@@ -606,10 +606,6 @@ const App = () => {
       );
     }
 
-    // Still checking permissions on first load
-    if (missingPermissions === null) {
-      return null;
-    }
 
     if (missingPermissions.length > 0) {
       return (

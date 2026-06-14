@@ -122,8 +122,8 @@ const LoginScreen = () => {
       const fullPhoneNumber = `${selectedCountry.dial_code}${requestPhone}`;
       const payload = { phoneNumber: fullPhoneNumber };
       let licenseNumber = null;
-      if (licPart2 && licPart3) {
-        licenseNumber = `KBY-${licPart2}-${licPart3}`;
+      if (licPart3) {
+        licenseNumber = `KBY-${licPart3}`;
         payload.licenseNumber = licenseNumber;
       }
       const requestOtp = await new Promise((resolve, reject) => {
@@ -249,6 +249,7 @@ const LoginScreen = () => {
             {getFlagEmoji(selectedCountry.code)} {selectedCountry.dial_code}
           </Text>
         </TouchableOpacity>
+        <View style={styles.phoneDivider} />
         <TextInput
           placeholder="1234567890"
           placeholderTextColor="#6B7C99"
@@ -292,23 +293,7 @@ const LoginScreen = () => {
 
           <Text style={styles.licenseSep}>—</Text>
 
-          {/* Field 2 — e.g. 08 */}
-          <View style={[styles.licenseFieldWrap, { flex: 1.5 }]}>
-            <TextInput
-              ref={licRef2}
-              style={styles.licenseInput}
-              placeholder="08"
-              placeholderTextColor="#3a4a66"
-              keyboardType="number-pad"
-              editable={!isGetOtp}
-              value={licPart2}
-              onChangeText={text => {
-                setLicPart2(text);
-                
-              }}
-            />
-            
-          </View>
+          
 
           <Text style={styles.licenseSep}>—</Text>
 
@@ -332,7 +317,7 @@ const LoginScreen = () => {
         <View style={styles.licensePreviewRow}>
           <Text style={styles.licensePreviewLabel}>FULL ID</Text>
           <Text style={styles.licensePreviewValue}>
-            {`KBY-${licPart2 || '··'}-${licPart3 || '······'}`}
+            {`KBY-${licPart3 || '······'}`}
           </Text>
         </View>
       </View>
