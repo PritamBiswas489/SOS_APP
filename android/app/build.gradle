@@ -27,8 +27,8 @@ android {
         applicationId "com.sos.kobytech"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12
-        versionName "4.2.1"
+        versionCode 13
+        versionName "4.3.1"
     }
 
     signingConfigs {

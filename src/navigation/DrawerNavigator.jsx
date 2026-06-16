@@ -13,6 +13,7 @@ import SettingsScreen from '../screens/settingsScreen';
 
 import AddContactsScreen from '../screens/addContactsScreen';
 import ContactsScreen from '../screens/contactsScreen';
+import EmergencyServicesScreen from '../screens/EmergencyServicesScreen/index.jsx';
 import analysisScreen from '../screens/analysis';
 import CreatorScreen from '../screens/soupCreatorScreen/index.jsx';
 import ListenerScreen from '../screens/soupListenerScreen/index.jsx';
@@ -178,6 +179,18 @@ const DrawerNavigator = () => {
           }}
         />
       )}
+     
+        <Drawer.Screen
+          name="EmergencyServices"
+          component={EmergencyServicesScreen}
+          options={{
+            drawerLabel: 'Emergency Services',
+            drawerIcon: ({ color, size }) => (
+              <Icon name="emergency" size={size} color={color} />
+            ),
+          }}
+        />
+      
       {/* <Drawer.Screen
         name="Settings"
         component={SettingsScreen}
@@ -201,30 +214,7 @@ const DrawerNavigator = () => {
         />
       )}
 
-      {isDevUser && (
-        <Drawer.Screen
-          name="CreatorSoup"
-          component={CreatorScreen}
-          options={{
-            drawerLabel: 'Creator soup',
-            drawerIcon: ({ color, size }) => (
-              <Icon name="mic" size={size} color={color} />
-            ),
-          }}
-        />
-      )}
-      {isDevUser && (
-        <Drawer.Screen
-          name="ListenerSoup"
-          component={ListenerScreen}
-          options={{
-            drawerLabel: 'Listener soup',
-            drawerIcon: ({ color, size }) => (
-              <Icon name="mic" size={size} color={color} />
-            ),
-          }}
-        />
-      )}
+      
     </Drawer.Navigator>
   );
 };

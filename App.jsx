@@ -35,6 +35,7 @@ import {
 import CompleteProfileScreen from './src/screens/completeProfileScreen/index.jsx';
 import AuthLoadingScreen from './src/screens/authLoadingScreen/index.jsx';
 import EditProfileScreen from './src/screens/editProfileScreen/index.jsx';
+import EmergencyServicesScreen from './src/screens/EmergencyServicesScreen/index.jsx';
 import {
   createNotificationChannels,
   requestNotificationPermissions,
@@ -654,6 +655,10 @@ const App = () => {
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="AddContact" component={AddContactsScreen} />
             <Stack.Screen name="Main" component={DrawerNavigator} />
+            <Stack.Screen
+              name="EmergencyServices"
+              component={EmergencyServicesScreen}
+            />
           </Stack.Navigator>
         </NavigationContainer>
         <Toast config={toastConfig} />
