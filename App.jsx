@@ -70,6 +70,7 @@ import { UserService } from './src/services/user.service.js';
 import { resetAllState } from './src/store/index.jsx';
 import * as Sentry from '@sentry/react-native';
 import { SENTRY_DSN_URL } from './environment.jsx';
+import ReportListScreen from './src/screens/abuserReportListScreen/index.jsx';
  
 
 Sentry.init({
@@ -659,6 +660,7 @@ const App = () => {
               name="EmergencyServices"
               component={EmergencyServicesScreen}
             />
+            <Stack.Screen name="ReportList" component={ReportListScreen} />
           </Stack.Navigator>
         </NavigationContainer>
         <Toast config={toastConfig} />

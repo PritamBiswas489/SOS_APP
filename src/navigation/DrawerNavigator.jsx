@@ -17,6 +17,9 @@ import EmergencyServicesScreen from '../screens/EmergencyServicesScreen/index.js
 import analysisScreen from '../screens/analysis';
 import CreatorScreen from '../screens/soupCreatorScreen/index.jsx';
 import ListenerScreen from '../screens/soupListenerScreen/index.jsx';
+import AppFeedback from '../screens/AppFeeback/index.jsx';
+import PrivacyPolicy from '../screens/PrivacyPolicy/index.jsx';
+import ReportFormScreen from '../screens/abuserReportFormScreen/index.jsx';
 
 import { Alert } from 'react-native';
 
@@ -26,13 +29,13 @@ import { resetAllState } from '../store';
 import { useUserData } from '../hook/useUserData';
 import { getProfileImage } from '../config/utility';
 import useUserAuth from '../hook/useUserAuth.jsx';
-import { log } from '@react-native-firebase/app/dist/module/internal/web/firebaseFirestorePipelines';
+import DeviceInfo from 'react-native-device-info';
 
 const Drawer = createDrawerNavigator();
 
 const logoutProcess = async (navigation, dispatch, callback) => {
   try {
-    await UserService.deleteFcmToken(() => {}); // Best effort to delete FCM token, ignoring result
+    await UserService.deleteFcmToken(() => { }); // Best effort to delete FCM token, ignoring result
     await UserService.logout();
     dispatch(resetAllState());
     callback();
@@ -104,13 +107,6 @@ const CustomDrawerContent = props => {
       {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Extra Options */}
-      <View style={styles.extraSection}>
-        <TouchableOpacity style={styles.extraItem}>
-          <Icon name="privacy-tip" size={22} color="#A4B0BE" />
-          <Text style={styles.extraItemText}>Privacy Policy</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Logout */}
       <View style={styles.bottomSection}>
@@ -126,7 +122,7 @@ const CustomDrawerContent = props => {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>Version 1.0.0</Text>
+        <Text style={styles.version}>Version {DeviceInfo.getVersion()}</Text>
       </View>
     </DrawerContentScrollView>
   );
@@ -179,18 +175,9 @@ const DrawerNavigator = () => {
           }}
         />
       )}
-     
-        <Drawer.Screen
-          name="EmergencyServices"
-          component={EmergencyServicesScreen}
-          options={{
-            drawerLabel: 'Emergency Services',
-            drawerIcon: ({ color, size }) => (
-              <Icon name="emergency" size={size} color={color} />
-            ),
-          }}
-        />
-      
+
+
+
       {/* <Drawer.Screen
         name="Settings"
         component={SettingsScreen}
@@ -213,8 +200,51 @@ const DrawerNavigator = () => {
           }}
         />
       )}
+      <Drawer.Screen
+        name="EmergencyServices"
+        component={EmergencyServicesScreen}
+        options={{
+          drawerLabel: 'Emergency Services',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="emergency" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="AppFeedback"
+        component={AppFeedback}
+        options={{
+          drawerLabel: 'Feedback',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="feedback" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="AbuseReport"
+        component={ReportFormScreen}
+        options={{
+          drawerLabel: 'Report Abuse',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="person-off" size={size} color={color} />
+          ),
+        }}
+      />
 
-      
+
+      <Drawer.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicy}
+        options={{
+          drawerLabel: 'Privacy Policy',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="privacy-tip" size={size} color={color} />
+          ),
+        }}
+      />
+
+
+
     </Drawer.Navigator>
   );
 };

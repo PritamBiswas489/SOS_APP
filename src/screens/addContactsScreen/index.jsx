@@ -22,6 +22,7 @@ import { trustedContactOutgongRequestActions } from '../../store/redux/trustedCo
 import { useOutgoingRequests } from '../../hook/useOutgoingRequests';
 import { useTrustedContactActions } from '../../context/TrustedProviderContext';
 import { useContactTab } from '../../hook/useContactTab';
+ 
 
 const getFlagEmoji = countryCode => {
   const codePoints = countryCode
@@ -287,6 +288,7 @@ const AddContactsScreen = () => {
       </TouchableOpacity>
 
       <View style={{ height: 60 }} />
+      
     </ScrollView>
   );
 };
