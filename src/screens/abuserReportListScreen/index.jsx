@@ -8,12 +8,13 @@ import { Colors, Typography, Spacing, Radius } from '../../components/abuserRepo
 import AbuserReportCard from '../../components/abuserReport/AbuserReportCard.jsx';
 import AbuserDetailsModal from '../../components/abuserReport/AbuserDetailsModal.jsx';
 import api from '../../config/authApi.config';
+import { useNavigation } from '@react-navigation/native';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 // api.baseURL is already: <appUrl>/api-mobile/auth
 // so we only need the remaining path segment here
 const API_PATH   = '/abuser-report/get-my-reports';
-const PAGE_LIMIT = 10;
+const PAGE_LIMIT = 50;
 const FILTERS    = ['All', 'High', 'Medium', 'Low'];
 
 // ─── Normaliser ───────────────────────────────────────────────────────────────
@@ -99,12 +100,13 @@ const useReports = () => {
 
   const refresh = useCallback(() => fetchPage(1, true), [fetchPage]);
 
-  return { reports, loading, refreshing, error, hasMore, loadMore, refresh };
+  return { reports, setReports, loading, refreshing, error, hasMore, loadMore, refresh };
 };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function ReportListScreen() {
-  const { reports, loading, refreshing, error, loadMore, refresh } = useReports();
+  const { reports, setReports, loading, refreshing, error, loadMore, refresh } = useReports();
+  const navigation = useNavigation();
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [modalVisible, setModalVisible]     = useState(false);
@@ -128,16 +130,31 @@ export default function ReportListScreen() {
   const openModal  = (report) => { setSelectedReport(report); setModalVisible(true); };
   const closeModal = ()       => setModalVisible(false);
 
-  // ── List sub-renders (defined outside JSX to avoid recreation on each render)
+  // Remove deleted report instantly — no refetch needed
+  const handleDeleted = useCallback((deletedId) => {
+    setReports(prev => prev.filter(r => String(r.id) !== String(deletedId)));
+    if (selectedReport && String(selectedReport.id) === String(deletedId)) {
+      setModalVisible(false);
+      setSelectedReport(null);
+    }
+  }, [selectedReport]);
+
+  // ── List sub-renders
   const renderItem = useCallback(
-    ({ item }) => <AbuserReportCard report={item} onPress={() => openModal(item)} />,
-    [],
+    ({ item }) => (
+      <AbuserReportCard
+        report={item}
+        onPress={() => openModal(item)}
+        onDeleted={handleDeleted}
+      />
+    ),
+    [handleDeleted],
   );
 
   const renderHeader = () => (
     <View>
       {/* Search bar */}
-      <View style={styles.searchWrap}>
+      {/* <View style={styles.searchWrap}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
@@ -152,10 +169,10 @@ export default function ReportListScreen() {
             <Text style={styles.clearBtn}>✕</Text>
           </TouchableOpacity>
         ) : null}
-      </View>
+      </View> */}
 
       {/* Filter pills */}
-      <View style={styles.filterRow}>
+      {/* <View style={styles.filterRow}>
         {FILTERS.map(f => {
           const active = activeFilter === f;
           return (
@@ -172,7 +189,7 @@ export default function ReportListScreen() {
         <Text style={styles.countBadge}>
           {filtered.length} report{filtered.length !== 1 ? 's' : ''}
         </Text>
-      </View>
+      </View> */}
 
       {/* Inline error banner */}
       {error ? (
@@ -214,6 +231,26 @@ export default function ReportListScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
 
+      {/* ── Page Header ── */}
+      <View style={styles.pageHeader}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.backArrow}>‹</Text>
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Abuser Reports</Text>
+          <Text style={styles.headerSubtitle}>Incident & threat records</Text>
+        </View>
+
+        {/* Right spacer keeps title truly centred */}
+        <View style={styles.backBtn} />
+      </View>
+
       <FlatList
         data={filtered}
         keyExtractor={item => String(item.id)}
@@ -243,6 +280,38 @@ export default function ReportListScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
+
+  // ── Page header ──
+  pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'left',
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+    backgroundColor: Colors.bg,
+  },
+  backBtn: {
+    width: 40, height: 40,
+    borderRadius: 20,
+
+    alignItems: 'center', justifyContent: 'center',
+  },
+  backArrow: {
+    fontSize: 26, color: Colors.textPrimary,
+    lineHeight: 30, marginTop: -2,
+    fontWeight: '300',
+  },
+  headerCenter: { flex: 1, alignItems: 'left' ,marginLeft: 20 },
+  headerTitle: {
+    fontSize: 18, fontWeight: '700',
+    color: Colors.textPrimary, letterSpacing: 0.2,
+  },
+  headerSubtitle: {
+    fontSize: 11, color: Colors.textMuted,
+    marginTop: 1, letterSpacing: 0.3,
+  },
   list: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.xxl },
 
   searchWrap: {

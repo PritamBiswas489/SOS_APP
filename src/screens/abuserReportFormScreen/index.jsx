@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
     View, Text, ScrollView, SafeAreaView,
-    StyleSheet, StatusBar, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Modal, Image, ActivityIndicator
+    StyleSheet, StatusBar, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Modal, Image, ActivityIndicator, FlatList
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
@@ -16,8 +16,6 @@ import { AbuseReportService } from '../../services/abuseRport.service.js';
 import { useNavigation } from '@react-navigation/native';
 
 const MAX_ABUSER_IMAGE_SIZE = 5 * 1024 * 1024;
-const FLOATING_SUBMIT_BAR_HEIGHT = 92;
-
 const ABUSE_TYPES = ['Physical', 'Psychological', 'Sexual', 'Financial', 'Stalking', 'Other'];
 const THREAT_LEVELS = ['Low', 'Medium', 'High'];
 const EVIDENCE_TYPES = [
@@ -38,41 +36,29 @@ const formatMimeType = mimeType => {
     return mimeType.split('/').pop()?.toUpperCase() || mimeType;
 };
 
-const MOCK_ABUSERS = [
-    {
-        id: 'ABR-1291',
-        fullName: 'Daniel Carter',
-        aliasName: 'Danny C',
-        gender: 'Male',
-        age: '36',
-        phone: '+1 555-238-1101',
-        address: '18 Northview Street, Austin',
-        riskTag: 'High Risk',
-        avatar: 'https://i.pravatar.cc/120?img=12',
-    },
-    {
-        id: 'ABR-1174',
-        fullName: 'Monica Rivera',
-        aliasName: 'Mona',
-        gender: 'Female',
-        age: '33',
-        phone: '+1 555-912-0041',
-        address: '94 Eastwood Avenue, Dallas',
-        riskTag: 'Medium Risk',
-        avatar: 'https://i.pravatar.cc/120?img=5',
-    },
-    {
-        id: 'ABR-1089',
-        fullName: 'Victor Hopkins',
-        aliasName: 'Vick',
-        gender: 'Male',
-        age: '42',
-        phone: '+1 555-774-5579',
-        address: '210 Lake Shore Rd, Houston',
-        riskTag: 'High Risk',
-        avatar: 'https://i.pravatar.cc/120?img=31',
-    },
-];
+ 
+
+const calculateAge = dob => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    if (Number.isNaN(birthDate.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age -= 1;
+    return age >= 0 ? String(age) : null;
+};
+
+const normalizeAbuser = item => ({
+    id: String(item?.id ?? ''),
+    fullName: item?.full_name || '-',
+    aliasName: item?.alias_name || '-',
+    gender: item?.gender || '-',
+    age: calculateAge(item?.dob),
+    phone: item?.phone || '-',
+    address: item?.address || '-',
+    avatar: item?.photo || null,
+});
 
 const INITIAL_FORM = {
     fullName: '', aliasName: '', gender: '',
@@ -110,11 +96,15 @@ const TEST_FORM = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ReportFormScreen({ onNavigateBack }) {
-    const [useTestData, setUseTestData] = useState(true);
+    const [useTestData, setUseTestData] = useState(false);
     const [form, setForm] = useState(INITIAL_FORM);
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const [abuserPickerOpen, setAbuserPickerOpen] = useState(false);
+    const [abuserList, setAbuserList] = useState([]);
+    const [abuserListLoading, setAbuserListLoading] = useState(false);
+    const [abuserListRefreshing, setAbuserListRefreshing] = useState(false);
+    const [deletingAbuserId, setDeletingAbuserId] = useState(null);
     const [selectedAbuser, setSelectedAbuser] = useState(null);
     const [abuserPhoto, setAbuserPhoto] = useState(null);
     const [evidenceFiles, setEvidenceFiles] = useState({ document: null, image: null, video: null });
@@ -137,6 +127,86 @@ export default function ReportFormScreen({ onNavigateBack }) {
       }
 
     },[useTestData])
+
+    const fetchExistingAbusers = async (isRefresh = false) => {
+        if (isRefresh) setAbuserListRefreshing(true);
+        else setAbuserListLoading(true);
+
+        try {
+            const response = await new Promise((resolve, reject) => {
+                AbuseReportService.getExistingAbuser(result => {
+                    if (result.success) resolve(result.data);
+                    else reject(new Error(result.error || 'Failed to fetch existing abusers'));
+                });
+            });
+
+            const payload = Array.isArray(response?.data)
+                ? response.data
+                : Array.isArray(response)
+                    ? response
+                    : [];
+
+            setAbuserList(payload.map(normalizeAbuser).filter(item => item.id));
+        } catch (error) {
+            Alert.alert('Abuser List', error?.message || 'Failed to load existing abusers. Please try again.');
+        } finally {
+            if (isRefresh) setAbuserListRefreshing(false);
+            else setAbuserListLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (abuserPickerOpen && abuserList.length === 0) {
+            fetchExistingAbusers();
+        }
+    }, [abuserPickerOpen]);
+
+    const handleSelectAbuser = item => {
+        setSelectedAbuser(item);
+        setAbuserPickerOpen(false);
+        setErrors(prev => ({ ...prev, fullName: null }));
+    };
+
+    const handleDeleteAbuser = item => {
+        Alert.alert(
+            'Delete Abuser',
+            `Are you sure you want to delete ${item?.fullName || 'this abuser'}? This action cannot be undone.All report associated with this abuser will also be deleted.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setDeletingAbuserId(item.id);
+                        try {
+                            const response = await new Promise((resolve, reject) => {
+                                AbuseReportService.deleteAbuser(item.id, result => {
+                                    if (result.success) resolve(result.data);
+                                    else reject(new Error(result.error || 'Failed to delete abuser'));
+                                });
+                            });
+
+                            const status = response?.status;
+                            if (status && status !== 200 && status !== 204) {
+                                throw new Error(response?.message || 'Failed to delete abuser');
+                            }
+
+                            if (selectedAbuser?.id === item.id) {
+                                setSelectedAbuser(null);
+                            }
+
+                            setAbuserList(prev => prev.filter(abuser => abuser.id !== item.id));
+                            Alert.alert('Abuser List', 'Abuser deleted successfully.');
+                        } catch (error) {
+                            Alert.alert('Abuser List', error?.message || 'Failed to delete abuser. Please try again.');
+                        } finally {
+                            setDeletingAbuserId(null);
+                        }
+                    },
+                },
+            ],
+        );
+    };
 
     const set = (key, value) => {
         setForm(prev => ({ ...prev, [key]: value }));
@@ -191,26 +261,29 @@ export default function ReportFormScreen({ onNavigateBack }) {
     const handleSubmit = async () => {
         if (!validate()) { Alert.alert('Validation Error', 'Please correct the highlighted fields before submitting.'); return; }
         setSaving(true);
+        let abuserID = selectedAbuser?.id || null;
+        if (!abuserID) {
+            const newAbuserFormData = new FormData();
+            form.fullName && newAbuserFormData.append('full_name', form.fullName);
+            form.aliasName && newAbuserFormData.append('alias_name', form.aliasName);
+            form.gender && newAbuserFormData.append('gender', form.gender);
+            form.dob && newAbuserFormData.append('dob', form.dob);
+            form.phone && newAbuserFormData.append('phone', form.phone);
+            form.email && newAbuserFormData.append('email', form.email);
+            form.address && newAbuserFormData.append('address', form.address);
+            if (abuserPhoto) newAbuserFormData.append('photo', { uri: abuserPhoto.uri, name: abuserPhoto.name, type: abuserPhoto.type });
 
-        const newAbuserFormData = new FormData();
-        form.fullName && newAbuserFormData.append('full_name', form.fullName);
-        form.aliasName && newAbuserFormData.append('alias_name', form.aliasName);
-        form.gender && newAbuserFormData.append('gender', form.gender);
-        form.dob && newAbuserFormData.append('dob', form.dob);
-        form.phone && newAbuserFormData.append('phone', form.phone);
-        form.email && newAbuserFormData.append('email', form.email);
-        form.address && newAbuserFormData.append('address', form.address);
-        if (abuserPhoto) newAbuserFormData.append('photo', { uri: abuserPhoto.uri, name: abuserPhoto.name, type: abuserPhoto.type });
-
-        const resposnenewabuser = await new Promise((resolve) => {
-            AbuseReportService.registerNewAbuser(newAbuserFormData, (result) => {
-                if (result.success) resolve(result.data);
-                else Alert.alert('Error', 'Failed to register new abuser: ' + result.error);
+            const responseNewAbuser = await new Promise((resolve) => {
+                AbuseReportService.registerNewAbuser(newAbuserFormData, (result) => {
+                    if (result.success) resolve(result.data);
+                    else Alert.alert('Error', 'Failed to register new abuser: ' + result.error);
+                });
             });
-        });
 
-        if (resposnenewabuser?.id) {
-            const abuserID = resposnenewabuser.id;
+            abuserID = responseNewAbuser?.id;
+        }
+
+        if (abuserID) {
             const reportFormData = new FormData();
             reportFormData.append('abuser_id', abuserID);
             form.abuseType && reportFormData.append('abuse_type', form.abuseType);
@@ -239,8 +312,9 @@ export default function ReportFormScreen({ onNavigateBack }) {
                 setSuccessModal({
                     visible: true,
                     reportId: responseReport.id,
-                    abuserName: form.fullName || selectedAbuser?.fullName || 'Unknown',
+                    abuserName: selectedAbuser?.fullName || form.fullName || 'Unknown',
                 });
+                resetForm();
             } else {
                 setSaving(false);
                 Alert.alert('Error', 'Failed to submit abuse report. Please try again.');
@@ -255,14 +329,13 @@ export default function ReportFormScreen({ onNavigateBack }) {
         <SafeAreaView style={styles.safe}>
             <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
-                <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-
+                <View style={styles.headerWrap}>
                     <View style={styles.header}>
                         <View style={styles.headerTitleRow}>
                             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.75}>
                                 <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
                             </TouchableOpacity>
-                            <Text style={styles.headerTitle}>Abuse Report</Text>
+                            <Text style={styles.headerTitle}>Abuse report</Text>
                             <TouchableOpacity onPress={()=>navigation.navigate('ReportList')} style={styles.resetButton} activeOpacity={0.85}>
                                 <Icon name="list" size={18} color={Colors.accent} />
                                 <Text style={styles.resetButtonText}>List reports</Text>
@@ -273,6 +346,9 @@ export default function ReportFormScreen({ onNavigateBack }) {
                             Provide incident details so the report can be reviewed and acted on quickly.
                         </Text>
                     </View>
+                </View>
+
+                <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
                     {/* ── DEV: TEST DATA TOGGLE ───────────────────────────── */}
                     {/* <TouchableOpacity
@@ -315,10 +391,10 @@ export default function ReportFormScreen({ onNavigateBack }) {
                             <View style={{ flex: 1 }}>
                                 <View style={styles.selectedAbuserTopRow}>
                                     <Text style={styles.selectedAbuserName}>{selectedAbuser.fullName}</Text>
-                                    <Text style={styles.selectedAbuserTag}>{selectedAbuser.riskTag}</Text>
+                                    <Text style={styles.selectedAbuserTag}>Existing</Text>
                                 </View>
                                 <Text style={styles.selectedAbuserMeta}>ID: {selectedAbuser.id} • Alias: {selectedAbuser.aliasName}</Text>
-                                <Text style={styles.selectedAbuserMeta}>{selectedAbuser.gender} • Age {selectedAbuser.age}</Text>
+                                <Text style={styles.selectedAbuserMeta}>{selectedAbuser.gender}{selectedAbuser.age ? ` • Age ${selectedAbuser.age}` : ''}</Text>
                                 <Text style={styles.selectedAbuserMeta}>{selectedAbuser.phone}</Text>
                                 <Text style={styles.selectedAbuserMeta}>{selectedAbuser.address}</Text>
                             </View>
@@ -477,14 +553,15 @@ export default function ReportFormScreen({ onNavigateBack }) {
                         <StyledInput placeholder="Any additional context, updates, or case notes…" value={form.notes} onChangeText={v => set('notes', v)} multiline style={{ minHeight: 90 }} />
                     </FormField>
 
-                </ScrollView>
-
-                <View style={styles.submitFloatingWrap}>
+ <View style={styles.submitFloatingWrap}>
                     <View style={styles.submitRow}>
                         <PrimaryButton title="Reset" variant="outline" onPress={resetForm} style={styles.clearFormBtn} />
                         <PrimaryButton title={saving ? '' : 'Submit Report'} onPress={handleSubmit} loading={saving} style={styles.submitBtn} />
                     </View>
                 </View>
+                </ScrollView>
+
+               
             </KeyboardAvoidingView>
 
             {/* ── ABUSER PICKER MODAL ─────────────────────────────────────── */}
@@ -492,23 +569,64 @@ export default function ReportFormScreen({ onNavigateBack }) {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
                         <Text style={styles.modalTitle}>Select Existing Abuser</Text>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {MOCK_ABUSERS.map(item => (
-                                <TouchableOpacity key={item.id} activeOpacity={0.8} style={styles.modalRow} onPress={() => { setSelectedAbuser(item); setAbuserPickerOpen(false); setErrors(prev => ({ ...prev, fullName: null })); }}>
-                                    <Image source={{ uri: item.avatar }} style={styles.modalAvatar} />
-                                    <View style={{ flex: 1 }}>
-                                        <View style={styles.modalNameRow}>
-                                            <Text style={styles.modalName}>{item.fullName}</Text>
-                                            <Text style={styles.modalRisk}>{item.riskTag}</Text>
+                        {abuserListLoading ? (
+                            <View style={styles.modalLoaderWrap}>
+                                <ActivityIndicator size="small" color={Colors.accent} />
+                                <Text style={styles.modalLoaderText}>Loading abuser list...</Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={abuserList}
+                                keyExtractor={item => item.id}
+                                style={styles.modalList}
+                                showsVerticalScrollIndicator={false}
+                                refreshing={abuserListRefreshing}
+                                onRefresh={() => fetchExistingAbusers(true)}
+                                renderItem={({ item }) => (
+                                    <View
+                                        key={item.id}
+                                        style={styles.modalRow}
+                                    >
+                                        {item.avatar ? <Image source={{ uri: item.avatar }} style={styles.modalAvatar} /> : <View style={styles.modalAvatarEmpty}><Text style={styles.modalAvatarIcon}>👤</Text></View>}
+                                        <View style={{ flex: 1 }}>
+                                            <View style={styles.modalNameRow}>
+                                                <Text style={styles.modalName}>{item.fullName}</Text>
+                                            </View>
+                                            <Text style={styles.modalMeta}>Alias: {item.aliasName}</Text>
+                                            <Text style={styles.modalMeta}>{item.gender}{item.age ? ` • Age ${item.age}` : ''}</Text>
+                                            <Text style={styles.modalMeta}>{item.phone}</Text>
+                                            <Text style={styles.modalMeta}>{item.address}</Text>
+                                            <View style={styles.modalActionRow}>
+                                                <TouchableOpacity
+                                                    activeOpacity={0.8}
+                                                    style={styles.modalSelectBtn}
+                                                    onPress={() => handleSelectAbuser(item)}
+                                                >
+                                                    <Text style={styles.modalSelectBtnText}>Select</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    activeOpacity={0.8}
+                                                    style={[styles.modalDeleteBtn, deletingAbuserId === item.id && styles.modalDeleteBtnDisabled]}
+                                                    onPress={() => handleDeleteAbuser(item)}
+                                                    disabled={deletingAbuserId === item.id}
+                                                >
+                                                    {deletingAbuserId === item.id
+                                                        ? <ActivityIndicator size="small" color="#fff" />
+                                                        : <Text style={styles.modalDeleteBtnText}>Delete</Text>
+                                                    }
+                                                </TouchableOpacity>
+                                            </View>
                                         </View>
-                                        <Text style={styles.modalMeta}>Alias: {item.aliasName}</Text>
-                                        <Text style={styles.modalMeta}>{item.gender} • Age {item.age}</Text>
-                                        <Text style={styles.modalMeta}>{item.phone}</Text>
-                                        <Text style={styles.modalMeta}>{item.address}</Text>
                                     </View>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                                )}
+                                ListEmptyComponent={
+                                    <View style={styles.modalEmptyWrap}>
+                                        <Text style={styles.modalEmptyText}>No existing abusers found.</Text>
+                                        <Text style={styles.modalEmptySubText}>Pull down to refresh the list.</Text>
+                                    </View>
+                                }
+                            />
+                        )}
                         <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setAbuserPickerOpen(false)}>
                             <Text style={styles.modalCloseText}>Close</Text>
                         </TouchableOpacity>
@@ -595,8 +713,9 @@ export default function ReportFormScreen({ onNavigateBack }) {
 const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: Colors.bg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: Spacing.base, paddingTop: Spacing.base, paddingBottom: FLOATING_SUBMIT_BAR_HEIGHT + Spacing.xl },
+    content: { paddingHorizontal: Spacing.base, paddingTop: 0, paddingBottom: Spacing.xl },
 
+    headerWrap: { paddingHorizontal: Spacing.base, paddingTop: Spacing.base },
     header: { marginBottom: Spacing.base },
     headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     backButton: { marginRight: 12 },
@@ -696,7 +815,7 @@ const styles = StyleSheet.create({
     evidenceSmallBtnOutline: { flex: 1, borderWidth: 1, borderColor: Colors.divider, borderRadius: Radius.md, alignItems: 'center', paddingVertical: 8 },
     evidenceSmallBtnOutlineText: { ...Typography.captionBold, color: Colors.textSecondary },
 
-    submitFloatingWrap: { position: 'absolute', left: Spacing.base, right: Spacing.base, bottom: Spacing.base, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.divider, borderRadius: Radius.lg, padding: Spacing.md },
+    submitFloatingWrap: { marginTop: Spacing.lg, marginBottom: Spacing.sm, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.divider, borderRadius: Radius.lg, padding: Spacing.md },
     submitRow: { flexDirection: 'row', gap: Spacing.md },
     clearFormBtn: { flex: 1 },
     submitBtn: { flex: 2 },
@@ -705,12 +824,26 @@ const styles = StyleSheet.create({
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', padding: Spacing.base, justifyContent: 'center' },
     modalCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.divider, maxHeight: '82%', padding: Spacing.base },
     modalTitle: { ...Typography.h4, marginBottom: Spacing.base },
+    modalList: { maxHeight: 420 },
+    modalLoaderWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.xl },
+    modalLoaderText: { ...Typography.caption, color: Colors.textSecondary, marginTop: 8 },
+    modalEmptyWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.xl },
+    modalEmptyText: { ...Typography.bodyBold, color: Colors.textPrimary },
+    modalEmptySubText: { ...Typography.caption, color: Colors.textSecondary, marginTop: 4 },
     modalRow: { flexDirection: 'row', gap: Spacing.md, borderWidth: 1, borderColor: Colors.divider, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.sm, backgroundColor: Colors.inputBg },
     modalAvatar: { width: 54, height: 54, borderRadius: 27 },
+    modalAvatarEmpty: { width: 54, height: 54, borderRadius: 27, borderWidth: 1, borderColor: Colors.divider, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+    modalAvatarIcon: { fontSize: 20 },
     modalNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 },
     modalName: { ...Typography.bodyBold, flexShrink: 1, paddingRight: 8 },
     modalRisk: { ...Typography.captionBold, color: Colors.accent },
     modalMeta: { ...Typography.caption, color: Colors.textSecondary, lineHeight: 17 },
+    modalActionRow: { flexDirection: 'row', gap: 8, marginTop: Spacing.sm },
+    modalSelectBtn: { flex: 1, backgroundColor: Colors.accentMuted, borderWidth: 1, borderColor: Colors.accentGlow, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 },
+    modalSelectBtnText: { ...Typography.captionBold, color: Colors.accent },
+    modalDeleteBtn: { flex: 1, backgroundColor: '#DC2626', borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 },
+    modalDeleteBtnDisabled: { opacity: 0.7 },
+    modalDeleteBtnText: { ...Typography.captionBold, color: '#fff' },
     modalCloseBtn: { marginTop: Spacing.md, backgroundColor: Colors.accent, borderRadius: Radius.md, alignItems: 'center', paddingVertical: 11 },
     modalCloseText: { ...Typography.captionBold, color: '#fff' },
 
