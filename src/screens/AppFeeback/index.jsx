@@ -25,6 +25,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { uploadMedia } from '../../config/apiClient';
 import DeviceInfo from 'react-native-device-info';
+import appFonts from '../../theme/appFonts';
+import { SW, SH } from '../../theme/dimensions';
 
 // ─── NOTE ────────────────────────────────────────────────────────────────────
 // This component requires the following peer package:
@@ -523,18 +525,15 @@ export default function AppFeedback() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerTitleRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Icon name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.8}>
+            <Icon name="arrow-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <View style={styles.headerTextWrap}>
             <Text style={styles.headerTitle}>Send feedback</Text>
-          </View>
-          <Text style={styles.headerSubtitle}>
+            <Text style={styles.headerSubtitle}>
             Tell us what's working and what isn't. It helps us improve the app for everyone.
-          </Text>
+            </Text>
+          </View>
         </View>
 
         {/* Rating */}
@@ -765,29 +764,31 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.bg },
   scrollContent: {
     padding: 20,
-    paddingTop: 28,
+    paddingTop: 10,
   },
   header: {
-    marginBottom: 28,
-  },
-  headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+   paddingHorizontal: SW(5),
+       paddingTop: SW(45),
+       marginBottom: SW(20),
   },
-  backButton: {
-    marginRight: 12,
+  headerTextWrap: {
+    flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
     color: COLORS.text,
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    fontSize: 22,
+    fontFamily: appFonts.NunitoBold,
   },
   headerSubtitle: {
     color: COLORS.textDim,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+    fontFamily: appFonts.NunitoSemiBold,
   },
   section: {
     marginBottom: 22,

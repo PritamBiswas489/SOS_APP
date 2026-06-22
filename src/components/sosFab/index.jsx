@@ -16,18 +16,18 @@ const PADDING = 10; // min distance from screen edges
 const SosFab = ({ onPress, visible = true, loading = false }) => {
   const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-  // Position — start top-right (near header)
+  // Position — start centered on the left side
   const position = useRef(
     new Animated.ValueXY({
-      x: SCREEN_W - FAB_SIZE - PADDING,
-      y: 20,
+      x: PADDING,
+      y: (SCREEN_H - FAB_SIZE) / 2,
     }),
   ).current;
 
   // Track raw coords for clamping
   const posRef = useRef({
-    x: SCREEN_W - FAB_SIZE - PADDING,
-    y: 20,
+    x: PADDING,
+    y: (SCREEN_H - FAB_SIZE) / 2,
   });
 
   // Entrance scale
@@ -42,8 +42,8 @@ const SosFab = ({ onPress, visible = true, loading = false }) => {
 
   // Snapshot of position at the moment a drag starts (before extractOffset resets values to 0)
   const startPosRef = useRef({
-    x: SCREEN_W - FAB_SIZE - PADDING,
-    y: 60,
+    x: PADDING,
+    y: (SCREEN_H - FAB_SIZE) / 2,
   });
 
   const pulseLoop = useRef(null);

@@ -331,20 +331,20 @@ export default function ReportFormScreen({ onNavigateBack }) {
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
                 <View style={styles.headerWrap}>
                     <View style={styles.header}>
-                        <View style={styles.headerTitleRow}>
+                        <View style={styles.headerTopRow}>
                             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.75}>
                                 <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
                             </TouchableOpacity>
-                            <Text style={styles.headerTitle}>Abuse report</Text>
+                            <View style={styles.headerTextWrap}>
+                                <Text style={styles.headerTitle}>Abuse report</Text>
+                                <Text style={styles.headerSubtitle}>
+                                    All information will handled with strict confidentiality. Provide incident details so the report can be reviewed and acted on quickly.
+                                </Text>
+                            </View>
                             <TouchableOpacity onPress={()=>navigation.navigate('ReportList')} style={styles.resetButton} activeOpacity={0.85}>
                                 <Icon name="list" size={18} color={Colors.accent} />
-                                <Text style={styles.resetButtonText}>List reports</Text>
                             </TouchableOpacity>
                         </View>
-                        <Text style={styles.headerSubtitle}>
-                            All information will handled with strict confidentiality.
-                            Provide incident details so the report can be reviewed and acted on quickly.
-                        </Text>
                     </View>
                 </View>
 
@@ -713,13 +713,14 @@ export default function ReportFormScreen({ onNavigateBack }) {
 const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: Colors.bg },
     scroll: { flex: 1 },
-    content: { paddingHorizontal: Spacing.base, paddingTop: 0, paddingBottom: Spacing.xl },
+    content: { paddingHorizontal: Spacing.base, paddingTop: 8, paddingBottom: Spacing.xl },
 
-    headerWrap: { paddingHorizontal: Spacing.base, paddingTop: Spacing.base },
-    header: { marginBottom: Spacing.base },
-    headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    headerWrap: { paddingHorizontal: Spacing.base, paddingTop: Spacing.xxl },
+    header: { marginBottom: Spacing.lg },
+    headerTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
     backButton: { marginRight: 12 },
-    headerTitle: { color: Colors.textPrimary, fontSize: 20, fontWeight: '700', letterSpacing: 0.2, flex: 1 },
+    headerTextWrap: { flex: 1 },
+    headerTitle: { color: Colors.textPrimary, fontSize: 20, fontWeight: '700', letterSpacing: 0.2 },
     resetButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -736,7 +737,7 @@ const styles = StyleSheet.create({
         color: Colors.accent,
         letterSpacing: 0.2,
     },
-    headerSubtitle: { ...Typography.caption, color: Colors.textSecondary, lineHeight: 20, marginTop: 8 },
+    headerSubtitle: { ...Typography.caption, color: Colors.textSecondary, lineHeight: 21, marginTop: 6 },
 
     // Test data toggle
     testDataToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.divider, borderStyle: 'dashed', paddingHorizontal: Spacing.base, paddingVertical: Spacing.md, marginBottom: Spacing.lg },
@@ -823,7 +824,7 @@ const styles = StyleSheet.create({
     // Abuser picker modal
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', padding: Spacing.base, justifyContent: 'center' },
     modalCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.divider, maxHeight: '82%', padding: Spacing.base },
-    modalTitle: { ...Typography.h4, marginBottom: Spacing.base },
+    modalTitle: { ...Typography.h4, marginBottom: Spacing.base, color: Colors.textPrimary },
     modalList: { maxHeight: 420 },
     modalLoaderWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.xl },
     modalLoaderText: { ...Typography.caption, color: Colors.textSecondary, marginTop: 8 },
