@@ -64,7 +64,7 @@ const HomeScreen = () => {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const holdTimerRef = useRef(null);
   const { fetchMySosSessions } = useMySosSessions();
-  const { contactList } = useChatContacts();
+  const { lengthCalculation } = useChatContacts();
   const { stress } = useStress();
   const { getCurrentPosition } = useLocation();
   const { userData } = useUserData();
@@ -106,6 +106,11 @@ const HomeScreen = () => {
   useEffect(() => {
     console.log('Status changed:', status, statusText);
   }, [status, statusText]);
+
+
+   
+
+   
 
   // ── Connecting spin animation ──────────────────────────────────────────────
   useEffect(() => {
@@ -461,7 +466,7 @@ const HomeScreen = () => {
         <View style={styles.card}>
           <Icon name="people" size={30} color="#A4B0BE" />
           <Text style={[styles.cardNumber, { color: appColors.blue }]}>
-            {contactList.length}
+            {lengthCalculation()}
           </Text>
           <Text style={styles.cardLabel}>CONTACTS</Text>
         </View>

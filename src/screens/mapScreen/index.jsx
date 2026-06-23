@@ -237,8 +237,8 @@ const MapScreen = ({ route }) => {
   // ╚══════════════════════════════════════════════════════════╝
   const fetchRoute = useCallback(async () => {
     console.log('Fetching route with Google Directions API...');
-    if (!userLocation?.latitude || !userLocation?.longitude) return;
-    if (!selectedContactLocation?.latitude || !selectedContactLocation?.longitude) return;
+    if (!userLocation?.latitude || !userLocation?.longitude || (userLocation.latitude === 0 && userLocation.longitude === 0)) return;
+    if (!selectedContactLocation?.latitude || !selectedContactLocation?.longitude ) return;
 
     // Skip if contact is more than 200 km away
     const distanceM = haversineMeters(
@@ -284,7 +284,8 @@ const MapScreen = ({ route }) => {
         if (!route) return;
         const decoded = decodePolyline(route.overview_polyline.points);
         // Keep every 3rd point — reduces memory 60-70% with negligible visual loss
-        const points = decoded.filter((_, i) => i % 3 === 0);
+        const filterRate = distanceM > 50000 ? 10 : 3; 
+        const points = decoded.filter((_, i) => i % filterRate === 0);
         const leg = route.legs?.[0];
         setRouteCoords(points);
         setRouteInfo({
