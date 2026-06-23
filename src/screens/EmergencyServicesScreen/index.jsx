@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { SW, SH } from '../../theme/dimensions';
+import { SW, SH, SF } from '../../theme/dimensions';
 import appColors from '../../theme/appColors';
 import appFonts from '../../theme/appFonts';
 import { GOOGLE_MAPS_API_KEY } from '../../../environment';
@@ -810,11 +810,10 @@ const EmergencyServicesScreen = () => {
       <View>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Icon name="arrowBack" size={24} color={C.text} />
+            <Icon name="arrowBack" size={24} color={appColors.white} />
           </TouchableOpacity>
           <View style={styles.headerTextWrap}>
             <Text style={styles.headerTitle}>Emergency Services</Text>
-            <Text style={styles.headerSubtitle}>{nearbyServices.length} RESULTS</Text>
           </View>
         </View>
 
@@ -1005,29 +1004,27 @@ const styles = StyleSheet.create({
     backgroundColor: C.bg,
   },
 
-  // Header
+  // Header — mirrors AddContactsScreen exactly
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: SW(18),
-    paddingTop: SW(45),
+    paddingTop: SW(48),
     marginBottom: SW(20),
   },
   headerTextWrap: {
     flex: 1,
-    marginLeft: SW(12),
+    marginLeft: SW(10),
   },
   headerTitle: {
-    color: C.white,
-    fontSize: 22,
+    color: appColors.white,
+    fontSize: SF(17),
     fontFamily: appFonts.NunitoBold,
   },
   headerSubtitle: {
-    color: C.sub,
+    color: appColors.bodyColor,
+    fontSize: SF(10),
     fontFamily: appFonts.NunitoSemiBold,
-    fontSize: 12,
-    marginTop: SW(4),
   },
 
   // Search
@@ -1776,6 +1773,3 @@ const styles = StyleSheet.create({
 });
 
 export default EmergencyServicesScreen;
-
-
-
