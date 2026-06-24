@@ -16,7 +16,7 @@
 import React, {
   createContext, useContext, useState, useEffect,
   useMemo, useCallback, useRef,
-  use,
+ 
 } from 'react';
 import {Vibration} from 'react-native';
 import {useGoogleFit} from './GoogleFitContext';

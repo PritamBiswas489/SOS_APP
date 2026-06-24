@@ -119,7 +119,7 @@ export function GoogleFitProvider({children, refreshIntervalMs = 30_000}) {
   const intervalRef       = useRef(null);
   const appStateRef       = useRef(AppState.currentState);
   const disconnectedRef   = useRef(false); // prevents in-flight fetchAll from re-authorizing after disconnect
-
+  const bgStartingRef = useRef(false);
   const setPartial = useCallback(
     partial => setState(prev => ({...prev, ...partial})),
     [],
@@ -229,24 +229,40 @@ export function GoogleFitProvider({children, refreshIntervalMs = 30_000}) {
 
   // ── Background service start / stop ──────────────────────────────────────
   const startBgService = useCallback(async () => {
-    console.log('Starting background service with interval:', refreshIntervalMs);
-    if (BackgroundService.isRunning()) return;
-    try {
-      await BackgroundService.start(bgHeartRateTask, makeBgOptions(refreshIntervalMs));
-    } catch (e) {
-      console.warn('[BG] Failed to start background service:', e.message);
-    }
-  }, [refreshIntervalMs]);
+  // ✅ FIX 1: Only start from active state — Android blocks bg service starts on API 31+
+  if (AppState.currentState !== 'active') {
+    console.warn('[BG] Skipping background service start — app not in foreground');
+    return;
+  }
+
+  // ✅ FIX 2: Prevent concurrent start calls
+  if (BackgroundService.isRunning() || bgStartingRef.current) return;
+  bgStartingRef.current = true;
+
+  // ✅ FIX 3: Small delay so RN bridge is fully ready before OS foreground service call
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  try {
+    await BackgroundService.start(bgHeartRateTask, makeBgOptions(refreshIntervalMs));
+    console.log('[BG] Background service started');
+  } catch (e) {
+    console.warn('[BG] Failed to start background service:', e.message);
+    // ✅ FIX 4: Don't crash — gracefully degrade, foreground polling still works
+  } finally {
+    bgStartingRef.current = false;
+  }
+}, [refreshIntervalMs]);
 
   const stopBgService = useCallback(async () => {
-    console.log('Stopping background service');
+    bgStartingRef.current = false; // ✅ cancel any pending start
     if (!BackgroundService.isRunning()) return;
     try {
       await BackgroundService.stop();
+      console.log('[BG] Background service stopped');
     } catch (e) {
       console.warn('[BG] Failed to stop background service:', e.message);
     }
-  }, []);
+  } , []);
 
   // ── Disconnect: revoke HC permissions and reset all state
   const disconnect = useCallback(async () => {
@@ -345,31 +361,35 @@ export function GoogleFitProvider({children, refreshIntervalMs = 30_000}) {
   }, [state.authorized, refreshIntervalMs, fetchAll]);
 
   // ── Switch between foreground polling and background service based on AppState
-  useEffect(() => {
-    if (!state.authorized) return;
+ useEffect(() => {
+  if (!state.authorized) return;
 
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      const wasActive = appStateRef.current === 'active';
-      const isActive  = nextAppState === 'active';
+  const subscription = AppState.addEventListener('change', nextAppState => {
+    const wasActive = appStateRef.current === 'active';
+    const isActive  = nextAppState === 'active';
 
-      if (wasActive && !isActive) {
-        // App going to background — stop interval, start background service
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        startBgService();
-      } else if (!wasActive && isActive) {
-        // App coming to foreground — stop background service, restart interval
-        stopBgService();
-        intervalRef.current = setInterval(fetchAll, refreshIntervalMs);
+    if (wasActive && !isActive) {
+      // App going to background
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
+      // ✅ Only start bg service if transitioning to background (not inactive/unknown)
+      if (nextAppState === 'background') {
+        startBgService();
+      }
+    } else if (!wasActive && isActive) {
+      // App coming to foreground
+      stopBgService();
+      fetchAll(); // ✅ immediate fresh read when user returns
+      intervalRef.current = setInterval(fetchAll, refreshIntervalMs);
+    }
 
-      appStateRef.current = nextAppState;
-    });
+    appStateRef.current = nextAppState;
+  });
 
-    return () => subscription.remove();
-  }, [state.authorized, refreshIntervalMs, fetchAll, startBgService, stopBgService]);
+  return () => subscription.remove();
+}, [state.authorized, refreshIntervalMs, fetchAll, startBgService, stopBgService]);
 
   // ── Listen for heart rate updates emitted by the background task
   useEffect(() => {

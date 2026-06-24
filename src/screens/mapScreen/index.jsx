@@ -235,7 +235,7 @@ const MapScreen = ({ route }) => {
   // ╔══════════════════════════════════════════════════════════╗
   // ║     ROUTE FETCHING — switches API based on toggle       ║
   // ╚══════════════════════════════════════════════════════════╝
-  const fetchRoute = useCallback(async () => {
+  const fetchRoute = useCallback(async () => { 
     console.log('Fetching route with Google Directions API...');
     if (!userLocation?.latitude || !userLocation?.longitude || (userLocation.latitude === 0 && userLocation.longitude === 0)) return;
     if (!selectedContactLocation?.latitude || !selectedContactLocation?.longitude ) return;

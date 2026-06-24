@@ -171,8 +171,8 @@ const HomeScreen = () => {
         resolve(result.data);
       });
     });
-
-    console.log('Joining room...' + userData?.id);
+ 
+    console.log('Joining room...' + userData?.id); 
     const sosId = createSOS?.data?.id;
     if (!sosId) {
       console.log('❌ Failed to create SOS. Cannot join room.');
@@ -234,7 +234,7 @@ const HomeScreen = () => {
             Sentry.captureException(new Error('First error'));
           }}
         /> */}
-      </View>
+      </View> 
 
       {/* ── SOS Button ── */}
       <View style={styles.sosWrapper}>

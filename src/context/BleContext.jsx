@@ -6,20 +6,20 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import {Platform, PermissionsAndroid, AppState} from 'react-native';
-import {getBleManager, destroyBleManager} from './bleManagerSingleton';
-import {atob} from 'react-native-quick-base64';
+import { Platform, PermissionsAndroid, AppState } from 'react-native';
+import { getBleManager, destroyBleManager } from './bleManagerSingleton';
+import { atob } from 'react-native-quick-base64';
 import BackgroundService from 'react-native-background-actions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
-const SAVED_DEVICE_KEY = '@ble_saved_device'; 
-const HR_SERVICE_UUID  = '0000180d-0000-1000-8000-00805f9b34fb';
-const HR_CHAR_UUID     = '00002a37-0000-1000-8000-00805f9b34fb';
-const SCAN_TIMEOUT_MS  = 15_000;
-const MAX_HR_BUFFER    = 60;
+const SAVED_DEVICE_KEY = '@ble_saved_device';
+const HR_SERVICE_UUID = '0000180d-0000-1000-8000-00805f9b34fb';
+const HR_CHAR_UUID = '00002a37-0000-1000-8000-00805f9b34fb';
+const SCAN_TIMEOUT_MS = 15_000;
+const MAX_HR_BUFFER = 60;
 const RECONNECT_DELAY_MS = 800; // Android BLE stack stabilization delay
 
 // ─────────────────────────────────────────────
@@ -28,10 +28,10 @@ const RECONNECT_DELAY_MS = 800; // Android BLE stack stabilization delay
 // ─────────────────────────────────────────────
 function parseHRCharacteristic(base64Value) {
   try {
-    const raw   = atob(base64Value);
+    const raw = atob(base64Value);
     const bytes = Array.from(raw).map(c => c.charCodeAt(0));
     const flags = bytes[0];
-    const is16  = flags & 0x01;
+    const is16 = flags & 0x01;
     return is16 ? bytes[1] + (bytes[2] << 8) : bytes[1];
   } catch {
     return null;
@@ -70,11 +70,11 @@ const bgBleKeepAliveTask = async _taskData => {
 };
 
 const BLE_BG_OPTIONS = {
-  taskName:   'BLEHeartRate',
-  taskTitle:  'Heart Rate Monitor Active',
-  taskDesc:   'Receiving heart rate data via Bluetooth',
-  taskIcon:   {name: 'ic_launcher', type: 'mipmap'},
-  color:      '#60A6FF',
+  taskName: 'BLEHeartRate',
+  taskTitle: 'Heart Rate Monitor Active',
+  taskDesc: 'Receiving heart rate data via Bluetooth',
+  taskIcon: { name: 'ic_launcher', type: 'mipmap' },
+  color: '#60A6FF',
   parameters: {},
 };
 
@@ -83,41 +83,54 @@ const BLE_BG_OPTIONS = {
 // ─────────────────────────────────────────────
 const BleContext = createContext(null);
 
-export function BleProvider({children}) {
-  const manager       = useRef(null);
-  const deviceRef     = useRef(null);
-  const scanTimer     = useRef(null);
-  const destroyed     = useRef(false);
+export function BleProvider({ children }) {
+  const manager = useRef(null);
+  const deviceRef = useRef(null);
+  const scanTimer = useRef(null);
+  const destroyed = useRef(false);
   const connectDeviceRef = useRef(null);
+  const bgStartingRef = useRef(false);
   // FIX: store HR subscription so it can be removed on disconnect / reconnect
   const hrSubscription = useRef(null);
-  const appStateRef    = useRef(AppState.currentState);
+  const appStateRef = useRef(AppState.currentState);
 
   const [state, setState] = useState({
-    currentHR:  null,
-    hrBuffer:   [],   // [{ hr: number, ts: number }] — FIX: includes timestamps
+    currentHR: null,
+    hrBuffer: [],   // [{ hr: number, ts: number }] — FIX: includes timestamps
     deviceName: null,
-    connected:  false,
-    scanning:   false,
-    error:      null,
+    connected: false,
+    scanning: false,
+    error: null,
   });
 
   const setPartial = useCallback(
-    partial => setState(prev => ({...prev, ...partial})),
+    partial => setState(prev => ({ ...prev, ...partial })),
     [],
   );
 
   // ── Background service start / stop ──────────────────────────────────────
   const startBgService = useCallback(async () => {
-    if (BackgroundService.isRunning()) return;
+    // ✅ Only start from active state — Android 12+ blocks bg service starts
+    if (AppState.currentState !== 'active') {
+      console.warn('[BLE BG] Skipping bg service start — app not in foreground');
+      return;
+    }
+    if (BackgroundService.isRunning() || bgStartingRef.current) return;
+    bgStartingRef.current = true;
+
+    await new Promise(resolve => setTimeout(resolve, 300)); // bridge settle delay
+
     try {
       await BackgroundService.start(bgBleKeepAliveTask, BLE_BG_OPTIONS);
     } catch (e) {
       console.warn('[BLE BG] Failed to start background service:', e.message);
+    } finally {
+      bgStartingRef.current = false;
     }
   }, []);
 
   const stopBgService = useCallback(async () => {
+    bgStartingRef.current = false; // cancel any pending start
     if (!BackgroundService.isRunning()) return;
     try {
       await BackgroundService.stop();
@@ -138,16 +151,16 @@ export function BleProvider({children}) {
         const saved = await AsyncStorage.getItem(SAVED_DEVICE_KEY);
         if (!saved || destroyed.current || !manager.current) return;
 
-        const {id, name} = JSON.parse(saved);
+        const { id, name } = JSON.parse(saved);
         if (__DEV__) console.log('[BLE] Auto-reconnecting to:', name, id);
 
         // FIX: wait for BLE adapter to be ready before attempting connection
         await waitForPoweredOn(manager.current);
         if (destroyed.current || !manager.current) return;
 
-        const device = await manager.current.connectToDevice(id, {autoConnect: false});
+        const device = await manager.current.connectToDevice(id, { autoConnect: false });
         if (destroyed.current || !manager.current) {
-          device.cancelConnection().catch(() => {});
+          device.cancelConnection().catch(() => { });
           return;
         }
         await connectDeviceRef.current(device);
@@ -166,15 +179,15 @@ export function BleProvider({children}) {
       hrSubscription.current = null;
       // Only null the ref so isStale() works — do NOT destroy the singleton.
       // The native BleManager survives hot reload and stays ready for the next mount.
-      try { manager.current?.stopDeviceScan().catch(() => {}); } catch (_) {}
+      try { manager.current?.stopDeviceScan().catch(() => { }); } catch (_) { }
       manager.current = null;
       // Stop background service on unmount
       if (BackgroundService.isRunning()) {
-        BackgroundService.stop().catch(() => {});
+        BackgroundService.stop().catch(() => { });
       }
     };
   }, []);
- 
+
   // ── 2. Permissions ───────────────────────────────────────────────────────
   const requestPermissions = useCallback(async () => {
     if (Platform.OS !== 'android') {
@@ -184,7 +197,7 @@ export function BleProvider({children}) {
       if (!manager.current) return false;
       const bleState = await manager.current.state();
       if (bleState === 'Unauthorized') {
-        setPartial({error: 'Bluetooth access denied. Enable it in Settings > Privacy > Bluetooth.'});
+        setPartial({ error: 'Bluetooth access denied. Enable it in Settings > Privacy > Bluetooth.' });
         return false;
       }
       return true;
@@ -221,20 +234,20 @@ export function BleProvider({children}) {
           hrSubscription.current = null;
           deviceRef.current = null;
           setPartial({
-            connected:  false,
+            connected: false,
             deviceName: null,
-            currentHR:  null,
+            currentHR: null,
             error: err ? `Disconnected: ${err.message}` : 'Device disconnected',
           });
         });
 
         // Step 2 — Connect
-        const connected = await device.connect({autoConnect: false});
-        if (isStale()) { connected.cancelConnection().catch(() => {}); return; }
+        const connected = await device.connect({ autoConnect: false });
+        if (isStale()) { connected.cancelConnection().catch(() => { }); return; }
 
         // Step 3 — Android BLE stack stabilization delay
         await new Promise(resolve => setTimeout(resolve, RECONNECT_DELAY_MS));
-        if (isStale()) { connected.cancelConnection().catch(() => {}); return; }
+        if (isStale()) { connected.cancelConnection().catch(() => { }); return; }
 
         // Step 4 — Discover services
         await connected.discoverAllServicesAndCharacteristics();
@@ -247,17 +260,17 @@ export function BleProvider({children}) {
           await AsyncStorage.setItem(
             SAVED_DEVICE_KEY,
             JSON.stringify({
-              id:   device.id,
+              id: device.id,
               name: device.name ?? device.localName ?? 'HR Device',
             }),
           );
-        } catch (_) {}
+        } catch (_) { }
 
         setPartial({
-          connected:  true,
-          scanning:   false,
+          connected: true,
+          scanning: false,
           deviceName: device.name ?? device.localName ?? 'HR Device',
-          error:      null,
+          error: null,
         });
 
         // Step 5 — Subscribe to HR notifications
@@ -272,8 +285,8 @@ export function BleProvider({children}) {
             if (err) {
               // Ignore "operation was cancelled" — this is normal on disconnect
               if (!err.message?.includes('cancelled') &&
-                  !err.message?.includes('destroyed')) {
-                setPartial({error: err.message});
+                !err.message?.includes('destroyed')) {
+                setPartial({ error: err.message });
               }
               return;
             }
@@ -282,16 +295,16 @@ export function BleProvider({children}) {
             // FIX: use `hr !== null` so a legitimate 0-BPM reading isn't skipped
             if (hr !== null && hr > 20 && hr < 250) {
               setState(prev => ({
-              ...prev,
-              currentHR: hr,
-              hrBuffer: [...prev.hrBuffer.slice(-(MAX_HR_BUFFER - 1)), hr],
-            }));
+                ...prev,
+                currentHR: hr,
+                hrBuffer: [...prev.hrBuffer.slice(-(MAX_HR_BUFFER - 1)), hr],
+              }));
             }
           },
         );
       } catch (e) {
         if (isStale() || destroyed.current || e.message?.includes('destroyed')) return;
-        setPartial({scanning: false, error: e.message});
+        setPartial({ scanning: false, error: e.message });
       }
     },
     [setPartial],
@@ -310,11 +323,13 @@ export function BleProvider({children}) {
 
     const subscription = AppState.addEventListener('change', nextAppState => {
       const wasActive = appStateRef.current === 'active';
-      const isActive  = nextAppState === 'active';
+      const isActive = nextAppState === 'active';
 
       if (wasActive && !isActive) {
         // App going to background — start foreground service to keep process alive
-        startBgService();
+        if (nextAppState === 'background') {
+             startBgService();
+        }
       } else if (!wasActive && isActive) {
         // App coming to foreground — foreground service no longer needed
         stopBgService();
@@ -344,7 +359,7 @@ export function BleProvider({children}) {
 
     const ok = await requestPermissions();
     if (!ok) {
-      setPartial({error: 'Bluetooth permissions denied'});
+      setPartial({ error: 'Bluetooth permissions denied' });
       return;
     }
 
@@ -352,19 +367,19 @@ export function BleProvider({children}) {
     await waitForPoweredOn(currentManager);
     if (manager.current !== currentManager || destroyed.current) return;
 
-    setPartial({scanning: true, error: null}); 
+    setPartial({ scanning: true, error: null });
 
     try {
       currentManager.startDeviceScan(
         [HR_SERVICE_UUID],
-        {allowDuplicates: false},
+        { allowDuplicates: false },
         async (error, device) => {
           if (manager.current !== currentManager || destroyed.current) return;
 
           try {
             if (error) {
               if (error.message?.includes('destroyed')) return;
-              setPartial({scanning: false, error: error.message});
+              setPartial({ scanning: false, error: error.message });
               return;
             }
 
@@ -376,12 +391,12 @@ export function BleProvider({children}) {
 
             if (__DEV__) console.log('[BLE] Found HR device:', device.name ?? device.id);
 
-            try { currentManager.stopDeviceScan(); } catch (_) {}
+            try { currentManager.stopDeviceScan(); } catch (_) { }
             clearTimeout(scanTimer.current);
 
             connectDevice(device).catch(err => {
               if (!destroyed.current && manager.current === currentManager) {
-                setPartial({scanning: false, error: err.message});
+                setPartial({ scanning: false, error: err.message });
               }
             });
           } catch (callbackErr) {
@@ -390,21 +405,21 @@ export function BleProvider({children}) {
               !destroyed.current &&
               manager.current === currentManager
             ) {
-              setPartial({scanning: false, error: callbackErr.message});
+              setPartial({ scanning: false, error: callbackErr.message });
             }
           }
         },
       );
     } catch (e) {
-      setPartial({scanning: false, error: e.message});
+      setPartial({ scanning: false, error: e.message });
       return;
     }
 
     // Auto-stop scan after timeout
     scanTimer.current = setTimeout(() => {
       if (destroyed.current || manager.current !== currentManager) return;
-      try { currentManager.stopDeviceScan(); } catch (_) {}
-      setPartial({scanning: false});
+      try { currentManager.stopDeviceScan(); } catch (_) { }
+      setPartial({ scanning: false });
     }, SCAN_TIMEOUT_MS);
   }, [connectDevice, requestPermissions, state.scanning, setPartial]);
 
@@ -418,31 +433,31 @@ export function BleProvider({children}) {
 
     // Stop background service if running
     if (BackgroundService.isRunning()) {
-      BackgroundService.stop().catch(() => {});
+      BackgroundService.stop().catch(() => { });
     }
 
     // Clear saved device so auto-reconnect doesn't fire next launch
-    AsyncStorage.removeItem(SAVED_DEVICE_KEY).catch(() => {});
+    AsyncStorage.removeItem(SAVED_DEVICE_KEY).catch(() => { });
 
     if (manager.current) {
-      try { await manager.current.stopDeviceScan(); } catch (_) {}
+      try { await manager.current.stopDeviceScan(); } catch (_) { }
     }
     if (deviceRef.current) {
-      try { await deviceRef.current.cancelConnection(); } catch (_) {}
+      try { await deviceRef.current.cancelConnection(); } catch (_) { }
       deviceRef.current = null;
     }
 
     setPartial({
-      connected:  false,
+      connected: false,
       deviceName: null,
-      currentHR:  null,
-      scanning:   false,
-      error:      null,
+      currentHR: null,
+      scanning: false,
+      error: null,
     });
   }, [setPartial]);
 
   return (
-    <BleContext.Provider value={{...state, startScan, disconnect}}>
+    <BleContext.Provider value={{ ...state, startScan, disconnect }}>
       {children}
     </BleContext.Provider>
   );

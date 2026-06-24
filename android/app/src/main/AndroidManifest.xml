@@ -21,6 +21,7 @@
     <!-- Required for Android 14+ foreground service type used by Notifee/FCM -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
@@ -111,10 +112,9 @@
 
   <service
   android:name="com.asterinet.react.bgactions.RNBackgroundActionsTask"
-  android:foregroundServiceType="location"
+  android:foregroundServiceType="location|connectedDevice|dataSync"
   android:stopWithTask="true"
   android:exported="false"
   tools:node="replace" />
-
     </application>
 </manifest>

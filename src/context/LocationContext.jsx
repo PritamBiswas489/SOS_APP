@@ -16,8 +16,8 @@ import { useUserData } from '../hook/useUserData';
 import { useContactLocations } from '../hook/useContactLocations';
 import { LocationsService } from '../services/locations.service';
 import useUserAuth from '../hook/useUserAuth';
- 
- 
+
+
 
 const LocationContext = createContext(null);
 
@@ -88,13 +88,14 @@ export const LocationProvider = ({ children }) => {
   const isBackgroundRef = useRef(false);
   const startTrackingRef = useRef(null);
   const stopTrackingRef = useRef(null);
+  const bgStartingRef = useRef(false);
   const { setUserData: updateUserCurrentLocation } = useUserData();
   const updateUserCurrentLocationRef = useRef(updateUserCurrentLocation);
   useEffect(() => {
     updateUserCurrentLocationRef.current = updateUserCurrentLocation;
   });
-  const {   updateContactLocations } = useContactLocations();
- 
+  const { updateContactLocations } = useContactLocations();
+
   const { userData } = useUserData();
   const { isAuthenticated } = useUserAuth();
 
@@ -123,7 +124,7 @@ export const LocationProvider = ({ children }) => {
     };
   }, []);
 
-   
+
 
 
   // ── Permission helpers ─────────────────────────────────────────────────────
@@ -140,69 +141,88 @@ export const LocationProvider = ({ children }) => {
   }, []);
 
   const startTracking = useCallback(
-    async onUpdate => {
-      if (isTrackingRef.current) return; // synchronous guard against multiple watchers
-      isTrackingRef.current = true;
-      onLocationUpdateRef.current = onUpdate;
+  async onUpdate => {
+    if (isTrackingRef.current) return; // synchronous guard against multiple watchers
 
-      const granted = await requestPermissions();
-        console.log('Starting location tracking with permission status:', granted);
-      // requestPermissions returns 'full' | 'foreground-only' | 'denied'
-      if (granted === 'denied') {
-        // reset the synchronous guard if permission was denied
-        isTrackingRef.current = false;
-        return;
-      }
-    
+    // Guard: permissions API requires an active Activity on Android
+    if (AppState.currentState !== 'active') {
+      console.warn('startTracking: app not in foreground, skipping');
+      return;
+    }
 
-      try {
-        // Foreground watch
-        watchIdRef.current = Geolocation.watchPosition(
-          location => {
-            global.__locationUpdateCallback?.(location, false);
+    isTrackingRef.current = true;
+    onLocationUpdateRef.current = onUpdate;
+
+    // Wrap requestPermissions in its own try/catch so a throw resets the guard
+    let granted;
+    try {
+      granted = await requestPermissions();
+      console.log('Starting location tracking with permission status:', granted);
+    } catch (err) {
+      console.error('requestPermissions threw:', err);
+      isTrackingRef.current = false;
+      return;
+    }
+
+    // requestPermissions returns 'full' | 'foreground-only' | 'denied'
+    if (granted === 'denied') {
+      isTrackingRef.current = false;
+      return;
+    }
+
+    try {
+      // Foreground watch
+      watchIdRef.current = Geolocation.watchPosition(
+        location => {
+          global.__locationUpdateCallback?.(location, false);
+        },
+        error => {
+          console.error('Foreground location error:', error.message);
+          setLocationError(error.message);
+        },
+        {
+          accuracy: {
+            android: 'high',
+            ios: 'best',
           },
-          error => {
-            console.error('Foreground location error:', error.message);
-            setLocationError(error.message);
-          },
-          {
-            accuracy: {
-              android: 'high',
-              ios: 'best',
-            },
-            interval: 3000, // every 3 seconds
-            fastestInterval: 2000,
-            distanceFilter: 5, // or every 5 metres
-            forceRequestLocation: true,
-            showsBackgroundLocationIndicator: true,
-          },
-        );
-        console.log("permissionStatus", permissionStatus);
-        // Background service (only when full background permission is available)
-        // Use the immediate `granted` result instead of state which may be stale
-        // CRITICAL: Android 15 forbids starting location-type services from background
-        const isAppInForeground = AppState.currentState === 'active';
-        if (granted === 'full' && !BackgroundActions.isRunning() && isAppInForeground) {
-          console.log('BackgroundActions Starting background location task...');
-          await BackgroundActions.start(
-            backgroundLocationTask,
-            backgroundOptions,
-          );
-          console.log("BackgroundActions is runninggg:", BackgroundActions.isRunning());
-        } else if (granted === 'full' && !isAppInForeground) {
-          console.log('BackgroundActions: Skipped start - app is in background. Will start when app returns to foreground.');
+          interval: 3000,
+          fastestInterval: 2000,
+          distanceFilter: 5,
+          forceRequestLocation: true,
+          showsBackgroundLocationIndicator: true,
+        },
+      );
+
+      // Background service (only when full background permission is available)
+      // CRITICAL: Android 15 forbids starting location-type services from background
+      const isAppInForeground = AppState.currentState === 'active';
+      const running = await BackgroundActions.isRunning(); // await — may return a Promise
+
+      if (granted === 'full' && !running && isAppInForeground && !bgStartingRef.current) {
+        console.log('BackgroundActions: Starting background location task...');
+        bgStartingRef.current = true;
+        try {
+          await BackgroundActions.start(backgroundLocationTask, backgroundOptions);
+          console.log('BackgroundActions is running:', await BackgroundActions.isRunning());
+        } catch (err) {
+          console.error('Failed to start background location service:', err);
+        } finally {
+          bgStartingRef.current = false;
         }
-
-        setIsTracking(true);
-        setLocationError(null);
-      } catch (err) {
-        console.error('startTracking error:', err);
-        isTrackingRef.current = false; // reset guard on failure
-        setLocationError(err.message);
+      } else if (granted === 'full' && !isAppInForeground) {
+        console.log('BackgroundActions: Skipped start — app is in background. Will start when app returns to foreground.');
       }
-    },
-    [requestPermissions],
-  );
+
+      setIsTracking(true);
+      setLocationError(null);
+    } catch (err) {
+      console.error('startTracking error:', err);
+      isTrackingRef.current = false;
+      setLocationError(err.message);
+    }
+  },
+  [requestPermissions],
+);
   startTrackingRef.current = startTracking;
 
   const stopTracking = useCallback(async () => {
@@ -212,7 +232,7 @@ export const LocationProvider = ({ children }) => {
     }
 
     if (BackgroundActions.isRunning()) {
-      await BackgroundActions.stop().catch(() => {});
+      await BackgroundActions.stop().catch(() => { });
     }
 
     onLocationUpdateRef.current = null;
@@ -251,8 +271,8 @@ export const LocationProvider = ({ children }) => {
   }, []);
 
   const updateCurrentLocation = useCallback(async (location) => {
-     console.log('Updating current location in context:', location);
-     if(location?.latitude && location?.longitude) {
+    console.log('Updating current location in context:', location);
+    if (location?.latitude && location?.longitude) {
       const updatedLocation = {
         latitude: location.latitude,
         longitude: location.longitude,
@@ -264,13 +284,13 @@ export const LocationProvider = ({ children }) => {
       };
       emitNoAck('location:update', JSON.stringify({ loc: updatedLocation }));
     }
-  },[emit]);
+  }, [emit]);
 
 
   const updateMyGprsLocation = useCallback(async () => {
     console.log('Updating current location from GPRS...');
     const location = await getCurrentPosition();
-    if(location?.latitude && location?.longitude) {
+    if (location?.latitude && location?.longitude) {
       const updatedLocation = {
         latitude: location.latitude,
         longitude: location.longitude,
@@ -283,7 +303,7 @@ export const LocationProvider = ({ children }) => {
       emitNoAck('location:update', JSON.stringify({ loc: updatedLocation }));
     }
 
-  },[emit]);
+  }, [emit]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -295,20 +315,28 @@ export const LocationProvider = ({ children }) => {
   // Android 15: Start background service when app comes to foreground
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async nextAppState => {
-      if (nextAppState === 'active' && isTrackingRef.current && permissionStatus === 'full' && !BackgroundActions.isRunning()) {
-        console.log('App returned to foreground - starting background location service');
+      // ✅ Only start on true foreground return AND only on 'background' → 'active' transition
+      if (
+        nextAppState === 'active' &&
+        isTrackingRef.current &&
+        permissionStatus === 'full' &&
+        !BackgroundActions.isRunning() &&
+        !bgStartingRef.current
+      ) {
+        bgStartingRef.current = true;
+        await new Promise(resolve => setTimeout(resolve, 300)); // ✅ settle delay
         try {
+          console.log('App returned to foreground, starting background location task...');
           await BackgroundActions.start(backgroundLocationTask, backgroundOptions);
-          console.log('Background service started successfully');
         } catch (err) {
           console.error('Failed to start background service on foreground return:', err);
+        } finally {
+          bgStartingRef.current = false;
         }
       }
     });
 
-    return () => {
-      subscription?.remove();
-    };
+    return () => subscription?.remove();
   }, [permissionStatus]);
 
   useEffect(() => {
@@ -330,7 +358,7 @@ export const LocationProvider = ({ children }) => {
 
       // Fallback interval for Android background — watchPosition is unreliable
       // when the app is backgrounded, so re-emit the last known location every 10s.
-      
+
       // locationIntervalRef.current = setInterval(() => {
       //   console.log('Emitting periodic location update to server:');
       //  emitNoAck('location:update');
@@ -372,61 +400,63 @@ export const LocationProvider = ({ children }) => {
     console.log('Fetching contacts last locations from server...');
     try {
 
-      const response = await new Promise((resolve, reject) => {
+      const response = await Promise.race([
+      new Promise((resolve, reject) => {
         LocationsService.getContactsLastLocations(result => {
-          if (result.success) {
-            resolve(result.data);
-          } else {            
-            reject(new Error(result.error || 'Unknown error fetching locations'));
-          }        
+          if (result.success) resolve(result.data);
+          else reject(new Error(result.error || 'Unknown error'));
         });
-      });
-      if(response?.data){
-           const initialLocations = {};
-           response.data.forEach(locData => {
-              initialLocations[locData.user_id] = {
-                latitude: locData.latitude,
-                longitude: locData.longitude,
-                altitude: locData.altitude || 0,
-                accuracy: locData.accuracy || 0,
-                heading: locData.heading || 0,
-                speed: locData.speed || 0.5,
-                isBackground: true,
-              };
-           });
-           updateContactLocations(initialLocations);
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('getContactsLastLocations timeout')), 10000)
+      ), // ✅ 10s max wait
+      ]);
+      if (response?.data) {
+        const initialLocations = {};
+        response.data.forEach(locData => {
+          initialLocations[locData.user_id] = {
+            latitude: locData.latitude,
+            longitude: locData.longitude,
+            altitude: locData.altitude || 0,
+            accuracy: locData.accuracy || 0,
+            heading: locData.heading || 0,
+            speed: locData.speed || 0.5,
+            isBackground: true,
+          };
+        });
+        updateContactLocations(initialLocations);
       }
     } catch (err) {
       console.error('Failed to get contacts locations:', err.message);
     }
   }, []);
 
-   
+
 
   // Fetch contacts' last locations on mount
   useEffect(() => {
-    if(isAuthenticated){
-        getContactsLastLocations();
+    if (isAuthenticated) {
+      getContactsLastLocations();
     }
   }, [getContactsLastLocations, isAuthenticated]);
-  
 
-   
+
+
 
   const value = {
-        currentLocation,
-        locationError,
-        isTracking,
-        isBackground,
-        permissionStatus,
-        startTracking,
-        stopTracking,
-        getCurrentPosition,
-        requestPermissions,
-        getContactsLastLocations,
-        updateCurrentLocation,
-        updateMyGprsLocation
-        
+    currentLocation,
+    locationError,
+    isTracking,
+    isBackground,
+    permissionStatus,
+    startTracking,
+    stopTracking,
+    getCurrentPosition,
+    requestPermissions,
+    getContactsLastLocations,
+    updateCurrentLocation,
+    updateMyGprsLocation
+
   };
   return (
     <LocationContext.Provider value={value}>
