@@ -228,12 +228,12 @@ const HomeScreen = () => {
         <Text style={styles.userName}>
           {userData?.name || userData?.phone_number} 👋
         </Text>
-        {/* <Button
+         {/* <Button
           title="Try!"
           onPress={() => {
             Sentry.captureException(new Error('First error'));
           }}
-        /> */}
+        />  */}
       </View> 
 
       {/* ── SOS Button ── */}

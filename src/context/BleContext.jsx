@@ -190,6 +190,11 @@ export function BleProvider({ children }) {
 
   // ── 2. Permissions ───────────────────────────────────────────────────────
   const requestPermissions = useCallback(async () => {
+    if (AppState.currentState !== 'active') {
+        console.warn('[BLE] requestPermissions: app not active, skipping');
+         return false;
+     }
+
     if (Platform.OS !== 'android') {
       // FIX: on iOS, verify the BLE adapter state rather than blindly returning true.
       // If the user denied Bluetooth in Settings, state will be 'Unauthorized'
@@ -371,9 +376,10 @@ export function BleProvider({ children }) {
 
     try {
       currentManager.startDeviceScan(
-        [HR_SERVICE_UUID],
+       [HR_SERVICE_UUID],
         { allowDuplicates: false },
         async (error, device) => {
+          console.log('[BLE]', device?.name, device?.localName, device?.serviceUUIDs);
           if (manager.current !== currentManager || destroyed.current) return;
 
           try {
@@ -383,10 +389,7 @@ export function BleProvider({ children }) {
               return;
             }
 
-            // FIX: removed hardcoded device name filter ('Nokia T20', 'V2126').
-            // The service UUID filter in startDeviceScan already ensures only
-            // HR-advertising devices are returned. Connecting to the first
-            // valid device is the correct behaviour for a dedicated HR app.
+             
             if (!device) return;
 
             if (__DEV__) console.log('[BLE] Found HR device:', device.name ?? device.id);

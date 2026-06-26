@@ -215,6 +215,10 @@ const App = () => {
 
   const handleCheckPermissions = useCallback(async () => {
     // First, prompt the user to grant permissions, then check what is still missing
+    if (AppState.currentState !== 'active') {
+       console.warn('[App] handleCheckPermissions: app not active, skipping');
+       return;
+    }
     await requestLocationPermissions();
     await requestNotificationPermissions();
     await requestMicrophonePermission();
