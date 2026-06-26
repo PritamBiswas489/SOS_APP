@@ -72,6 +72,7 @@ import * as Sentry from '@sentry/react-native';
 import { SENTRY_DSN_URL } from './environment.jsx';
 import ReportListScreen from './src/screens/abuserReportListScreen/index.jsx';
  
+ 
 
 Sentry.init({
   dsn: SENTRY_DSN_URL,
@@ -219,12 +220,14 @@ const App = () => {
        console.warn('[App] handleCheckPermissions: app not active, skipping');
        return;
     }
-    await requestLocationPermissions();
-    await requestNotificationPermissions();
-    await requestMicrophonePermission();
-    const missing = await checkRequiredPermissions();
-    setMissingPermissions(missing);
-  }, []);
+   // await requestLocationPermissions();
+   // await requestNotificationPermissions();
+   // await requestMicrophonePermission();
+   if(isAuthenticated){
+     const missing = await checkRequiredPermissions();
+     setMissingPermissions(missing);
+   }
+  }, [isAuthenticated]);
 
   // Check permissions on mount
   useEffect(() => {

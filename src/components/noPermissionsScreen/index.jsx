@@ -8,8 +8,9 @@ import {
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { requestLocationPermissions, requestNotificationPermissions, requestMicrophonePermission } from '../../services/permissions.service';
 
-const PermissionItem = ({ icon, label, description, granted }) => (
+const PermissionItem = ({ icon, label, description, granted, onRetry }) => (
   <View style={styles.permissionItem}>
     <View style={[styles.permIconWrap, granted ? styles.permIconGranted : styles.permIconDenied]}>
       <Icon name={icon} size={22} color={granted ? '#00c48c' : '#FF3B5C'} />
@@ -18,10 +19,23 @@ const PermissionItem = ({ icon, label, description, granted }) => (
       <Text style={styles.permLabel}>{label}</Text>
       <Text style={styles.permDesc}>{description}</Text>
     </View>
-    <View style={[styles.statusBadge, granted ? styles.statusGranted : styles.statusDenied]}>
-      <Text style={[styles.statusText, granted ? styles.statusTextGranted : styles.statusTextDenied]}>
-        {granted ? 'Granted' : 'Required'}
-      </Text>
+    <View style={styles.rightWrap}>
+      <View style={[styles.statusBadge, granted ? styles.statusGranted : styles.statusDenied]}>
+        <Text style={[styles.statusText, granted ? styles.statusTextGranted : styles.statusTextDenied]}>
+          {granted ? 'Granted' : 'Required'}
+        </Text>
+      </View>
+      {granted ? (
+        <View style={styles.enabledPill}>
+          <Icon name="check-circle" size={12} color="#00c48c" style={styles.enableBtnIcon} />
+          <Text style={styles.enabledPillText}>Enabled</Text>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.enableBtn} activeOpacity={0.85} onPress={onRetry}>
+          <Icon name="lock-open" size={13} color="#FFFFFF" style={styles.enableBtnIcon} />
+          <Text style={styles.enableBtnText}>Enable</Text>
+        </TouchableOpacity>
+      )}
     </View>
   </View>
 );
@@ -58,6 +72,10 @@ const NoPermissionsScreen = ({ missingPermissions = [], onRetry }) => {
             label="Location (Foreground & Background)"
             description="Required to share your real-time position with trusted contacts. Choose this option ''Allow all the time'' when granting permission."
             granted={!locationMissing}
+            onRetry={async () => {
+              await requestLocationPermissions();
+              onRetry();
+            }}
           />
           <View style={styles.divider} />
           <PermissionItem
@@ -65,59 +83,34 @@ const NoPermissionsScreen = ({ missingPermissions = [], onRetry }) => {
             label="Notifications"
             description="Required to receive SOS alerts and emergency messages."
             granted={!notificationMissing}
+            onRetry={async () => {
+              await requestNotificationPermissions();
+              onRetry();
+            }}
           />
           <View style={styles.divider} />
+           
+        
           <PermissionItem
             icon="mic"
             label="Microphone"
             description="Required to stream live audio during an SOS emergency."
             granted={!microphoneMissing}
+            onRetry={async () => {
+              await requestMicrophonePermission();
+              onRetry();
+            }}
           />
         </View>
 
-        {/* Action buttons */}
-        {locationMissing && (
-          <TouchableOpacity
-            onPress={openSettings}
-            activeOpacity={0.85}
-            style={[styles.actionBtn, styles.locationBtn]}>
-            <Icon name="location-on" size={18} color="#fff" style={styles.btnIcon} />
-            <Text style={styles.actionBtnText}>Enable Location in Settings</Text>
-          </TouchableOpacity>
-        )}
+        
 
-        {notificationMissing && (
-          <TouchableOpacity
-            onPress={openSettings}
-            activeOpacity={0.85}
-            style={[styles.actionBtn, styles.notifBtn]}>
-            <Icon name="notifications" size={18} color="#fff" style={styles.btnIcon} />
-            <Text style={styles.actionBtnText}>Enable Notifications in Settings</Text>
-          </TouchableOpacity>
-        )}
+         
+       
 
-        {microphoneMissing && (
-          <TouchableOpacity
-            onPress={openSettings}
-            activeOpacity={0.85}
-            style={[styles.actionBtn, styles.micBtn]}>
-            <Icon name="mic" size={18} color="#fff" style={styles.btnIcon} />
-            <Text style={styles.actionBtnText}>Enable Microphone in Settings</Text>
-          </TouchableOpacity>
-        )}
+         
 
-        {/* Re-check button */}
-        <TouchableOpacity
-          onPress={onRetry}
-          activeOpacity={0.85}
-          style={styles.retryBtn}>
-          <Icon name="refresh" size={18} color="#4a9eff" style={styles.btnIcon} />
-          <Text style={styles.retryText}>I've Enabled Permissions — Continue</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.hint}>
-          Tap the button above after granting permissions in Settings.
-        </Text>
+        
       </ScrollView>
     </View>
   );
@@ -205,10 +198,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
   },
+  rightWrap: {
+    alignItems: 'flex-end',
+    minWidth: 90,
+  },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
+    marginBottom: 6,
   },
   statusDenied: {
     backgroundColor: 'rgba(255,59,92,0.15)',
@@ -225,6 +223,48 @@ const styles = StyleSheet.create({
   },
   statusTextGranted: {
     color: '#00c48c',
+  },
+  enableBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2E6DFF',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(122,167,255,0.65)',
+    shadowColor: '#2E6DFF',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  enabledPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,196,140,0.12)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(0,196,140,0.35)',
+  },
+  enableBtnIcon: {
+    marginRight: 5,
+  },
+  enableBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  enabledPillText: {
+    color: '#00c48c',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   divider: {
     height: 1,

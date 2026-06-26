@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -7,51 +6,35 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { Platform, AppState } from 'react-native';
+import { AppState } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
-import { requestLocationPermissions } from '../services/permissions.service';
 import BackgroundActions from 'react-native-background-actions';
 import { useSocket } from './SocketContext';
 import { useUserData } from '../hook/useUserData';
 import { useContactLocations } from '../hook/useContactLocations';
 import { LocationsService } from '../services/locations.service';
 import useUserAuth from '../hook/useUserAuth';
-
-
+import { checkLocationPermission } from '../services/permissions.service';
 
 const LocationContext = createContext(null);
 
 // ─── Background Task Definition ───────────────────────────────────────────────
-// react-native-background-actions runs a JS task; we use the global callback
-// pattern identical to the Expo version so SocketContext wiring is unchanged.
+// Does NOT call Geolocation directly — Android's headless JS context blocks it.
+// Instead, sets a global flag so the foreground watchPosition marks updates as bg:true.
+// The task's only job is to keep the Android Foreground Service notification alive,
+// which prevents the OS from killing the app process while backgrounded.
 const backgroundLocationTask = async taskData => {
-  console.log('Background location task started with data:', taskData);
   await new Promise(resolve => {
-    const watchId = Geolocation.watchPosition(
-      position => {
-        if (global.__locationUpdateCallback) {
-          global.__locationUpdateCallback(position, true);
-        }
-      },
-      error => {
-        console.error('Background location error:', error.message);
-      },
-      {
-        accuracy: {
-          android: 'balanced', // PRIORITY_BALANCED_POWER_ACCURACY
-          ios: 'hundredMeters',
-        },
-        interval: 10000, // every 10 seconds in background
-        fastestInterval: 5000,
-        distanceFilter: 10,
-        showsBackgroundLocationIndicator: true,
-        forceRequestLocation: true,
-      },
-    );
+    // ✅ Signal foreground watchPosition to mark upcoming updates as background
+    global.__isBackgroundTask = true;
+    console.log('🟡 BG TASK STARTED — foreground watcher will now emit bg: true');
 
-    // Keep the task alive; it resolves only when BackgroundActions.stop() is called.
+    const keepAlive = setInterval(() => {}, 10000);
+
     BackgroundActions.on('expiration', () => {
-      Geolocation.clearWatch(watchId);
+      global.__isBackgroundTask = false;
+      clearInterval(keepAlive);
+      console.log('🔴 BG TASK EXPIRED — cleaning up');
       resolve();
     });
   });
@@ -67,7 +50,7 @@ const backgroundOptions = {
     type: 'mipmap',
   },
   color: '#6C63FF',
-  linkingURI: undefined, // set to your deep-link scheme if needed
+  linkingURI: undefined,
   parameters: {},
   foregroundServiceType: ['location'],
 };
@@ -81,27 +64,38 @@ export const LocationProvider = ({ children }) => {
   const { on, emitNoAck, emit, isConnected } = useSocket();
 
   const watchIdRef = useRef(null);
-  const onLocationUpdateRef = useRef(null); // callback from SocketContext
-  const isTrackingRef = useRef(false); // synchronous guard — state is async and races
+  const onLocationUpdateRef = useRef(null);
+  const isTrackingRef = useRef(false);
   const locationIntervalRef = useRef(null);
   const currentLocationRef = useRef(null);
   const isBackgroundRef = useRef(false);
   const startTrackingRef = useRef(null);
   const stopTrackingRef = useRef(null);
   const bgStartingRef = useRef(false);
+
   const { setUserData: updateUserCurrentLocation } = useUserData();
   const updateUserCurrentLocationRef = useRef(updateUserCurrentLocation);
   useEffect(() => {
     updateUserCurrentLocationRef.current = updateUserCurrentLocation;
   });
-  const { updateContactLocations } = useContactLocations();
 
+  const { updateContactLocations } = useContactLocations();
   const { userData } = useUserData();
   const { isAuthenticated } = useUserAuth();
 
-  // Register the global callback for the background task
+  // ── Global location callback ───────────────────────────────────────────────
+  // Called by foreground watchPosition on every location update.
+  // Reads global.__isBackgroundTask to determine if app is currently backgrounded.
   useEffect(() => {
     global.__locationUpdateCallback = (location, bg) => {
+      // ✅ Override bg flag with the global background task flag
+      const isInBackground = bg || global.__isBackgroundTask === true;
+      console.log(
+        '📍 LOCATION UPDATE | bg:',
+        isInBackground,
+        '| lat:',
+        location.coords.latitude,
+      );
       const coords = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -109,13 +103,13 @@ export const LocationProvider = ({ children }) => {
         accuracy: location.coords.accuracy,
         heading: location.coords.heading,
         speed: location.coords.speed,
-        isBackground: bg,
+        isBackground: isInBackground,
         timestamp: location.timestamp,
       };
       setCurrentLocation(coords);
       currentLocationRef.current = coords;
-      setIsBackground(bg);
-      isBackgroundRef.current = bg;
+      setIsBackground(isInBackground);
+      isBackgroundRef.current = isInBackground;
       onLocationUpdateRef.current?.(coords);
     };
 
@@ -124,13 +118,10 @@ export const LocationProvider = ({ children }) => {
     };
   }, []);
 
-
-
-
   // ── Permission helpers ─────────────────────────────────────────────────────
   const requestPermissions = useCallback(async () => {
     try {
-      const status = await requestLocationPermissions();
+      const status = await checkLocationPermission();
       console.log('Location permission status:', status);
       setPermissionStatus(status);
       return status;
@@ -140,100 +131,120 @@ export const LocationProvider = ({ children }) => {
     }
   }, []);
 
+  // ── Start Tracking ─────────────────────────────────────────────────────────
   const startTracking = useCallback(
-  async onUpdate => {
-    if (isTrackingRef.current) return; // synchronous guard against multiple watchers
+    async onUpdate => {
+      if (isTrackingRef.current) return;
 
-    // Guard: permissions API requires an active Activity on Android
-    if (AppState.currentState !== 'active') {
-      console.warn('startTracking: app not in foreground, skipping');
-      return;
-    }
-
-    isTrackingRef.current = true;
-    onLocationUpdateRef.current = onUpdate;
-
-    // Wrap requestPermissions in its own try/catch so a throw resets the guard
-    let granted;
-    try {
-      granted = await requestPermissions();
-      console.log('Starting location tracking with permission status:', granted);
-    } catch (err) {
-      console.error('requestPermissions threw:', err);
-      isTrackingRef.current = false;
-      return;
-    }
-
-    // requestPermissions returns 'full' | 'foreground-only' | 'denied'
-    if (granted === 'denied') {
-      isTrackingRef.current = false;
-      return;
-    }
-
-    try {
-      // Foreground watch
-      watchIdRef.current = Geolocation.watchPosition(
-        location => {
-          global.__locationUpdateCallback?.(location, false);
-        },
-        error => {
-          console.error('Foreground location error:', error.message);
-          setLocationError(error.message);
-        },
-        {
-          accuracy: {
-            android: 'high',
-            ios: 'best',
-          },
-          interval: 3000,
-          fastestInterval: 2000,
-          distanceFilter: 5,
-          forceRequestLocation: true,
-          showsBackgroundLocationIndicator: true,
-        },
-      );
-
-      // Background service (only when full background permission is available)
-      // CRITICAL: Android 15 forbids starting location-type services from background
-      const isAppInForeground = AppState.currentState === 'active';
-      const running = await BackgroundActions.isRunning(); // await — may return a Promise
-
-      if (granted === 'full' && !running && isAppInForeground && !bgStartingRef.current) {
-        console.log('BackgroundActions: Starting background location task...');
-        bgStartingRef.current = true;
-        try {
-          await BackgroundActions.start(backgroundLocationTask, backgroundOptions);
-          console.log('BackgroundActions is running:', await BackgroundActions.isRunning());
-        } catch (err) {
-          console.error('Failed to start background location service:', err);
-        } finally {
-          bgStartingRef.current = false;
-        }
-      } else if (granted === 'full' && !isAppInForeground) {
-        console.log('BackgroundActions: Skipped start — app is in background. Will start when app returns to foreground.');
+      if (AppState.currentState !== 'active') {
+        console.warn('startTracking: app not in foreground, skipping');
+        return;
       }
 
-      setIsTracking(true);
-      setLocationError(null);
-    } catch (err) {
-      console.error('startTracking error:', err);
-      isTrackingRef.current = false;
-      setLocationError(err.message);
-    }
-  },
-  [requestPermissions],
-);
+      isTrackingRef.current = true;
+      onLocationUpdateRef.current = onUpdate;
+
+      let granted;
+      try {
+        granted = await requestPermissions();
+        console.log('Starting location tracking with permission status:', granted);
+      } catch (err) {
+        console.error('requestPermissions threw:', err);
+        isTrackingRef.current = false;
+        return;
+      }
+
+      if (granted === 'denied') {
+        isTrackingRef.current = false;
+        return;
+      }
+
+      try {
+        // ✅ Foreground watchPosition — this is the ONLY location source.
+        // When the app is backgrounded, global.__isBackgroundTask = true
+        // causes the callback to mark coords as isBackground: true.
+        watchIdRef.current = Geolocation.watchPosition(
+          location => {
+            const isBg = global.__isBackgroundTask === true;
+            console.log(
+              '📍 FG WATCHER FIRED | bg:',
+              isBg,
+              '| lat:',
+              location.coords.latitude,
+            );
+            global.__locationUpdateCallback?.(location, isBg);
+          },
+          error => {
+            console.error('Foreground location error:', error.message);
+            setLocationError(error.message);
+          },
+          {
+            accuracy: { android: 'high', ios: 'hundredMeters' },
+            distanceFilter: 10,
+            forceRequestLocation: true,
+            interval: 5000,
+            fastestInterval: 3000,
+            allowsBackgroundLocationUpdates: true,   // ✅ iOS critical
+            pausesLocationUpdatesAutomatically: false,
+            showsBackgroundLocationIndicator: true,
+          },
+        );
+
+        // ✅ Start background foreground service (keeps process alive on Android)
+        const isAppInForeground = AppState.currentState === 'active';
+        const running = await BackgroundActions.isRunning();
+
+        if (
+          granted === 'full' &&
+          !running &&
+          isAppInForeground &&
+          !bgStartingRef.current
+        ) {
+          console.log('BackgroundActions: Starting background location task...');
+          bgStartingRef.current = true;
+          try {
+            await BackgroundActions.start(backgroundLocationTask, backgroundOptions);
+            console.log(
+              'BackgroundActions is running:',
+              await BackgroundActions.isRunning(),
+            );
+          } catch (err) {
+            console.error('Failed to start background location service:', err);
+          } finally {
+            bgStartingRef.current = false;
+          }
+        } else if (granted === 'full' && !isAppInForeground) {
+          console.log(
+            'BackgroundActions: Skipped start — app is in background. Will start when app returns to foreground.',
+          );
+        }
+
+        setIsTracking(true);
+        setLocationError(null);
+      } catch (err) {
+        console.error('startTracking error:', err);
+        isTrackingRef.current = false;
+        setLocationError(err.message);
+      }
+    },
+    [requestPermissions],
+  );
   startTrackingRef.current = startTracking;
 
+  // ── Stop Tracking ──────────────────────────────────────────────────────────
   const stopTracking = useCallback(async () => {
     if (watchIdRef.current !== null) {
       Geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
 
-    if (BackgroundActions.isRunning()) {
-      await BackgroundActions.stop().catch(() => { });
+    const running = await BackgroundActions.isRunning();
+    if (running) {
+      await BackgroundActions.stop().catch(() => {});
     }
+
+    // ✅ Reset global background flag on stop
+    global.__isBackgroundTask = false;
 
     onLocationUpdateRef.current = null;
     isTrackingRef.current = false;
@@ -261,31 +272,33 @@ export const LocationProvider = ({ children }) => {
           resolve(null);
         },
         {
-          accuracy: { android: 'high', ios: 'best' },
-          timeout: 15000,
-          maximumAge: 10000,
-          forceRequestLocation: true,
+          accuracy: { android: 'balanced', ios: 'hundredMeters' },
+          timeout: 5000,
+          maximumAge: 30000,
+          forceRequestLocation: false,
         },
       );
     });
   }, []);
 
-  const updateCurrentLocation = useCallback(async (location) => {
-    console.log('Updating current location in context:', location);
-    if (location?.latitude && location?.longitude) {
-      const updatedLocation = {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        altitude: location.altitude || 0,
-        accuracy: location.accuracy || 0,
-        heading: location.heading || 0,
-        speed: location.speed || 0.5,
-        isBackground: isBackgroundRef.current,
-      };
-      emitNoAck('location:update', JSON.stringify({ loc: updatedLocation }));
-    }
-  }, [emit]);
-
+  const updateCurrentLocation = useCallback(
+    async location => {
+      console.log('Updating current location in context:', location);
+      if (location?.latitude && location?.longitude) {
+        const updatedLocation = {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          altitude: location.altitude || 0,
+          accuracy: location.accuracy || 0,
+          heading: location.heading || 0,
+          speed: location.speed || 0.5,
+          isBackground: isBackgroundRef.current,
+        };
+        emitNoAck('location:update', JSON.stringify({ loc: updatedLocation }));
+      }
+    },
+    [emitNoAck],
+  );
 
   const updateMyGprsLocation = useCallback(async () => {
     console.log('Updating current location from GPRS...');
@@ -302,67 +315,65 @@ export const LocationProvider = ({ children }) => {
       };
       emitNoAck('location:update', JSON.stringify({ loc: updatedLocation }));
     }
+  }, [emitNoAck, getCurrentPosition]);
 
-  }, [emit]);
-
-  // Cleanup on unmount
+  // ── Cleanup on unmount ─────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       stopTracking();
     };
   }, []);
 
-  // Android 15: Start background service when app comes to foreground
+  // ── AppState listener — reset bg flag + restart service on foreground ──────
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async nextAppState => {
-      // ✅ Only start on true foreground return AND only on 'background' → 'active' transition
-      if (
-        nextAppState === 'active' &&
-        isTrackingRef.current &&
-        permissionStatus === 'full' &&
-        !BackgroundActions.isRunning() &&
-        !bgStartingRef.current
-      ) {
-        bgStartingRef.current = true;
-        await new Promise(resolve => setTimeout(resolve, 300)); // ✅ settle delay
-        try {
-          console.log('App returned to foreground, starting background location task...');
-          await BackgroundActions.start(backgroundLocationTask, backgroundOptions);
-        } catch (err) {
-          console.error('Failed to start background service on foreground return:', err);
-        } finally {
-          bgStartingRef.current = false;
+      if (nextAppState === 'active') {
+        // ✅ App returned to foreground — reset background flag
+        global.__isBackgroundTask = false;
+        console.log('📱 App foregrounded — bg flag reset to false');
+
+        // Restart background service if it died while app was backgrounded
+        const running = await BackgroundActions.isRunning();
+        if (
+          isTrackingRef.current &&
+          permissionStatus === 'full' &&
+          !running &&
+          !bgStartingRef.current
+        ) {
+          bgStartingRef.current = true;
+          await new Promise(resolve => setTimeout(resolve, 300));
+          try {
+            console.log('App returned to foreground, starting background location task...');
+            await BackgroundActions.start(backgroundLocationTask, backgroundOptions);
+          } catch (err) {
+            console.error('Failed to start background service on foreground return:', err);
+          } finally {
+            bgStartingRef.current = false;
+          }
         }
+      } else if (nextAppState === 'background') {
+        // ✅ App going to background — set flag so watcher emits bg: true
+        console.log('📱 App backgrounded — bg flag set to true');
+        global.__isBackgroundTask = true;
       }
     });
 
     return () => subscription?.remove();
   }, [permissionStatus]);
 
+  // ── Socket connection handling ─────────────────────────────────────────────
   useEffect(() => {
     if (!isConnected) {
-      // Socket dropped — reset tracking guard so it restarts after reconnect
       isTrackingRef.current = false;
       return;
     }
 
-    // Start tracking once the server confirms the personal room was joined.
-    // SocketContext already emits join:personal on connect, so this fires
-    // automatically after every (re)connect.
     const onPersonalRoomJoined = () => {
       console.log('Joined personal room, starting location tracking...');
       startTrackingRef.current(location => {
         console.log('Emitting location update to server:', location);
         emitNoAck('location:update', JSON.stringify({ loc: location }));
       });
-
-      // Fallback interval for Android background — watchPosition is unreliable
-      // when the app is backgrounded, so re-emit the last known location every 10s.
-
-      // locationIntervalRef.current = setInterval(() => {
-      //   console.log('Emitting periodic location update to server:');
-      //  emitNoAck('location:update');
-      // }, 90000); // every 90 seconds
     };
 
     const onLocationUpdated = payload => {
@@ -382,8 +393,6 @@ export const LocationProvider = ({ children }) => {
       on('location:my-updated', onMyLocationUpdated),
     ];
 
-    // Emit AFTER registering the listener — guarantees the server's
-    // personal:room:joined response is never missed due to a race condition.
     emitNoAck('join:personal');
 
     return () => {
@@ -396,21 +405,25 @@ export const LocationProvider = ({ children }) => {
     };
   }, [isConnected, on, emitNoAck]);
 
+  // ── Fetch contacts' last known locations ───────────────────────────────────
   const getContactsLastLocations = useCallback(async () => {
     console.log('Fetching contacts last locations from server...');
     try {
-
       const response = await Promise.race([
-      new Promise((resolve, reject) => {
-        LocationsService.getContactsLastLocations(result => {
-          if (result.success) resolve(result.data);
-          else reject(new Error(result.error || 'Unknown error'));
-        });
-      }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('getContactsLastLocations timeout')), 10000)
-      ), // ✅ 10s max wait
+        new Promise((resolve, reject) => {
+          LocationsService.getContactsLastLocations(result => {
+            if (result.success) resolve(result.data);
+            else reject(new Error(result.error || 'Unknown error'));
+          });
+        }),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('getContactsLastLocations timeout')),
+            10000,
+          ),
+        ),
       ]);
+
       if (response?.data) {
         const initialLocations = {};
         response.data.forEach(locData => {
@@ -431,17 +444,13 @@ export const LocationProvider = ({ children }) => {
     }
   }, []);
 
-
-
-  // Fetch contacts' last locations on mount
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isAuthenticated) return;
+    const timer = setTimeout(() => {
       getContactsLastLocations();
-    }
-  }, [getContactsLastLocations, isAuthenticated]);
-
-
-
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated]);
 
   const value = {
     currentLocation,
@@ -455,15 +464,16 @@ export const LocationProvider = ({ children }) => {
     requestPermissions,
     getContactsLastLocations,
     updateCurrentLocation,
-    updateMyGprsLocation
-
+    updateMyGprsLocation,
   };
+
   return (
     <LocationContext.Provider value={value}>
       {children}
     </LocationContext.Provider>
   );
 };
+
 export const useLocation = () => {
   const context = useContext(LocationContext);
   if (!context) {
@@ -471,4 +481,5 @@ export const useLocation = () => {
   }
   return context;
 };
+
 export default LocationContext;

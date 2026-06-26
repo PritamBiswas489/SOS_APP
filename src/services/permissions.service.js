@@ -86,6 +86,26 @@ export const requestNotificationPermissions = async () => {
   return result === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'denied';
 };
 
+export const checkLocationPermission = async () => {
+  console.log('Checking location permissions...');
+  if (Platform.OS === 'android') {
+    const fgLocation = await safeCheck( // ✅ safeCheck
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    );
+    let bgLocation = true;
+    if (Platform.Version >= 29) {
+      bgLocation = await safeCheck( // ✅ safeCheck
+        PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+      );
+    }
+    console.log('Location permission status:', { fgLocation, bgLocation });
+     if (!fgLocation || !bgLocation) {
+       return "denied";
+     }
+     return bgLocation ? "full" : "foreground-only";
+  }
+}
+
 export const checkRequiredPermissions = async () => {
   const missing = [];
 
