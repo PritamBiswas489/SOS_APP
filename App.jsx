@@ -236,6 +236,10 @@ const App = () => {
 
   // Re-check permissions when app comes back to foreground (user returns from Settings)
   useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
     const subscription = AppState.addEventListener(
       'change',
       async nextState => {
@@ -267,7 +271,7 @@ const App = () => {
       },
     );
     return () => subscription.remove();
-  }, []);
+  }, [isAuthenticated]);
 
   const syncCurrentScreen = useCallback(() => {
     const routeName = navigationRef.getCurrentRoute()?.name;
