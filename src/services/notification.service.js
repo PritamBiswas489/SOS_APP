@@ -12,7 +12,6 @@ import {
   getToken,
 } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
-import { set } from '@react-native-firebase/app/dist/module/internal/web/firebaseDatabase';
 
 // Modular API: get the messaging instance once
 const getMsg = () => getMessaging(getApp());
@@ -160,6 +159,40 @@ export const displayRemoteNotification = async remoteMessage => {
     data: remoteMessage?.data,
     android: {
       channelId,
+      smallIcon: 'ic_launcher',
+      pressAction: {
+        id: 'default',
+      },
+    },
+  });
+};
+
+export const displayStressUpdateNotification = async ({
+  score,
+  stateLabel,
+  source,
+  currentHR,
+}) => {
+  const title = 'Stress Score Updated';
+  const details = [
+    `Score: ${score}`,
+    stateLabel ? `State: ${stateLabel}` : null,
+    currentHR != null ? `HR: ${currentHR} bpm` : null,
+    source ? `Source: ${source}` : null,
+  ].filter(Boolean).join(' | ');
+
+  await notifee.displayNotification({
+    title,
+    body: details,
+    data: {
+      messageType:'CHAT',
+      score: String(score ?? ''),
+      stateLabel: stateLabel ?? '',
+      source: source ?? '',
+      currentHR: currentHR == null ? '' : String(currentHR),
+    },
+    android: {
+      channelId: NOTIFICATION_CHANNELS.DEFAULT,
       smallIcon: 'ic_launcher',
       pressAction: {
         id: 'default',
