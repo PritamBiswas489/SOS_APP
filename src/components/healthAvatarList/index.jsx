@@ -373,6 +373,12 @@ const HealthAvatarList = ({ chatContacts, fetchChatContacts }) => {
       }, 100);
     }, []);
 
+    const renderEmptyContacts = useCallback(() => (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No contacts available</Text>
+      </View>
+    ), []);
+
   return (
     <View style={styles.avatarRowContainer}>
       {/* ── Me button ── */}
@@ -386,9 +392,10 @@ const HealthAvatarList = ({ chatContacts, fetchChatContacts }) => {
       <FlatList
         ref={flatListRef}
         horizontal
-        data={chatContacts}
+        data={Array.isArray(chatContacts) ? chatContacts : []}
         keyExtractor={item => String(item.id)}
         renderItem={renderContactItem}
+        ListEmptyComponent={renderEmptyContacts}
         extraData={healthSelectedContact?.item?.id}
         showsHorizontalScrollIndicator={false}
         style={styles.avatarRow}

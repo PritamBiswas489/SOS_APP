@@ -191,6 +191,7 @@ const MapScreen = ({ route }) => {
   const [routeInfo, setRouteInfo] = useState(null);
   const [travelMode, setTravelMode] = useState('driving');
   const [menuOpen, setMenuOpen] = useState(false);
+ 
 
   const userLocation = useMemo(() => ({
     latitude: userData?.latitude ?? 0,
@@ -245,7 +246,7 @@ const MapScreen = ({ route }) => {
       { latitude: userLocation.latitude, longitude: userLocation.longitude },
       { latitude: selectedContactLocation.latitude, longitude: selectedContactLocation.longitude },
     );
-    if (distanceM > 200000) {
+    if (distanceM > 50000) {
       setRouteCoords([]);
       setRouteInfo(null);
       lastRouteRef.current = '';
@@ -348,6 +349,8 @@ const MapScreen = ({ route }) => {
   useEffect(() => {
     return () => { if (routeRequestRef.current) routeRequestRef.current.abort(); };
   }, []);
+
+  
 
   // ─── Map pan / zoom helpers ───────────────────────────────────────────────
   const [isOffCenter, setIsOffCenter] = useState(false);

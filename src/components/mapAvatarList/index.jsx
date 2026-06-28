@@ -170,14 +170,21 @@ const getAvatarColor = item => {
       }, 100);
     }, []);
 
+    const renderEmptyContacts = useCallback(() => (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No contacts available</Text>
+      </View>
+    ), []);
+
   return (
     <View style={styles.avatarRowContainer}>
       <FlatList
         ref={flatListRef}
         horizontal
-        data={chatContacts}
+        data={Array.isArray(chatContacts) ? chatContacts : []}
         keyExtractor={item => String(item.id)}
         renderItem={renderContactItem}
+        ListEmptyComponent={renderEmptyContacts}
         extraData={mapSelectedContact?.id}
         showsHorizontalScrollIndicator={false}
         style={styles.avatarRow}

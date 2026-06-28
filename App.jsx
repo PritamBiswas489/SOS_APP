@@ -71,8 +71,8 @@ import { resetAllState } from './src/store/index.jsx';
 import * as Sentry from '@sentry/react-native';
 import { SENTRY_DSN_URL } from './environment.jsx';
 import ReportListScreen from './src/screens/abuserReportListScreen/index.jsx';
- 
- 
+
+
 
 Sentry.init({
   dsn: SENTRY_DSN_URL,
@@ -99,7 +99,7 @@ Sentry.init({
 // logError(new Error('Test error from App.jsx to verify crash logging is working correctly'));
 // Isolated so that opening from FAB only re-renders this component logic
 const SOSController = React.memo(
-  ({ fabVisible, navigationRef, sosModalVisible, setSosModalVisible }) => {
+  ({ fabVisible, navigationRef, sosModalVisible, setSosModalVisible, hasLicense }) => {
     const [isOpening, setIsOpening] = useState(false);
 
     const handleFabPress = () => {
@@ -121,6 +121,7 @@ const SOSController = React.memo(
           navigationRef={navigationRef}
           onClose={() => setSosModalVisible(false)}
           onOpened={handleOpened}
+          hasLicense={hasLicense}
         />
       </>
     );
@@ -191,7 +192,7 @@ const App = () => {
   const [emittedSOS, setEmittedSOS] = useState(null);
   const { hasLicense } = useUserData();
 
-     
+
 
   const openSosModalFromNotification = useCallback(() => {
     if (AppState.currentState === 'active') {
@@ -217,16 +218,16 @@ const App = () => {
   const handleCheckPermissions = useCallback(async () => {
     // First, prompt the user to grant permissions, then check what is still missing
     if (AppState.currentState !== 'active') {
-       console.warn('[App] handleCheckPermissions: app not active, skipping');
-       return;
+      console.warn('[App] handleCheckPermissions: app not active, skipping');
+      return;
     }
-   // await requestLocationPermissions();
-   // await requestNotificationPermissions();
-   // await requestMicrophonePermission();
-   if(isAuthenticated){
-     const missing = await checkRequiredPermissions();
-     setMissingPermissions(missing);
-   }
+    // await requestLocationPermissions();
+    // await requestNotificationPermissions();
+    // await requestMicrophonePermission();
+    if (isAuthenticated) {
+      const missing = await checkRequiredPermissions();
+      setMissingPermissions(missing);
+    }
   }, [isAuthenticated]);
 
   // Check permissions on mount
@@ -334,7 +335,7 @@ const App = () => {
       DeviceEventEmitter.emit('chat:switch-recipient', { senderId });
       return;
     }
-    
+
 
     navigationRef.navigate('Main', {
       screen: 'MainTabs',
@@ -348,15 +349,15 @@ const App = () => {
       console.log('Already on Health screen, skipping stress redirect');
       return;
     }
-     
+
     if (!navigationRef.isReady()) {
       pendingNavigationRef.current = () => {
-        navigationRef.navigate('Process',{action: 'redirectToStressScreen', userId: victimId });
+        navigationRef.navigate('Process', { action: 'redirectToStressScreen', userId: victimId });
       };
       return;
     }
 
-    navigationRef.navigate('Process',{action: 'redirectToStressScreen', userId: victimId });
+    navigationRef.navigate('Process', { action: 'redirectToStressScreen', userId: victimId });
   }, []);
 
   const redirectToAudioScreen = useCallback(victimId => {
@@ -365,14 +366,14 @@ const App = () => {
       console.log('Already on Health screen, skipping stress redirect');
       return;
     }
-     if (!navigationRef.isReady()) {
+    if (!navigationRef.isReady()) {
       pendingNavigationRef.current = () => {
-        navigationRef.navigate('Process',{action: 'redirectToAudioScreen', userId: victimId });
+        navigationRef.navigate('Process', { action: 'redirectToAudioScreen', userId: victimId });
       };
       return;
     }
-     
-    navigationRef.navigate('Process',{action: 'redirectToAudioScreen', userId: victimId });
+
+    navigationRef.navigate('Process', { action: 'redirectToAudioScreen', userId: victimId });
 
 
   }, []);
@@ -387,7 +388,7 @@ const App = () => {
       const messageType = String(
         payloadData?.messageType || '',
       ).toUpperCase();
-      console.log("payloadData",{ payloadData: payloadData });
+      console.log("payloadData", { payloadData: payloadData });
       const refreshMessageTypes = [
         'ACCEPTED_TRUSTED_CONTACT',
         'DELETED_TRUSTED_CONTACT',
@@ -407,15 +408,17 @@ const App = () => {
           'Opening SOS modal from notification with payloadData:',
           payloadData,
         );
+         
         openSosModalFromNotification();
+         
         const victimId = payloadData?.fromUserId;
-        if(payloadData?.type === 'stress'){
-          if(victimId){
+        if (payloadData?.type === 'stress') {
+          if (victimId) {
             console.log('Redirecting to stress screen for victimId:', victimId);
             redirectToStressScreen(victimId);
           }
-        }else{
-          if(victimId){
+        } else {
+          if (victimId) {
             console.log('Redirecting to audio screen for victimId:', victimId);
             redirectToAudioScreen(victimId);
           }
@@ -448,12 +451,12 @@ const App = () => {
         );
         navigateToChat(payloadData?.senderId);
       }
-      console.log('=========================== payloadData==========================' , payloadData);
+      console.log('=========================== payloadData==========================', payloadData);
       if (!messageType || payloadData?.fromProcessScreen) {
         navigateToMain();
       }
-       
-       
+
+
     },
     [
       fetchMySosSessions,
@@ -462,6 +465,7 @@ const App = () => {
       navigateToChat,
       navigateToMain,
       openSosModalFromNotification,
+      
     ],
   );
 
@@ -617,100 +621,104 @@ const App = () => {
     });
   };
 
-   
+
 
   return (
-  <SocketProvider>
-    <CreatorMediaSoupProvider>
-      <ListenerMediaSoupProvider>
-        <TrustedContactsProvider>
-          <ChatProvider>
-            <LocationProvider>
-              <HealthProvider
-                userAge={28}
-                criticalThreshold={76}
-                gfRefreshMs={10_000}
-              >
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <SafeAreaProvider>
-                    <StatusBar
-                      barStyle="light-content"
-                      backgroundColor={
-                        !isConnected || missingPermissions.length > 0
-                          ? '#020B1B'
-                          : '#1A1A2E'
-                      }
-                    />
-
-                    {!isConnected ? (
-                      <NoInternetScreen onRetry={handleRetryConnection} />
-                    ) : missingPermissions.length > 0 ? (
-                      <NoPermissionsScreen
-                        missingPermissions={missingPermissions}
-                        onRetry={handleCheckPermissions}
+    <SocketProvider>
+      <CreatorMediaSoupProvider>
+        <ListenerMediaSoupProvider>
+          <TrustedContactsProvider>
+            <ChatProvider>
+              <LocationProvider>
+                <HealthProvider
+                  userAge={28}
+                  criticalThreshold={76}
+                  gfRefreshMs={10_000}
+                >
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <SafeAreaProvider>
+                      <StatusBar
+                        barStyle="light-content"
+                        backgroundColor={
+                          !isConnected || missingPermissions.length > 0
+                            ? '#020B1B'
+                            : '#1A1A2E'
+                        }
                       />
-                    ) : (
-                      <>
-                        <InAppNotificationBanner
-                          visible={banner.visible}
-                          title={banner.title}
-                          body={banner.body}
-                          onClose={closeBanner}
-                        />
-                        <NavigationContainer
-                          ref={navigationRef}
-                          onReady={() => {
-                            if (pendingNavigationRef.current) {
-                              pendingNavigationRef.current();
-                              pendingNavigationRef.current = null;
-                            }
-                            syncCurrentScreen();
-                          }}
-                          onStateChange={syncCurrentScreen}
-                        >
-                          <Stack.Navigator
-                            initialRouteName="Splash"
-                            screenOptions={{ headerShown: false }}
-                          >
-                            <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
-                            <Stack.Screen name="Splash" component={SplashScreen} />
-                            <Stack.Screen name="Process" component={ProcessScreen} />
-                            <Stack.Screen name="Login" component={LoginScreen} />
-                            <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
-                            <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-                            <Stack.Screen name="AddContact" component={AddContactsScreen} />
-                            <Stack.Screen name="Main" component={DrawerNavigator} />
-                            <Stack.Screen name="EmergencyServices" component={EmergencyServicesScreen} />
-                            <Stack.Screen name="ReportList" component={ReportListScreen} />
-                          </Stack.Navigator>
-                        </NavigationContainer>
-                        <Toast config={toastConfig} />
-                      </>
-                    )}
-                     <SOSController
-                      fabVisible={
-                        isConnected &&
-                        Array.isArray(missingPermissions) &&
-                        missingPermissions.length === 0 &&
-                        activeScreen !== null &&
-                        !['Splash', 'Process', 'Login', 'CompleteProfile', 'AuthLoading'].includes(activeScreen)
-                      }
-                      navigationRef={navigationRef}
-                      sosModalVisible={sosModalVisible}
-                      setSosModalVisible={setSosModalVisible}
-                    />
-                  </SafeAreaProvider>
 
-                  
-                </GestureHandlerRootView>
-              </HealthProvider>
-            </LocationProvider>
-          </ChatProvider>
-        </TrustedContactsProvider>
-      </ListenerMediaSoupProvider>
-    </CreatorMediaSoupProvider>
-  </SocketProvider>
-);
+                      {!isConnected ? (
+                        <NoInternetScreen onRetry={handleRetryConnection} />
+                      ) : missingPermissions.length > 0 ? (
+                        <NoPermissionsScreen
+                          missingPermissions={missingPermissions}
+                          onRetry={handleCheckPermissions}
+                        />
+                      ) : (
+                        <>
+                          <InAppNotificationBanner
+                            visible={banner.visible}
+                            title={banner.title}
+                            body={banner.body}
+                            onClose={closeBanner}
+                          />
+                          <NavigationContainer
+                            ref={navigationRef}
+                            onReady={() => {
+                              if (pendingNavigationRef.current) {
+                                pendingNavigationRef.current();
+                                pendingNavigationRef.current = null;
+                              }
+                              syncCurrentScreen();
+                            }}
+                            onStateChange={syncCurrentScreen}
+                          >
+                            <Stack.Navigator
+                              initialRouteName="Splash"
+                              screenOptions={{ headerShown: false }}
+                            >
+                              <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
+                              <Stack.Screen name="Splash" component={SplashScreen} />
+                              <Stack.Screen name="Process" component={ProcessScreen} />
+                              <Stack.Screen name="Login" component={LoginScreen} />
+                              <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+                              <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                              <Stack.Screen name="AddContact" component={AddContactsScreen} />
+                              <Stack.Screen name="Main" component={DrawerNavigator} />
+                              <Stack.Screen name="EmergencyServices" component={EmergencyServicesScreen} />
+                              <Stack.Screen name="ReportList" component={ReportListScreen} />
+                            </Stack.Navigator>
+                          </NavigationContainer>
+                          <Toast config={toastConfig} />
+                        </>
+                      )}
+                       <SOSController
+                        fabVisible={
+                          isConnected &&
+                          Array.isArray(missingPermissions) &&
+                          missingPermissions.length === 0 &&
+                          activeScreen !== null &&
+                          ![
+                            ...['Splash', 'Process', 'Login', 'CompleteProfile', 'AuthLoading'],
+                            ...(!hasLicense ? ['Home'] : []),
+                          ].includes(activeScreen)
+                        }
+                        navigationRef={navigationRef}
+                        sosModalVisible={sosModalVisible}
+                        setSosModalVisible={setSosModalVisible}
+                        hasLicense={hasLicense}
+                      /> 
+                    </SafeAreaProvider>
+
+
+                  </GestureHandlerRootView>
+                </HealthProvider>
+              </LocationProvider>
+            </ChatProvider>
+          </TrustedContactsProvider>
+        </ListenerMediaSoupProvider>
+      </CreatorMediaSoupProvider>
+    </SocketProvider>
+  );
 };
 
 export default Sentry.wrap(App);
