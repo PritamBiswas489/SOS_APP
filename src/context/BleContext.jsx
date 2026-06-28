@@ -83,7 +83,6 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 //    • disconnect() — explicit user action
 //    • Real hardware disconnect (device off / out of range)
 // ─────────────────────────────────────────────────────────────────────────────
-let _manager          = null;
 let _device           = null;
 let _hrSub            = null;
 let _manualDisconnect = false;
@@ -109,11 +108,7 @@ let _onRawHR       = null; // → StressContext callback (foreground + backgroun
 // Module-level helpers
 // ─────────────────────────────────────────────
 function getManager() {
-  if (!_manager) {
-    _manager = getBleManager();
-    log.info('BLE manager created (module-level singleton)');
-  }
-  return _manager;
+  return getBleManager();
 }
 
 function teardownSubscription() {
@@ -232,11 +227,11 @@ function scheduleAndroidReconnect() {
       const { id, name } = JSON.parse(saved);
       log.android(`Reconnecting to ${name} (${id})...`);
 
-      if (!_manager) _manager = getBleManager();
-      await waitForPoweredOn(_manager);
+      const mgr = getBleManager();
+      await waitForPoweredOn(mgr);
       if (_manualDisconnect || !_isActive) return;
 
-      const device = await _manager.connectToDevice(id, { autoConnect: false });
+      const device = await mgr.connectToDevice(id, { autoConnect: false });
       await connectDevice(device);
     } catch (e) {
       log.android(`Reconnect failed: ${e.message}`);
@@ -248,12 +243,13 @@ function scheduleAndroidReconnect() {
 // connectDevice (module-level, no hooks)
 // ─────────────────────────────────────────────
 async function connectDevice(device) {
-  if (!_isActive || !_manager) return;
+  if (!_isActive) return;
   if (_isConnecting) {
     log.android(`connectDevice skipped — another connection is in progress (${device.id})`);
     return;
   }
 
+  const mgr = getBleManager();
   _isConnecting = true;
   _manualDisconnect = false;
 
@@ -286,13 +282,13 @@ async function connectDevice(device) {
   try {
     let connected;
     if (Platform.OS === 'android') {
-      const alreadyConnected = await _manager
+      const alreadyConnected = await mgr
         .isDeviceConnected(device.id)
         .catch(() => false);
 
       if (alreadyConnected) {
         log.android('Device already connected — using existing connection object');
-        const devs = await _manager.devices([device.id]).catch(() => []);
+        const devs = await mgr.devices([device.id]).catch(() => []);
         connected = devs[0] ?? device;
       } else {
         await sleep(800);
@@ -621,7 +617,8 @@ export function BleProvider({ children }) {
 
     AsyncStorage.removeItem(SAVED_DEVICE_KEY).catch(() => {});
 
-    if (_manager) { try { await _manager.stopDeviceScan(); } catch (_) {} }
+    const mgr = getBleManager();
+    try { await mgr.stopDeviceScan(); } catch (_) {}
     if (_device)  { try { await _device.cancelConnection(); } catch (_) {} _device = null; }
 
     _manualDisconnect = false;
