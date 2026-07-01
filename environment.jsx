@@ -37,3 +37,5 @@ export const env = {
     },
   },
 };
+
+export const APK_DOWNLOAD_URL = "https://back-sos.pritamaqua.aqualeafitsol.com/api/front-web/donwload-latest-apk";

@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
+
+    <!-- ✅ Added: required to launch the APK installer for force update -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- ✅ Location -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -116,5 +120,7 @@
   android:stopWithTask="true"
   android:exported="false"
   tools:node="replace" />
+
+ 
     </application>
 </manifest>

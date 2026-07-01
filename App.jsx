@@ -71,6 +71,8 @@ import { resetAllState } from './src/store/index.jsx';
 import * as Sentry from '@sentry/react-native';
 import { SENTRY_DSN_URL } from './environment.jsx';
 import ReportListScreen from './src/screens/abuserReportListScreen/index.jsx';
+import { checkForUpdate } from './src/services/forceUpdate.service.js';
+import ForceUpdateScreen from './src/components/forceUpdateApp/index.jsx';
 
 
 
@@ -178,6 +180,7 @@ const App = () => {
   const [isConnected, setIsConnected] = useState(true);
   const [sosModalVisible, setSosModalVisible] = useState(false);
   const [missingPermissions, setMissingPermissions] = useState([]); // null = checking
+  const [forceUpdateInfo, setForceUpdateInfo] = useState(null);
   const appStateRef = useRef(AppState.currentState);
   const pendingNavigationRef = useRef(null);
   const pendingSosRef = useRef(false);
@@ -191,6 +194,8 @@ const App = () => {
   const { isAuthenticated } = useUserAuth();
   const [emittedSOS, setEmittedSOS] = useState(null);
   const { hasLicense } = useUserData();
+  const isCheckingUpdateRef = useRef(false);
+  const updateAppStateRef = useRef(AppState.currentState);
 
 
 
@@ -234,6 +239,55 @@ const App = () => {
   useEffect(() => {
     handleCheckPermissions();
   }, [handleCheckPermissions]);
+
+
+ 
+
+const runUpdateCheck = useCallback(() => {
+  if (__DEV__) {
+    console.log('[App] Skipping force-update check in debug mode');
+    return;
+  }
+
+  if (isCheckingUpdateRef.current) {
+    console.log('[App] Update check already in progress, skipping');
+    return;
+  }
+
+  isCheckingUpdateRef.current = true;
+
+  checkForUpdate()
+    .then(({ updateRequired, latestVersion, apkUrl }) => {
+      setForceUpdateInfo(updateRequired ? { latestVersion, apkUrl } : null);
+    })
+    .catch(err => {
+      console.warn('[App] Update check failed:', err);
+    })
+    .finally(() => {
+      isCheckingUpdateRef.current = false;
+    });
+}, []);
+
+// Check on mount
+useEffect(() => {
+  runUpdateCheck();
+}, [runUpdateCheck]);
+
+// Re-check whenever app returns to foreground
+useEffect(() => {
+  
+  const subscription = AppState.addEventListener('change', nextState => {
+    if (
+      updateAppStateRef.current.match(/inactive|background/) &&
+      nextState === 'active'
+    ) {
+      console.log('[App] App returned to foreground, checking for updates');
+      runUpdateCheck();
+    }
+    updateAppStateRef.current = nextState;
+  });
+  return () => subscription.remove();
+}, [runUpdateCheck]);
 
   // Re-check permissions when app comes back to foreground (user returns from Settings)
   useEffect(() => {
@@ -408,9 +462,9 @@ const App = () => {
           'Opening SOS modal from notification with payloadData:',
           payloadData,
         );
-         
+
         openSosModalFromNotification();
-         
+
         const victimId = payloadData?.fromUserId;
         if (payloadData?.type === 'stress') {
           if (victimId) {
@@ -465,7 +519,7 @@ const App = () => {
       navigateToChat,
       navigateToMain,
       openSosModalFromNotification,
-      
+
     ],
   );
 
@@ -646,7 +700,12 @@ const App = () => {
                         }
                       />
 
-                      {!isConnected ? (
+                      {forceUpdateInfo ? (
+                        <ForceUpdateScreen
+                          apkUrl={forceUpdateInfo.apkUrl}
+                          latestVersion={forceUpdateInfo.latestVersion}
+                        />
+                      ) : !isConnected ? (
                         <NoInternetScreen onRetry={handleRetryConnection} />
                       ) : missingPermissions.length > 0 ? (
                         <NoPermissionsScreen
@@ -691,7 +750,7 @@ const App = () => {
                           <Toast config={toastConfig} />
                         </>
                       )}
-                       <SOSController
+                      <SOSController
                         fabVisible={
                           isConnected &&
                           Array.isArray(missingPermissions) &&
@@ -706,7 +765,7 @@ const App = () => {
                         sosModalVisible={sosModalVisible}
                         setSosModalVisible={setSosModalVisible}
                         hasLicense={hasLicense}
-                      /> 
+                      />
                     </SafeAreaProvider>
 
 
