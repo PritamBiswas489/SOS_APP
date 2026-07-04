@@ -363,7 +363,28 @@ const MapScreen = ({ route }) => {
 
   const centerOnUser = () => {
     setIsOffCenter(false);
-    mapRef.current?.animateToRegion({ ...userLocation, latitudeDelta: 0.012, longitudeDelta: 0.012 }, 600);
+    const hasSelectedContactCoords =
+      Number.isFinite(selectedContactLocation?.latitude) &&
+      Number.isFinite(selectedContactLocation?.longitude);
+
+    if (hasSelectedContactCoords) {
+      mapRef.current?.fitToCoordinates(
+        [
+          userLocation,
+          {
+            latitude: selectedContactLocation.latitude,
+            longitude: selectedContactLocation.longitude,
+          },
+        ],
+        { edgePadding: { top: 120, right: 60, bottom: 220, left: 60 }, animated: true },
+      );
+      return;
+    }
+
+    mapRef.current?.animateToRegion(
+      { ...userLocation, latitudeDelta: 0.012, longitudeDelta: 0.012 },
+      600,
+    );
   };
 
   const handleZoomIn = () => {

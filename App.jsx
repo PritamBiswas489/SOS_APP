@@ -73,6 +73,7 @@ import { SENTRY_DSN_URL } from './environment.jsx';
 import ReportListScreen from './src/screens/abuserReportListScreen/index.jsx';
 import { checkForUpdate } from './src/services/forceUpdate.service.js';
 import ForceUpdateScreen from './src/components/forceUpdateApp/index.jsx';
+import ContactHubScreen from './src/screens/contactHubScreen/index.jsx';
 
 
 
@@ -432,6 +433,22 @@ useEffect(() => {
 
   }, []);
 
+  const redirectToContactHubScreen = useCallback(victimId => {
+    const currentRoute = navigationRef.getCurrentRoute();
+    if (currentRoute?.name === 'ContactHub') {
+      console.log('Already on ContactHub screen, skipping redirect');
+      return;
+    }
+    if (!navigationRef.isReady()) {
+      pendingNavigationRef.current = () => {
+        navigationRef.navigate('ContactHub', {  selectedReceipentId: victimId });
+      };
+      return;
+    }
+
+    navigationRef.navigate('ContactHub', {  selectedReceipentId: victimId });
+  }, []);
+
   const notificationAction = useCallback(
     payload => {
       const payloadData =
@@ -469,12 +486,12 @@ useEffect(() => {
         if (payloadData?.type === 'stress') {
           if (victimId) {
             console.log('Redirecting to stress screen for victimId:', victimId);
-            redirectToStressScreen(victimId);
+            redirectToContactHubScreen(victimId);
           }
         } else {
           if (victimId) {
             console.log('Redirecting to audio screen for victimId:', victimId);
-            redirectToAudioScreen(victimId);
+            redirectToContactHubScreen(victimId);
           }
         }
       }
@@ -745,6 +762,7 @@ useEffect(() => {
                               <Stack.Screen name="Main" component={DrawerNavigator} />
                               <Stack.Screen name="EmergencyServices" component={EmergencyServicesScreen} />
                               <Stack.Screen name="ReportList" component={ReportListScreen} />
+                              <Stack.Screen name="ContactHub" component={ContactHubScreen} />
                             </Stack.Navigator>
                           </NavigationContainer>
                           <Toast config={toastConfig} />

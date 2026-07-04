@@ -20,6 +20,7 @@ import ListenerScreen from '../screens/soupListenerScreen/index.jsx';
 import AppFeedback from '../screens/AppFeeback/index.jsx';
 import PrivacyPolicy from '../screens/PrivacyPolicy/index.jsx';
 import ReportFormScreen from '../screens/abuserReportFormScreen/index.jsx';
+import ContactHubScreen from '../screens/contactHubScreen/index.jsx';
 
 import { Alert } from 'react-native';
 
@@ -242,6 +243,17 @@ const DrawerNavigator = () => {
           ),
         }}
       />
+
+      {/* <Drawer.Screen
+        name="Contract"
+        component={ContactHubScreen}
+        options={{
+          drawerLabel: 'Contact Hub',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="privacy-tip" size={size} color={color} />
+          ),
+        }}
+      /> */}
 
 
 

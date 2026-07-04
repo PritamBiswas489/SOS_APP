@@ -561,6 +561,8 @@ const ConversationList = ({
     const isIncomingMessage = !lastMessage?.isSelf;
     if (isIncomingMessage && !isNearBottom) {
       const bannerEventKey = `${currentRoomId || 'unknown-room'}:${lastMessageKey}`;
+      console.log('New incoming message detected. Banner event key:', bannerEventKey);
+      console.log('Last banner event key:', lastBannerEventKeyRef.current);
       if (bannerEventKey !== lastBannerEventKeyRef.current) {
         lastBannerEventKeyRef.current = bannerEventKey;
         DeviceEventEmitter.emit('chat:new-message-banner', {

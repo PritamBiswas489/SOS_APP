@@ -124,6 +124,13 @@ const IncomingCard = ({ item:incomingItem, navigationRef, onAccept, onDecline, o
   }, 50);
 }, [item, navigationRef, onClose]);
 
+  const navigateToContactHub = useCallback(() => {
+    if (!navigationRef.isReady()) return;
+    const victimId = item.sos_session?.user?.id;
+    onClose?.();
+    navigationRef.navigate('ContactHub', { selectedReceipentId: victimId });
+  }, [item, navigationRef, onClose]);
+
 
 
 const onAcceptSOS = useCallback(() => {
@@ -234,9 +241,20 @@ const onAcceptSOS = useCallback(() => {
       <View style={styles.profileRow}>
         <UserAvatar user={sender} size={52} />
         <View style={styles.profileInfo}>
-          <Text style={styles.senderName} numberOfLines={1}>
-            {sender.name ?? 'Unknown'}
-          </Text>
+          <View style={styles.senderNameRow}>
+            <Text style={styles.senderName} numberOfLines={2}>
+              {sender.name ?? 'Unknown'}
+            </Text>
+            <TouchableOpacity
+              style={styles.contactHubLinkBtn}
+              activeOpacity={0.75}
+              onPress={navigateToContactHub}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="shield-alert" size={16} color="#b60a0a" />
+              <Text style={styles.contactHubLinkText}>SOS Profile</Text>
+            </TouchableOpacity>
+          </View>
           <View
             style={[
               styles.responseBadge,
@@ -650,10 +668,34 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 6,
   },
+  senderNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   senderName: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+    flexShrink: 1,
+    
+  },
+  contactHubLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: 'rgba(74,158,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(74,158,255,0.3)',
+  },
+  contactHubLinkText: {
+    color: '#ea2d43',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   phoneRow: {
     flexDirection: 'row',
@@ -903,7 +945,3 @@ const styles = StyleSheet.create({
 });
 
 export default IncomingCard;
-
- 
-
- 

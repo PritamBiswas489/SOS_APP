@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { TouchableOpacity, View, Text, Animated, StyleSheet } from 'react-native';
+import React, { useRef, useEffect , useState} from 'react';
+import { TouchableOpacity, View, Text, Animated, StyleSheet , Keyboard, Platform} from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
  
@@ -67,6 +67,21 @@ const BottomTabNavigator = () => {
   const streamingCount = Object.values(currentStreamingRoomIds).filter(Boolean).length;
   const { hasLicense } = useUserData();
 
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+useEffect(() => {
+  if (Platform.OS !== 'android') return;
+  
+  const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+  const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+  
+  return () => {
+    show.remove();
+    hide.remove();
+  };
+}, []);
+
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -95,8 +110,9 @@ const BottomTabNavigator = () => {
         },
         tabBarActiveTintColor: '#FF4757',
         tabBarInactiveTintColor: '#A4B0BE',
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
+        tabBarHideOnKeyboard: false,
+          tabBarStyle: keyboardVisible
+      ? { display: 'none' }  : {
           backgroundColor: '#1b1b1b',
           borderTopWidth: 0,
           height: 65,
