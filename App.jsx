@@ -200,7 +200,7 @@ const App = () => {
 
 
 
-  const openSosModalFromNotification = useCallback(() => {
+  const openSosModalFromNotification = useCallback((payloadData) => {
     if (AppState.currentState === 'active') {
       pendingSosRef.current = false;
       setSosModalVisible(true);
@@ -214,12 +214,12 @@ const App = () => {
       if (pendingSosRef.current && AppState.currentState === 'active') {
         pendingSosRef.current = false;
         setSosModalVisible(true);
-        if (fetchSOS) {
-          fetchSosNotifications();
+        if (payloadData?.fetchSOS){
+            fetchSosNotifications();
         }
       }
     }, 450);
-  }, []);
+  }, [fetchSosNotifications]);
 
   const handleCheckPermissions = useCallback(async () => {
     // First, prompt the user to grant permissions, then check what is still missing
@@ -480,7 +480,7 @@ useEffect(() => {
           payloadData,
         );
 
-        openSosModalFromNotification();
+        openSosModalFromNotification(payloadData);
 
         const victimId = payloadData?.fromUserId;
         if (payloadData?.type === 'stress') {
