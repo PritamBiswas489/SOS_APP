@@ -65,6 +65,7 @@ import {
 } from './src/middleware/nativeCrashLogger.js';
 import useUserAuth from './src/hook/useUserAuth.jsx';
 import { useUserData } from './src/hook/useUserData.jsx';
+import { useSettings } from './src/hook/useSettings';
 import { Device } from 'mediasoup-client';
 import { UserService } from './src/services/user.service.js';
 import { resetAllState } from './src/store/index.jsx';
@@ -193,6 +194,7 @@ const App = () => {
   const { fetchSosNotifications } = useIncomingSosNotifications();
   const { fetchMySosSessions } = useMySosSessions();
   const { isAuthenticated } = useUserAuth();
+  const { fetchSettings } = useSettings();
   const [emittedSOS, setEmittedSOS] = useState(null);
   const { hasLicense } = useUserData();
   const isCheckingUpdateRef = useRef(false);
@@ -328,6 +330,14 @@ useEffect(() => {
     );
     return () => subscription.remove();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    fetchSettings();
+  }, [isAuthenticated, fetchSettings]);
 
   const syncCurrentScreen = useCallback(() => {
     const routeName = navigationRef.getCurrentRoute()?.name;

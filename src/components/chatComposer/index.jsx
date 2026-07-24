@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,15 +25,8 @@ import { getAppUrl } from '../../config/utility';
 import styles from './style';
 import MessageInput from './MessageInput';
 import { selectedReplyMessageActions } from '../../store/redux/selectedReplyMessage.redux';
-import { useUserData } from '../../hook/useUserData';
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
-const MAX_VIDEO_SIZE_BYTES = 30 * 1024 * 1024;
-const MAX_AUDIO_SIZE_BYTES = 20 * 1024 * 1024;
-const MAX_DOCUMENT_SIZE_BYTES = 20 * 1024 * 1024;
-const getMediaSizeLimit = mediaCategory =>
-  mediaCategory === 'video' ? MAX_VIDEO_SIZE_BYTES : MAX_IMAGE_SIZE_BYTES;
+import { useSettings } from '../../hook/useSettings';
 
-const formatMegabytes = bytes => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
 const AUDIO_RECORD_OPTIONS = {
   sampleRate: 16000,
@@ -42,6 +35,15 @@ const AUDIO_RECORD_OPTIONS = {
   audioSource: 6,
   wavFile: 'recording.wav',
 };
+
+const DEFAULT_MEDIA_SIZE_LIMITS = {
+  image: 5 * 1024 * 1024,
+  video: 30 * 1024 * 1024,
+  audio: 20 * 1024 * 1024,
+  document: 20 * 1024 * 1024,
+};
+
+const MAX_RECORDING_DURATION_SECONDS = 60;
 
 const ChatComposer = ({
   onSendComplete,
@@ -59,22 +61,44 @@ const ChatComposer = ({
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recordingTimerRef = useRef(null);
+  const isStoppingRecordingRef = useRef(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const { siteSettings } = useSettings();
+  const mediaSizeLimits = useMemo(() => ({
+    image: Number(siteSettings?.CHAT_MEDIA_FILE_SIZES?.image) || DEFAULT_MEDIA_SIZE_LIMITS.image,
+    video: Number(siteSettings?.CHAT_MEDIA_FILE_SIZES?.video) || DEFAULT_MEDIA_SIZE_LIMITS.video,
+    audio: Number(siteSettings?.CHAT_MEDIA_FILE_SIZES?.audio) || DEFAULT_MEDIA_SIZE_LIMITS.audio,
+    document: Number(siteSettings?.CHAT_MEDIA_FILE_SIZES?.document) || DEFAULT_MEDIA_SIZE_LIMITS.document,
+  }), [siteSettings]);
 
-  const chatSelectedTrustedContact = useSelector(state => state.chatSelectedTrustedContact);
-  const {userData} = useUserData();
-  const selectedReplyMessage = useSelector(state => state.selectedReplyMessage);
+  // const mediaSizeLimits = useMemo(() => DEFAULT_MEDIA_SIZE_LIMITS, []);
+  const getMediaSizeLimit = useCallback(
+    mediaCategory => mediaSizeLimits[mediaCategory] ?? mediaSizeLimits.image,
+    [mediaSizeLimits],
+  );
+
+  const formatMegabytes = useCallback(bytes => `${(bytes / (1024 * 1024)).toFixed(1)} MB`, []);
+
+  const roomId = useSelector(state => state.chatSelectedTrustedContact?.roomId);
+  const recipientId = useSelector(state => state.chatSelectedTrustedContact?.receipent_id);
+  const trustedContactName = useSelector(state => state.chatSelectedTrustedContact?.name);
+  const currentUserId = useSelector(state => state.userProviderData?.id);
+  const selectedReplyMessageId = useSelector(state => state.selectedReplyMessage?.id || null);
   const chatActions = useChatActions();
   const typingIndicators = useChatTyping();
-  const currentUserId = userData?.id;
-  const currentRoomId = chatSelectedTrustedContact?.roomId;
   const dispatch = useDispatch();
 
-  const rawTypingInfo = typingIndicators?.[currentRoomId] || null;
-  const typingInfo = rawTypingInfo?.userId && rawTypingInfo.userId !== currentUserId ? rawTypingInfo : null;
-  if (typingInfo) {
-    typingInfo.userName = chatSelectedTrustedContact?.name || typingInfo.userName;
-  }
+  const typingInfo = useMemo(() => {
+    const rawTypingInfo = typingIndicators?.[roomId] || null;
+    if (!rawTypingInfo?.userId || rawTypingInfo.userId === currentUserId) {
+      return null;
+    }
+
+    return {
+      ...rawTypingInfo,
+      userName: trustedContactName || rawTypingInfo.userName,
+    };
+  }, [typingIndicators, roomId, currentUserId, trustedContactName]);
 
    
 
@@ -114,7 +138,7 @@ const ChatComposer = ({
         AudioRecord.stop();
       }
     };
-  }, [currentRoomId, isRecordingAudio]);
+  }, [roomId, isRecordingAudio]);
 
   const openActionMenu = useCallback(() => setShowActionMenu(true), []);
   const closeActionMenu = useCallback(() => setShowActionMenu(false), []);
@@ -133,12 +157,12 @@ const ChatComposer = ({
       setIsSendingMessage(true);
       setShowMediaPreview(false);
       await chatActions.sendMessage(
-        chatSelectedTrustedContact?.roomId,
-        chatSelectedTrustedContact?.receipent_id,
+        roomId,
+        recipientId,
         messageInputRef.current?.getMessage()?.trim() ?? '',
         { url: selectedMedia, mediaType: selectedMediaType || 'image' },
         null,
-        selectedReplyMessage?.id || null,
+        selectedReplyMessageId,
       );
       messageInputRef.current?.clearMessage();
       setSelectedMedia(null);
@@ -155,9 +179,10 @@ const ChatComposer = ({
     selectedMedia,
     selectedMediaType,
     chatActions,
-    chatSelectedTrustedContact,
+    roomId,
+    recipientId,
     onSendComplete,
-    selectedReplyMessage,
+    selectedReplyMessageId,
   ]);
 
   const handleSendMessage = useCallback(async () => {
@@ -167,12 +192,12 @@ const ChatComposer = ({
     try {
       setIsSendingMessage(true);
       await chatActions.sendMessage(
-        chatSelectedTrustedContact?.roomId,
-        chatSelectedTrustedContact?.receipent_id,
+        roomId,
+        recipientId,
         trimmedMessage,
         selectedMedia ? { url: selectedMedia, mediaType: selectedMediaType || 'image' } : null,
         null,
-        selectedReplyMessage?.id || null,
+        selectedReplyMessageId,
       );
       messageInputRef.current?.clearMessage();
       setSelectedMedia(null);
@@ -189,9 +214,10 @@ const ChatComposer = ({
     selectedMedia,
     selectedMediaType,
     chatActions,
-    chatSelectedTrustedContact,
+    roomId,
+    recipientId,
     onSendComplete,
-    selectedReplyMessage,
+    selectedReplyMessageId,
   ]);
 
   const handlePickFromGallery = useCallback((type) => {
@@ -253,15 +279,15 @@ const ChatComposer = ({
         setIsUploadingMedia(false);
       },
     );
-  }, [closeActionMenu]);
+  }, [closeActionMenu, getMediaSizeLimit, formatMegabytes]);
 
   const uploadAudioUri = useCallback(
     async ({ uri, mimeType = 'audio/wav', name = 'audio.wav', fileSize = 0 }) => {
       if (!uri) return;
-      if (fileSize > 0 && fileSize > MAX_AUDIO_SIZE_BYTES) {
+      if (fileSize > 0 && fileSize > mediaSizeLimits.audio) {
         Alert.alert(
           'File too large',
-          `Audio exceeds ${formatMegabytes(MAX_AUDIO_SIZE_BYTES)}. Please choose a smaller file.`,
+          `Audio exceeds ${formatMegabytes(mediaSizeLimits.audio)}. Please choose a smaller file.`,
         );
         return;
       }
@@ -300,7 +326,7 @@ const ChatComposer = ({
       }
       setIsUploadingMedia(false);
     },
-    [],
+    [formatMegabytes, mediaSizeLimits.audio],
   );
 
   const handlePickAudio = useCallback(async () => {
@@ -318,6 +344,49 @@ const ChatComposer = ({
       }
     }
   }, [closeActionMenu, uploadAudioUri]);
+
+  const stopAndUploadRecording = useCallback(async () => {
+    if (isStoppingRecordingRef.current) {
+      return;
+    }
+
+    isStoppingRecordingRef.current = true;
+    try {
+      const recordedPath = await AudioRecord.stop();
+      setIsRecordingAudio(false);
+
+      if (!recordedPath) {
+        Alert.alert('Recording failed', 'Could not resolve recorded file path.');
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const recordedUri =
+        recordedPath.startsWith('file://') || recordedPath.startsWith('content://')
+          ? recordedPath
+          : `file://${recordedPath}`;
+
+      await uploadAudioUri({
+        uri: recordedUri,
+        mimeType: 'audio/wav',
+        name: recordedPath.split('/').pop() || `voice-note-${Date.now()}.wav`,
+      });
+    } catch {
+      setIsRecordingAudio(false);
+      Alert.alert('Recording error', 'Could not record audio. Please try again.');
+    } finally {
+      isStoppingRecordingRef.current = false;
+    }
+  }, [uploadAudioUri]);
+
+  useEffect(() => {
+    if (!isRecordingAudio || recordingDuration < MAX_RECORDING_DURATION_SECONDS) {
+      return;
+    }
+
+    stopAndUploadRecording();
+  }, [isRecordingAudio, recordingDuration, stopAndUploadRecording]);
 
   const handleRecordAudio = useCallback(async () => {
     closeActionMenu();
@@ -339,36 +408,12 @@ const ChatComposer = ({
         return;
       }
 
-      const recordedPath = await AudioRecord.stop();
-      setIsRecordingAudio(false);
-
-      if (!recordedPath) {
-        Alert.alert('Recording failed', 'Could not resolve recorded file path.');
-        return;
-      }
-
-      // Wait for the native audio recorder to fully flush the WAV file to disk.
-      // Without this delay, Android may return the path before the file is written,
-      // causing net::ERR_FAILED on the first upload attempt.
-      // Wait for the native audio encoder to finish flushing the WAV file to disk.
-      // AudioRecord.stop() resolves before the file is fully written on Android.
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const recordedUri =
-        recordedPath.startsWith('file://') || recordedPath.startsWith('content://')
-          ? recordedPath
-          : `file://${recordedPath}`;
-
-      await uploadAudioUri({
-        uri: recordedUri,
-        mimeType: 'audio/wav',
-        name: recordedPath.split('/').pop() || `voice-note-${Date.now()}.wav`,
-      });
+      await stopAndUploadRecording();
     } catch {
       setIsRecordingAudio(false);
       Alert.alert('Recording error', 'Could not record audio. Please try again.');
     }
-  }, [closeActionMenu, isRecordingAudio, uploadAudioUri]);
+  }, [closeActionMenu, isRecordingAudio, stopAndUploadRecording]);
 
   const handleCancelRecording = useCallback(async () => {
     try {
@@ -388,10 +433,10 @@ const ChatComposer = ({
 
       const mimeType = file?.type || 'application/octet-stream';
       const fileSize = Number(file?.size || 0);
-      if (fileSize > 0 && fileSize > MAX_DOCUMENT_SIZE_BYTES) {
+      if (fileSize > 0 && fileSize > mediaSizeLimits.document) {
         Alert.alert(
           'File too large',
-          `Document exceeds ${formatMegabytes(MAX_DOCUMENT_SIZE_BYTES)}. Please choose a smaller file.`,
+          `Document exceeds ${formatMegabytes(mediaSizeLimits.document)}. Please choose a smaller file.`,
         );
         return;
       }
@@ -432,7 +477,7 @@ const ChatComposer = ({
         Alert.alert('Error', 'Could not open document picker. Please try again.');
       }
     }
-  }, [closeActionMenu]);
+  }, [closeActionMenu, formatMegabytes, mediaSizeLimits.document]);
 
   const handleCaptureFromCamera = useCallback(() => {
     closeActionMenu();
@@ -445,10 +490,10 @@ const ChatComposer = ({
         if (!uri) return;
         const mimeType = asset?.type || 'image/jpeg';
         const fileSize = Number(asset?.fileSize || 0);
-        if (fileSize > 0 && fileSize > MAX_IMAGE_SIZE_BYTES) {
+        if (fileSize > 0 && fileSize > mediaSizeLimits.image) {
           Alert.alert(
             'File too large',
-            `Image exceeds ${formatMegabytes(MAX_IMAGE_SIZE_BYTES)}. Please capture a smaller image.`,
+            `Image exceeds ${formatMegabytes(mediaSizeLimits.image)}. Please capture a smaller image.`,
           );
           return;
         }
@@ -484,7 +529,7 @@ const ChatComposer = ({
         setIsUploadingMedia(false);
       },
     );
-  }, [closeActionMenu]);
+  }, [closeActionMenu, formatMegabytes, mediaSizeLimits.image]);
 
   const handleShareCurrentLocation = useCallback(async () => {
     closeActionMenu();
@@ -524,8 +569,8 @@ const ChatComposer = ({
       }
 
       await chatActions.sendMessage(
-        chatSelectedTrustedContact?.roomId,
-        chatSelectedTrustedContact?.receipent_id,
+        roomId,
+        recipientId,
         '',
         null,
         { latitude, longitude },
@@ -538,7 +583,7 @@ const ChatComposer = ({
         error?.message || 'Unable to fetch location';
       Alert.alert('Location Error', msg);
     }
-  }, [closeActionMenu, chatActions, chatSelectedTrustedContact]);
+  }, [closeActionMenu, chatActions, roomId, recipientId]);
 
   const handleCancelPreview = useCallback(() => setShowMediaPreview(false), []);
 
@@ -680,6 +725,8 @@ const ChatComposer = ({
         onPickDocument={handlePickDocument}
         onCaptureFromCamera={handleCaptureFromCamera}
         onShareCurrentLocation={handleShareCurrentLocation}
+        mediaCategoryLimits={mediaSizeLimits}
+        maxRecordingDuration={MAX_RECORDING_DURATION_SECONDS}
       />
     </>
   );
